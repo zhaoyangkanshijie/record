@@ -202,6 +202,7 @@ const router = new VueRouter({
 * vue-router导航钩子
 1. 全局导航钩子router.beforeEach/afterEach(to,from,next)，用来跳转前/后进行权限判断。
 ```js
+const router = new VueRouter({ ... });
 router.beforeEach((to, from, next) => {
     let token = router.app.$storage.fetch("token");
     let needAuth = to.matched.some(item => item.meta.login);
@@ -209,15 +210,61 @@ router.beforeEach((to, from, next) => {
     next();
 });
 ```
+这三个参数 to 、from 、next 分别的作用：
+
+1. to: Route，代表要进入的目标，它是一个路由对象
+2. from: Route，代表当前正要离开的路由，同样也是一个路由对象
+3. next: Function，这是一个必须需要调用的方法，而具体的执行效果则依赖 next 方法调用的参数
+  * next()：进入管道中的下一个钩子，如果全部的钩子执行完了，则导航的状态就是 confirmed（确认的）
+  * next(false)：这代表中断掉当前的导航，即 to 代表的路由对象不会进入，被中断，此时该表 URL 地址会被重置到 from 路由对应的地址
+  * next(‘/’) 和 next({path: ‘/’})：在中断掉当前导航的同时，跳转到一个不同的地址
+  * next(error)：如果传入参数是一个 Error 实例，那么导航被终止的同时会将错误传递给 router.onError() 注册过的回调
+  
 2. 组件内的钩子
 ```js
-var routes = [
-    {
-        path:'/home',
-        component:home,
-        name:"home"
+export default {
+  data() {
+    return {
+
     }
-]
+  },
+  methods: {
+    go() {
+      this.$router.push({ name: 'HelloWorld' })
+    }
+  },
+  beforeRouteEnter(to, from, next) {
+    console.log(this, 'beforeRouteEnter'); // undefined
+    console.log(to, '组件独享守卫beforeRouteEnter第一个参数');
+    console.log(from, '组件独享守卫beforeRouteEnter第二个参数');
+    console.log(next, '组件独享守卫beforeRouteEnter第三个参数');
+    next(vm => {
+      //因为当钩子执行前，组件实例还没被创建
+      // vm 就是当前组件的实例相当于上面的 this，所以在 next 方法里你就可以把 vm 当 this 来用了。
+      console.log(vm);//当前组件的实例
+    });
+  },
+  beforeRouteUpdate(to, from, next) {
+    //在当前路由改变，但是该组件被复用时调用
+    //对于一个带有动态参数的路径 /good/:id，在 /good/1 和 /good/2 之间跳转的时候，
+    // 由于会渲染同样的good组件，因此组件实例会被复用。而这个钩子就会在这个情况下被调用。
+    // 可以访问组件实例 `this`
+    console.log(this, 'beforeRouteUpdate'); //当前组件实例
+    console.log(to, '组件独享守卫beforeRouteUpdate第一个参数');
+    console.log(from, '组件独享守beforeRouteUpdate卫第二个参数');
+    console.log(next, '组件独享守beforeRouteUpdate卫第三个参数');
+    next();
+  },
+  beforeRouteLeave(to, from, next) {
+    // 导航离开该组件的对应路由时调用
+    // 可以访问组件实例 `this`
+    console.log(this, 'beforeRouteLeave'); //当前组件实例
+    console.log(to, '组件独享守卫beforeRouteLeave第一个参数');
+    console.log(from, '组件独享守卫beforeRouteLeave第二个参数');
+    console.log(next, '组件独享守卫beforeRouteLeave第三个参数');
+    next();
+  }
+}
 ```
 3. 单独路由独享组件
 ```js
@@ -306,6 +353,51 @@ export default new Vuex.Store({
 ## vue与jquery的区别
 
 vue是一个mvvm（model+view+viewModel）框架，数据驱动，通过数据来显示视图层，而不是jquery的事件驱动进行节点操作。vue适用于数据操作比较多的场景。
+
+## vuejs与angularjs以及react的区别
+
+* 学习难度：vue < angular < react
+* 社区成熟度：vue < angular、react
+* vue轻量级框架。使用jsx。
+* angular较完善框架，由google开发，包含服务，模板，数据双向绑定（脏检查），模块化，路由，过滤器，依赖注入等所有功能。使用typescript。
+* react由facebook开发，通过对DOM的模拟（虚拟dom），最大限度地减少与DOM的交互。使用jsx。
+
+## vue源码结构
+```txt
+|-- build                            // 项目构建(webpack)相关代码
+|   |-- build.js                     // 生产环境构建代码
+|   |-- check-version.js             // 检查node、npm等版本
+|   |-- utils.js                     // 构建工具相关
+|   |-- vue-loader.conf.js           // webpack loader配置
+|   |-- webpack.base.conf.js         // webpack基础配置
+|   |-- webpack.dev.conf.js          // webpack开发环境配置,构建开发本地服务器
+|   |-- webpack.prod.conf.js         // webpack生产环境配置
+|-- config                           // 项目开发环境配置
+|   |-- dev.env.js                   // 开发环境变量
+|   |-- index.js                     // 项目一些配置变量
+|   |-- prod.env.js                  // 生产环境变量
+|-- src                              // 源码目录
+|   |-- assets                       // 资源文件(字体、图片)
+|   |-- components                   // vue公共组件
+|   |-- pages                        // vue页面
+|   |-- router                       // vue的路由管理
+|   |-- scss                         // 样式文件
+|   |-- store                        // vuex状态管理
+|   |-- App.vue                      // 页面入口文件
+|   |-- main.js                      // 程序入口文件，加载各种公共组件
+|-- static                           // 静态文件，比如一些图片，json数据等
+|-- .babelrc                         // ES6语法编译配置
+|-- .editorconfig                    // 定义代码格式
+|-- .gitignore                       // git上传需要忽略的文件格式
+|-- .postcsssrc                      // postcss配置文件
+|-- README.md                        // 项目说明
+|-- index.html                       // 入口页面
+|-- package.json                     // 项目基本信息,包依赖信息等
+```
+
+
+
+
 
 
 
