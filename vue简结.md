@@ -12,6 +12,7 @@
 * [vue与jquery的区别](#vue与jquery的区别)
 * [vuejs与angularjs以及react的区别](#vuejs与angularjs以及react的区别)
 * [vue源码结构](#vue源码结构)
+* [vue2.0和3.0的区别](#vue2.0和3.0的区别)
 
 ## vue自带指令
 
@@ -365,6 +366,7 @@ vue是一个mvvm（model+view+viewModel）框架，数据驱动，通过数据�
 * react由facebook开发，通过对DOM的模拟（虚拟dom），最大限度地减少与DOM的交互。使用jsx。
 
 ## vue源码结构
+vue2结构
 ```txt
 |-- build                            // 项目构建(webpack)相关代码
 |   |-- build.js                     // 生产环境构建代码
@@ -397,10 +399,54 @@ vue是一个mvvm（model+view+viewModel）框架，数据驱动，通过数据�
 |-- package.json                     // 项目基本信息,包依赖信息等
 ```
 
+## vue2.0和3.0的区别
+* 安装命令调整
 
+原来：
+```txt
+npm install -g vue-cli
+vue init <template-name> <project-name>
+```
+现在：
+```txt
+npm install -g @vue/cli
+# or
+yarn global add @vue/cli
 
+vue create my-project
+```
 
+* 项目结构变化
+```txt
+│  package-lock.json
+│  package.json
+│  vue.config.js
+├─public
+│      favicon.ico
+│      index.html
+└─src
+    │  App.vue
+    │  main.js
+    │  router.js
+    │  store.js
+    ├─assets
+    │      logo.png
+    └─components
+            HelloWorld.vue
+```
+vue-cli3.0默认项目目录与2.0的相比，更精简:
+1. 移除的配置文件根目录下的，build和config等目录
+2. 移除了static文件夹，新增了public文件夹，并且index.html移动到public中
+3. 在src文件夹中新增了views文件夹，用于分类 视图组件 和 公共组件
+4. 大部分配置 都集成到 vue.config.js这里,在项目根目录下
 
+* 运行命令改变
 
-
-
+原来：
+```txt
+npm run dev/npm run build
+```
+现在：
+```txt
+npm run serve/npm run build
+```
