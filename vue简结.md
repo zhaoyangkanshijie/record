@@ -10,6 +10,8 @@
 * [父子组件通信](#父子组件通信)
 * [vuex状态管理(组件间通信)](#vuex状态管理(组件间通信))
 * [vue与jquery的区别](#vue与jquery的区别)
+* [vuejs与angularjs以及react的区别](#vuejs与angularjs以及react的区别)
+* [vue源码结构](#vue源码结构)
 
 ## vue自带指令
 
