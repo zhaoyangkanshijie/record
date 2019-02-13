@@ -13,6 +13,7 @@
 * [vuejs与angularjs以及react的区别](#vuejs与angularjs以及react的区别)
 * [vue源码结构](#vue源码结构)
 * [vue2.0和3.0的区别](#vue2.0和3.0的区别)
+* [style中scoped的作用](#style中scoped的作用)
 
 ## vue自带指令
 
@@ -171,10 +172,69 @@ proxyTable: {
     }
 ```
 
+* 使用resource
+1. npm install vue-resource
+2. 引入
+```js
+import Vue from 'vue'
+import VueResource from 'vue-resource'
+Vue.use(VueResource)
+```
+3. get请求
+```js
+// 传统写法
+this.$http.get('/someUrl', [options]).then(function(response){
+    // 响应成功回调
+}, function(response){
+    // 响应错误回调
+});
+
+// Lambda写法
+this.$http.get('/someUrl', [options]).then((response) => {
+    // 响应成功回调
+}, (response) => {
+    // 响应错误回调
+});
+```
+4. restful API
+```js
+get(url, [options])
+head(url, [options])
+delete(url, [options])
+jsonp(url, [options])
+post(url, [body], [options])
+put(url, [body], [options])
+patch(url, [body], [options])
+```
+* options包含：
+  * url
+  * method(get/post等)
+  * body
+  * params参数
+  * headers
+  * timeout
+  * before(类似jquery的beforeSend函数)
+  * progress(ProgressEvent回调处理函数)
+  * credientials(bool,跨域请求是否需要凭证)
+  * emulateHTTP(bool,发送put,patch,delete请求时以post发送，请求头：X-HTTP-Method-Override)
+  * emulateJSON(bool,body以application/x-www-form-urlencoded content type发送)
+
 ## 路由vue-router
 * 链接跳转
 ```html
 <router-link to="/">hello world</router-link>
+```
+
+* history模式
+
+用于消除url中的"#"，它利用了history.pushState API来完成URL的跳转而不需要重新加载页面。
+
+这种模式充分
+```js
+export default new Router({
+  mode: 'history',
+  routes: [...]
+})
 ```
 
 * 动态路由、子路由
@@ -450,3 +510,11 @@ npm run dev/npm run build
 ```txt
 npm run serve/npm run build
 ```
+
+## style中scoped的作用
+
+* 添加scoped来使得当前样式只作用于当前组件的节点，其它组件不能设置此组件样式,因此App.vue引用公共组件不使用scoped。
+
+* 在背后做的工作是将当前组件的节点添加一个像data-v-1233
+这样唯一属性的标识，当然也会给当前style的所有样式添加[data-v-1233]
+
