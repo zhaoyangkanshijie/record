@@ -14,6 +14,7 @@
 * [vue源码结构](#vue源码结构)
 * [vue2.0和3.0的区别](#vue2.0和3.0的区别)
 * [style中scoped的作用](#style中scoped的作用)
+* [子组件监听父组件数值变化](#子组件监听父组件数值变化)
 
 ## vue自带指令
 
@@ -517,4 +518,94 @@ npm run serve/npm run build
 
 * 在背后做的工作是将当前组件的节点添加一个像data-v-1233
 这样唯一属性的标识，当然也会给当前style的所有样式添加[data-v-1233]
+
+## 子组件监听父组件数值变化
+
+这就是观察订阅者模式，vue的实现采用了watch方法。
+
+* 父组件
+```html
+<template>
+    <load-list :param="param" cate="hide"></load-list>
+</template>
+```
+param是data函数里面的一个对象,子组件需要使用监听对象的watch写法
+
+* 子组件
+1. 普通类型的数据
+```js
+data() {  
+    return {  
+        param: 0      
+    }  
+},  
+watch: {  
+    param(newValue, oldValue) {  
+        console.log(newValue)  
+    }  
+}
+```
+2. 数组
+```js
+data() {  
+    return {  
+        param: new Array(11).fill(0)      
+    }  
+},  
+watch: {  
+   param(newValue, oldValue) {  
+       handler(newValue, oldValue) {  
+　　　　　　for (let i = 0; i < newValue.length; i++) {  
+　　　　　　　　if (oldValue[i] != newValue[i]) {  
+　　　　　　　　　　console.log(newValue)  
+　　　　　　　　}
+          }
+　　　　}  
+　　},  
+　　deep: true
+}
+```
+3. 对象
+```js
+data() {  
+    return {  
+        param: {  
+　　　　　　pokerState: 53,  
+　　　　　　pokerHistory: 'local'  
+　　　　} 
+    }  
+},  
+watch: {  
+   param(newValue, oldValue) {  
+        console.log(newValue)  
+　　},  
+　　deep: true
+}
+```
+4. 对象具体属性
+```js
+data() {  
+    return {  
+        param: {  
+　　　　　　pokerState: 53,  
+　　　　　　pokerHistory: 'local'  
+　　　　} 
+    }  
+},
+computed: {  
+　　pokerHistory() {  
+　　　　return this.param.pokerHistory  
+　　}  
+},  
+watch: {  
+　　pokerHistory(newValue, oldValue) {  
+        console.log(newValue)  
+　　}
+}
+```
+
+
+
+
+
 
