@@ -626,6 +626,7 @@ this.$router.push({
 ```html
 <router-link :to="{path:'/home',query:{id:'aaa'}}">跳转</router-link>
 ```
+2. 获取
 ```js
 export default {
     name: '',
