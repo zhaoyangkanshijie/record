@@ -15,6 +15,8 @@
 * [vue2.0和3.0的区别](#vue2.0和3.0的区别)
 * [style中scoped的作用](#style中scoped的作用)
 * [子组件监听父组件数值变化](#子组件监听父组件数值变化)
+* [页面传参与获取](#页面传参与获取)
+* [不同url复用页面，且只刷新部分组件](#不同url复用页面，且只刷新部分组件)
 
 ## vue自带指令
 
@@ -61,6 +63,10 @@ Vue.directive('img', {
 
 * 更新前/后：
     * 当data变化时，会触发beforeUpdate和updated方法。
+
+* keep-alive组件激活/停用时调用(在服务器端渲染期间不被调用)
+  * activated
+  * deactivated
 
 * 销毁前/后：
     * 在执行destroy方法后，对data的改变不会再触发周期函数，说明此时vue实例已经解除了事件监听以及和dom的绑定，但是dom结构依然存在
@@ -604,8 +610,103 @@ watch: {  
 }
 ```
 
+## 页面传参与获取
+1. 传参
+* 方法1
+```js
+this.$router.push({
+  path:'/world',
+  name:'world',
+  params:{
+    id : id
+  }
+})
+```
+* 方法2
+```html
+<router-link :to="{path:'/home',query:{id:'aaa'}}">跳转</router-link>
+```
+```js
+export default {
+    name: '',
+    data () {
+      return {
+        id: ''
+      }
+    },
+    created(){
+       this.getParams()
+    },
+    methods: {
+      getParams () {
+        // 取到路由带过来的参数 
+        var routerParams = this.$route.params.id
+        // 将数据放在当前组件的数据内
+        this.id = routerParams
+      }
+    },
+    watch: {
+    // 监测路由变化,只要变化了就调用获取路由参数方法将数据存储本组件即可
+      '$route': 'getParams'
+    }
+}
+```
 
+## 不同url复用页面，且只刷新部分组件
 
+场景：登录页面中，有忘记密码功能，所填的信息仅有部分不同，但为了区分功能，url需要改变。
+方法：watch+$route(to,from)
 
-
-
+* router
+```js
+{
+  path: '/login',
+  name: 'login',
+  component: Login
+},
+{
+  path: '/forgetAccount',
+  name: 'forgetAccount',
+  component: Login
+},
+{
+  path: '/forgetPassword',
+  name: 'forgetPassword',
+  component: Login
+}
+```
+```html
+<div class="login" v-else-if="page == 'login'">
+  <div class="login2">
+    <router-link to="/login">跳转</router-link>
+    <router-link to="/forgetAccount">跳转1</router-link>
+    <router-link to="/forgetPassword">跳转2</router-link>
+  </div>
+</div>
+<div class="forgetAccount" v-else-if="page == 'forgetAccount'">
+  <div class="forget">
+    <router-link to="/login">跳转</router-link>
+    <router-link to="/forgetAccount">跳转a</router-link>
+    <router-link to="/forgetPassword">跳转b</router-link>
+  </div>
+</div>
+<div class="forgetPassword" v-else-if="page == 'forgetPassword'">
+  <div class="forget">
+    <router-link to="/login">跳转</router-link>
+    <router-link to="/forgetAccount">跳转A</router-link>
+    <router-link to="/forgetPassword">跳转B</router-link>
+  </div>
+</div>
+```
+```js
+data () {
+    return {
+      page: 'login'
+    }
+  },
+  watch: {
+    '$route' (to, from) {
+      this.page = to.name;
+    }
+  }
+```
