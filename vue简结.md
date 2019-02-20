@@ -17,6 +17,7 @@
 * [子组件监听父组件数值变化](#子组件监听父组件数值变化)
 * [页面传参与获取](#页面传参与获取)
 * [不同url复用页面，且只刷新部分组件](#不同url复用页面，且只刷新部分组件)
+* [method与computed区别](#method与computed区别)
 
 ## vue自带指令
 
@@ -711,3 +712,16 @@ data () {
     }
   }
 ```
+
+## method与computed区别
+
+1. computed是属性调用，而methods是函数调用，computed要有返回值
+```html
+<p class="test2-3">{{methodTest()}}</p>
+<p class="test3-1">{{computedTest}}</p>
+```
+2. computed带有缓存功能，而methods不是
+
+computed依赖于data中的数据，只有在它的相关依赖数据发生改变时才会重新求值，官方文档反复强调：对于任何复杂逻辑，都应当使用计算属性。
+
+简单来说：data中依赖的值不变，刷新视图，method会重新计算，computed不会（节省内存）。
