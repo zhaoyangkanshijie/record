@@ -386,7 +386,7 @@ Store是Vuex的一个仓库。组件一般在计算属性（computed）获取sta
 * state：用来存放组件之间共享的数据。他跟组件的data选项类似，只不过data选项是用来存放组件的私有数据。
 * getters：state的数据的筛选和过滤，可以把getters看成是store的计算属性。getters下的函数接收接收state作为第一个参数。过滤的数据会存放到$store.getters对象中。
 * mutations：实际改变状态(state) 的唯一方式是通过提交(commit) 一个 mutation。mutations下的函数接收state作为参数，接收payload（载荷）作为第二个参数，用来记录开发者使用该函数的一些信息，如提交了什么，提交的东西用来干什么，包含多个字段，所以载荷一般是对象，mutations方法必须是同步方法。
-* actions：mutations只能处理同步函数，actions处理同步函数。actions提交的是 mutations，而不是直接变更状态。actions可以包含任意异步操作：ajax、setTimeout、setInterval。
+* actions：mutations只能处理同步函数，actions处理同步函数。actions提交的是 mutations，而不是直接变更状态。actions可以包含任意异步操作：ajax、setTimeout、setInterval。actions 通过 store.dispatch(方法名) 触发
 
 ```js
 import Vue from 'vue'
@@ -402,7 +402,11 @@ const getters = {
   count: state => state.count
 }
 
-const actions = {}
+const actions = {
+  count (context) {
+    context.commit('count')
+  }
+}
 
 const mutations = {
   add (state, n) {
