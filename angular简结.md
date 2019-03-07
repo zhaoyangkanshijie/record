@@ -322,6 +322,10 @@ export class ParentAndChildComponent implements OnInit {
 
   }
 
+  accept(msg:string){
+    console.log(msg)
+  }
+
 }
 ```
 
