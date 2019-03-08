@@ -11,6 +11,7 @@
 * [父子组件通信](#父子组件通信)
 * [组件间通信service依赖注入](#组件间通信service依赖注入)
 * [页面传参与获取](#页面传参与获取)
+* [使用cookie](#使用cookie)
 
 ## angular项目结构
 * e2e文件夹：end to end，测试目录，主要用于集成测试。
@@ -434,6 +435,19 @@ this.router.navigate(['user', 1],{ fragment: 'top' });
     }
     ```
 
-
-
-
+## 使用cookie
+1. npm install ngx-cookie-service
+2. 根模块引入
+```ts
+import { CookieService } from 'ngx-cookie-service';
+providers: [CookieService]
+```
+3. 子模块使用
+```ts
+import { CookieService } from 'ngx-cookie-service';
+constructor( private cookieService: CookieService ) { }
+ngOnInit() {
+    this.cookieService.set( name, value, time );
+    this.cookieService.get( name );
+}
+```

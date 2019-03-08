@@ -18,6 +18,7 @@
 * [页面传参与获取](#页面传参与获取)
 * [不同url复用页面，且只刷新部分组件](#不同url复用页面，且只刷新部分组件)
 * [method与computed区别](#method与computed区别)
+* [使用cookie](#使用cookie)
 
 ## vue自带指令
 
@@ -729,3 +730,16 @@ data () {
 computed依赖于data中的数据，只有在它的相关依赖数据发生改变时才会重新求值，官方文档反复强调：对于任何复杂逻辑，都应当使用计算属性。
 
 简单来说：data中依赖的值不变，刷新视图，method会重新计算，computed不会（节省内存）。
+
+## 使用cookie
+1. npm install vue-cookies
+2. main.js 文件
+```js
+const $cookies = require('vue-cookies')
+Vue.use($cookies)
+```
+3. 子组件引用
+```js
+this.$cookies.set(name, value, time);
+this.$cookies.get(name);
+```
