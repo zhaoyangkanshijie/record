@@ -12,6 +12,7 @@
 * [组件间通信service依赖注入](#组件间通信service依赖注入)
 * [页面传参与获取](#页面传参与获取)
 * [使用cookie](#使用cookie)
+* [宿主事件监听器](#宿主事件监听器)
 
 ## angular项目结构
 * e2e文件夹：end to end，测试目录，主要用于集成测试。
@@ -449,5 +450,20 @@ constructor( private cookieService: CookieService ) { }
 ngOnInit() {
     this.cookieService.set( name, value, time );
     this.cookieService.get( name );
+}
+```
+
+## 宿主事件监听器
+
+当宿主元素发出特定的事件时，Angular 就会执行所提供的处理器方法，并使用其结果更新所绑定到的元素。 如果该事件处理器返回 false，则在所绑定的元素上执行 preventDefault。
+
+屏幕滚动监听
+```ts
+public isScollDown : boolean = false;
+@HostListener('window:scroll', ['$event'])
+public onScroll = (e) => {
+    if(document.documentElement.scrollTop > 252){
+        this.isScollDown = true;
+    }
 }
 ```
