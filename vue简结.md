@@ -75,18 +75,48 @@ Vue.directive('img', {
 
 ## vue双向数据绑定原理
 
+* [探讨vue的双向绑定原理及实现](https://www.cnblogs.com/zhouyideboke/p/9626804.html)
+
 vue采用数据劫持结合发布者-订阅者模式的方式实现双向数据绑定。通过Object.defineProperty()来劫持各个属性的setter，getter，在数据变动时发布消息给订阅者，触发相应的监听回调。
+
+* Object.defineProperty()
+
+  Object.defineProperty(对象, 属性名, 属性描述符对象)
+
+  属性描述符：
+    * configurable：描述符是否能被改变
+    * enumerable：描述符是否能枚举
+    * value：属性值
+    * writable：value能否被赋值
+    * get：获取value执行的函数
+    * set：设置value执行的函数
+
+* 消息队列
+
+  用于应对修改大量数据导致变慢的情况，使用订阅者和发布者模式，发布者在数据改变时，消息传递给订阅者，依次作出相应变化，消息订阅器采用队列的方式添加订阅者。
+
+* DocumentFragments
+
+  DocumentFragments是DOM节点。它们不是主DOM树的一部分。通常的用例是创建文档片段，将元素附加到文档片段，然后将文档片段附加到DOM树。在DOM树中，文档片段被其所有的子元素所代替。
+  
+  因为文档片段存在于内存中，并不在DOM树中，所以将子元素插入到文档片段时不会引起页面对元素位置和几何上的计算。因此，使用文档片段通常会带来更好的性能。
 
 * 具体步骤：
 
-1. observe数据对象进行递归遍历，包括子属性对象的属性，都加上 setter和getter。给这个对象的某个值赋值，就会触发setter，那么就能监听到了数据变化。
+1. observe数据对象(即data)进行递归遍历，包括子属性对象的属性，都加上 setter和getter。给这个对象的某个值赋值，就会触发setter，那么就能监听到了数据变化,在set函数中通知订阅者watcher。
 
-2. compile解析模板指令，将模板中的变量替换成数据，然后初始化渲染页面视图，并将每个指令对应的节点绑定更新函数，添加监听数据的订阅者，一旦数据有变动，收到通知，更新视图
+2. compile解析模板指令，将模板中的变量替换成数据，然后初始化渲染页面视图，并将每个指令对应的节点绑定更新函数，添加监听数据的订阅者，一旦数据有变动，收到通知，更新视图。
+
+  * document.createDocumentFragment(); 创建文档片段(虚拟DOM)，以便操作完成后，挂载到真实DOM(就像创建一堆li，再挂载到实际存在的ul中)
+  * 解析元素节点指令
+  * /\{\{(.*)\}\}/，正则筛选模板语法，把表达式数据处理到虚拟DOM
 
 3. Watcher订阅者是Observer和Compile之间通信的桥梁，主要做的事情是:
     * 在自身实例化时往属性订阅器(dep)里面添加自己
     * 自身必须有一个update()方法
     * 待属性变动dep.notice()通知时，能调用自身的update()方法，并触发Compile中绑定的回调，则功成身退。
+
+    dep下使用subs[]消息队列,保存watcher，dep定义通知更新的方法
 
 4. MVVM作为数据绑定的入口，整合Observer、Compile和Watcher三者，通过Observer来监听自己的model数据变化，通过Compile来解析编译模板指令，最终利用Watcher搭起Observer和Compile之间的通信桥梁，达到数据变化 -> 视图更新；视图交互变化(input) -> 数据model变更的双向绑定效果。
 
@@ -379,6 +409,30 @@ props: [
     'data'
 ],
 ```
+3. 父传孙(继承关系跨任意级传值)
+* 父
+```js
+export default {
+  name: "el-select",
+  provide() {
+    return {
+      select: this
+    };
+  }
+}
+```
+* 孙
+```js
+export default {
+    name:'el-option',
+    inject:['select'],
+    created(){
+      if(this.select.value===this.value){
+        this.select.label=this.label;
+      }
+    }
+}
+```
 
 ## vuex状态管理(组件间通信)
 
@@ -387,7 +441,7 @@ Store是Vuex的一个仓库。组件一般在计算属性（computed）获取sta
 * state：用来存放组件之间共享的数据。他跟组件的data选项类似，只不过data选项是用来存放组件的私有数据。
 * getters：state的数据的筛选和过滤，可以把getters看成是store的计算属性。getters下的函数接收接收state作为第一个参数。过滤的数据会存放到$store.getters对象中。
 * mutations：实际改变状态(state) 的唯一方式是通过提交(commit) 一个 mutation。mutations下的函数接收state作为参数，接收payload（载荷）作为第二个参数，用来记录开发者使用该函数的一些信息，如提交了什么，提交的东西用来干什么，包含多个字段，所以载荷一般是对象，mutations方法必须是同步方法。
-* actions：mutations只能处理同步函数，actions处理同步函数。actions提交的是 mutations，而不是直接变更状态。actions可以包含任意异步操作：ajax、setTimeout、setInterval。actions 通过 store.dispatch(方法名) 触发
+* actions：mutations只能处理同步函数，actions处理异步函数。actions提交的是 mutations，而不是直接变更状态。actions可以包含任意异步操作：ajax、setTimeout、setInterval。actions 通过 store.dispatch(方法名) 触发
 
 ```js
 import Vue from 'vue'
