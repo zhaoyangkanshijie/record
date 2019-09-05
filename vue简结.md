@@ -19,6 +19,8 @@
 * [不同url复用页面，且只刷新部分组件](#不同url复用页面，且只刷新部分组件)
 * [method与computed区别](#method与computed区别)
 * [使用cookie](#使用cookie)
+* [使用插槽](#使用插槽)
+* [axios请求响应拦截](#axios请求响应拦截)
 
 ## vue自带指令
 
@@ -786,6 +788,7 @@ computed依赖于data中的数据，只有在它的相关依赖数据发生改�
 简单来说：data中依赖的值不变，刷新视图，method会重新计算，computed不会（节省内存）。
 
 ## 使用cookie
+
 1. npm install vue-cookies
 2. main.js 文件
 ```js
@@ -796,4 +799,253 @@ Vue.use($cookies)
 ```js
 this.$cookies.set(name, value, time);
 this.$cookies.get(name);
+```
+
+## 使用插槽
+
+* slot 插槽
+
+子组件
+```html
+<template>
+    <div class="child">
+      <slot name="slot1"></slot><!-- 具名插槽 -->
+      <slot></slot><!-- 匿名插槽 -->
+      <slot name="slot2"></slot>
+    </div>
+</template>
+```
+
+父组件
+```html
+<template>
+    <div class="father">
+        <child>
+          <div class="tmpl" slot="slot1">
+            <span>菜单1</span>
+          </div>
+          <div class="tmpl">
+            <span>菜单2</span>
+          </div>
+          <div class="tmpl" slot="slot2">
+            <span>菜单3</span>
+          </div>
+        </child>
+    </div>
+</template>
+```
+
+* slot-scope 带数据插槽
+
+子组件
+```html
+<template>
+  <div class="child">
+    <slot :data="data"></slot>
+  </div>
+</template>
+ 
+ export default {
+    data: function(){
+      return {
+        data: ['zhangsan','lisi','wanwu','zhaoliu','tianqi','xiaoba']
+      }
+    }
+}
+```
+
+父组件
+```html
+<template>
+  <div class="father">
+    <child>
+      <template slot-scope="user">
+        <ul>
+          <li v-for="item in user.data">{{item}}</li>
+        </ul>
+      </template>
+    </child>
+    <child>
+      模板
+    </child>
+  </div>
+</template>
+```
+
+## axios请求响应拦截
+
+config.js
+```js
+import axios from 'axios';//引入axios依赖
+import { Message } from 'element-ui';
+import Cookies from 'js-cookie'; //引入cookie操作依赖
+import router from '@/router/index'//引入路由对象
+axios.defaults.timeout = 5000;
+axios.defaults.baseURL ='';
+
+//http request 封装请求头拦截器
+axios.interceptors.request.use(
+  config => {
+    var token = ''
+    if(typeof Cookies.get('user') === 'undefined'){
+      //此时为空
+    }else {
+      token = JSON.parse(Cookies.get('user')).token
+    }//注意使用的时候需要引入cookie方法，推荐js-cookie
+    config.data = JSON.stringify(config.data);
+    config.headers = {
+      'Content-Type':'application/json'
+    }
+    if(token != ''){
+     config.headers.token = token;
+    }
+    return config;
+  },
+  error => {
+    return Promise.reject(err);
+  }
+);
+
+//http response 封装后台返回拦截器
+axios.interceptors.response.use(
+  response => {
+    //当返回信息为未登录或者登录失效的时候重定向为登录页面
+    if(response.data.code == 'W_100004' || response.data.message == '用户未登录或登录超时，请登录！'){
+      router.push({
+        path:"/",
+        query:{redirect:router.currentRoute.fullPath}//从哪个页面跳转
+      })
+    }
+    return response;
+  },
+  error => {
+    return Promise.reject(error)
+  }
+)
+
+// 移除拦截器
+// var myInterceptor = axios.interceptors.request.use(function () {/*...*/});
+// axios.interceptors.request.eject(myInterceptor);
+
+/**
+ * 封装get方法
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function fetch(url,params={}){
+  return new Promise((resolve,reject) => {
+    axios.get(url,{
+      params:params
+    })
+      .then(response => {
+        resolve(response.data);
+      })
+      .catch(err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装post请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function post(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.post(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装导出Excal文件请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function exportExcel(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios({
+      method: 'post',
+      url: url, // 请求地址
+      data: data, // 参数
+      responseType: 'blob' // 表明返回服务器返回的数据类型
+    })
+    .then(response => {
+      resolve(response.data);
+      let blob = new Blob([response.data], {type: "application/vnd.ms-excel"});
+      let fileName = "订单列表_"+Date.parse(new Date())+".xls" ;
+      if (window.navigator.msSaveOrOpenBlob) {
+        navigator.msSaveBlob(blob, fileName);
+      } else {
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+      }
+    },err => {
+      reject(err)
+    })
+  })
+}
+/**
+ * 封装patch请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function patch(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.patch(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装put请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function put(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.put(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+```
+
+在main.js中进行引用，并配置一个别名（$ajax）来进行调用:
+```js
+import axios from 'axios'
+import '../config/axios'
+
+Vue.prototype.$ajax = axios;
+```
+
+调用
+```js
+this.$ajax({
+　　method: 'post',
+　　url: '/login',
+　　data: {
+　　　　'userName': 'xxx',
+　　　　'password': 'xxx'
+　　}
+}).then(res => {
+　　console.log(res)
+})
 ```

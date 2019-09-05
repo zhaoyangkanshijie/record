@@ -13,6 +13,7 @@
 * [页面传参与获取](#页面传参与获取)
 * [使用cookie](#使用cookie)
 * [宿主事件监听器](#宿主事件监听器)
+* [请求响应拦截](#请求响应拦截)
 
 ## angular项目结构
 * e2e文件夹：end to end，测试目录，主要用于集成测试。
@@ -257,6 +258,7 @@ export class UnsaveGuard implements CanDeactivate<ProductComponent>{
     }
 }
 ```
+
 ## 父子组件通信
 
 子组件
@@ -393,6 +395,7 @@ export class Child2Component implements OnInit {
   }
 }
 ```
+
 ## 页面传参与获取
 
 * 使用routerLink跳转
@@ -465,5 +468,239 @@ public onScroll = (e) => {
     if(document.documentElement.scrollTop > 252){
         this.isScollDown = true;
     }
+}
+```
+
+## 请求响应拦截
+
+1. http拦截器
+
+实现HttpInterceptor 接口
+```ts
+import {
+  HttpErrorResponse,
+  HttpEvent,
+  HttpHandler,
+  HttpInterceptor,
+  HttpRequest,
+  HttpResponse
+} from "@angular/common/http";
+import { Observable, of, throwError} from "rxjs";
+import { catchError } from "rxjs/internal/operators";
+import { Router } from "@angular/router";
+import { Injectable } from '@angular/core';
+
+import { AuthService } from './../app.service';
+import { environment } from 'src/environments/environment';
+
+/** Pass untouched request through to the next request handler. */
+@Injectable()
+export class MyInterceptor implements HttpInterceptor {
+
+  constructor(private router: Router,private authService: AppService) {}
+
+  intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
+    // 获取本地存储的token值，
+    const authToken = this.authService.getAuthorizationToken();
+    // 若token存在，则对请求添加请求头
+    // 并格式化处理url地址，简化service中接口地址的编辑
+    if (authToken) {
+      const authReq = req.clone({
+        headers: req.headers.set('Authorization', 'bearer' + authToken),
+        url: environment.api_endpoint + req.url
+      });
+      return next
+      // 返回处理后的请求
+      .handle(authReq) 
+      // 返回结果错误处理
+      .pipe(catchError(error => this.auth.handleError(error)));
+    }
+    // 若token不存在，则不对请求进行处理
+    return next.handle(req).pipe(
+      catchError((err: HttpErrorResponse) => this.handleData(err))
+    ) ;
+  }
+
+  private handleData(
+    res: HttpResponse<any> | HttpErrorResponse,
+  ): Observable<any> {
+    // 业务处理：一些通用操作
+    switch (res.status) {
+      case 401:
+        console.log('not login') ;
+        this.router.navigate(['/']);
+        return of(res) ;
+        break ;
+      default:
+    }
+    return throwError(res) ;
+  }
+}
+```
+
+在app.module.ts中provide
+```ts
+providers: [
+{provide: HTTP_INTERCEPTORS, useClass: MyInterceptor, multi:true}
+],
+```
+
+2. axios拦截器
+
+在angular-cli项目的 src/ 文件夹下新建一个文件夹为 plugins，然后在 plugins/ 下新建 config.js  文件，写入如下代码
+```ts
+import axios from 'axios';//引入axios依赖
+
+axios.defaults.timeout = 5000;
+axios.defaults.baseURL ='';
+
+// 定义加载动画
+let loading = null
+let loadingShow = false
+
+//http request 封装请求头拦截器
+axios.interceptors.request.use(
+  config => {
+    if (!loadingShow) {
+      loadingShow = true
+      loading = message.loading('数据加载中...', 0)
+    }
+ 
+    // 设置 token 判断是否存在token，如果存在的话，则每个http header都加上token
+    if (sessionStorage.getItem('auth')) {
+      conf.headers['Authorize'] = sessionStorage.getItem('auth')
+
+    return config;
+  },
+  error => {
+    return Promise.reject(err);
+  }
+);
+
+//http response 封装后台返回拦截器
+axios.interceptors.response.use(
+  response => {
+    //当返回信息为未登录或者登录失效的时候重定向为登录页面
+    if(response.data.code == 'W_100004' || response.data.message == '用户未登录或登录超时，请登录！'){
+      // todo
+    }
+    return response;
+  },
+  error => {
+    return Promise.reject(error)
+  }
+)
+
+// 移除拦截器
+// var myInterceptor = axios.interceptors.request.use(function () {/*...*/});
+// axios.interceptors.request.eject(myInterceptor);
+
+/**
+ * 封装get方法
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function fetch(url,params={}){
+  return new Promise((resolve,reject) => {
+    axios.get(url,{
+      params:params
+    })
+      .then(response => {
+        resolve(response.data);
+      })
+      .catch(err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装post请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function post(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.post(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装导出Excal文件请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function exportExcel(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios({
+      method: 'post',
+      url: url, // 请求地址
+      data: data, // 参数
+      responseType: 'blob' // 表明返回服务器返回的数据类型
+    })
+    .then(response => {
+      resolve(response.data);
+      let blob = new Blob([response.data], {type: "application/vnd.ms-excel"});
+      let fileName = "订单列表_"+Date.parse(new Date())+".xls" ;
+      if (window.navigator.msSaveOrOpenBlob) {
+        navigator.msSaveBlob(blob, fileName);
+      } else {
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+        window.URL.revokeObjectURL(link.href);
+      }
+    },err => {
+      reject(err)
+    })
+  })
+}
+/**
+ * 封装patch请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function patch(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.patch(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+/**
+ * 封装put请求
+ * @param url
+ * @param data
+ * @returns {Promise}
+ */
+export function put(url,data = {}){
+  return new Promise((resolve,reject) => {
+    axios.put(url,data)
+      .then(response => {
+        resolve(response.data);
+      },err => {
+        reject(err)
+      })
+  })
+}
+```
+
+在组件中import以上文件并使用axios
+```ts
+import axios from '../../Plugins/axios';
+
+getSomething() {
+  axios.get(...)
 }
 ```
