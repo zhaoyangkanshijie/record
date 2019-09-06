@@ -14,6 +14,7 @@
 * [使用cookie](#使用cookie)
 * [宿主事件监听器](#宿主事件监听器)
 * [请求响应拦截](#请求响应拦截)
+* [rxjs](#rxjs)
 
 ## angular项目结构
 * e2e文件夹：end to end，测试目录，主要用于集成测试。
@@ -702,5 +703,195 @@ import axios from '../../Plugins/axios';
 
 getSomething() {
   axios.get(...)
+}
+```
+
+## rxjs
+
+* 引入
+```ts
+import { Observable, fromEvent, from, of, interval, throwError  } from "rxjs";
+import { mapTo, map, scan, mergeMap, concatMap, bufferTime, take, reduce, filter, throttleTime, throttle, distinctUntilChanged, debounce, debounceTime } from 'rxjs/operators';
+```
+
+* 使用
+
+从 rxjs6 版本往后，所有的操作符需要再 pipe 中执行
+```ts
+ObservableObject.pipe(funcA,funcB,...).subscribe(...)
+```
+
+* 创建操作符
+
+1. fromEvent: 创建一个 Observable，该 Observable 发出来自给定事件对象的指定类型事件
+```ts
+// 获取html元素
+const btnElem = document.querySelector('button#rxjsBtn');
+// 创建按钮的点击事件为可观察对象
+fromEvent(btnElem, 'click').pipe(scan(count => count + 1, 0)) // count为定义的变量；逗号后面的0为count的初始值；箭头后面的语句值为scan返回的值；
+.subscribe((count) => {
+    console.log('fromEvent' + count);
+});
+// 第一次点击输出: fromEvent1；第二次点击输出fromEvent2;依次同理
+```
+
+2. from: 将各种其他对象和数据类型转化为 Observables
+```ts
+const arrayData = [5, 6];
+from(arrayData).pipe(
+    scan((scanData, item) => scanData += item, 10),
+    map((item) => item * 2),
+).subscribe((data: any) => {
+    console.log('from:' + data);//from:30 from:42
+});
+```
+
+3. of: 创建一个 Observable，它会依次发出由你提供的参数，最后发出完成通知。
+```ts
+of('value1', 'value2')
+.subscribe((data: any) => {
+    console.log('of：' + data);//of：value1 of: value2
+});
+
+```
+
+4. interval: 返回一个无线自增的序列整数
+```ts
+const numbers = interval(1000);
+numbers.subscribe(x => console.log('interval:'+x));
+// 浏览器输出: interval:1 interval2 依次增加
+```
+
+5. create: 创建Observable对象, 当观察者( Observer )订阅该 Observable 时，它会执行指定的函数
+```ts
+new Observable((obsever) => {
+      obsever.next('add');
+      obsever.next('upt');
+      obsever.complete();
+      obsever.next('del');
+    }).pipe(map(data => data + 'Map')).subscribe((data: any) => {
+      console.log(data);
+    });
+// 浏览器输出: addMap uptMap
+```
+
+* 转换操作符
+
+1. Map: 把每个源值传递给转化函数以获得相应的输出值
+```ts
+from([1, 2]).pipe(.map((item) => item * 2))
+.subscribe((data: any) => { console.log('map:' + data);});
+// 浏览器输出: map: 2 map: 4
+```
+
+2. MergeMap: 将每个源值投射成 Observable ，该 Observable 会合并到输出 Observable 中,可用于串联请求
+```ts
+const mergeA = of(1, 2, 3);
+const mergeB = mergeA.pipe(map(r => of(r)),mergeMap(r => r));
+mergeB.subscribe(c => console.log('mergeMap:' + c));
+// 浏览器输出: mergeMap1 mergeMap2 mergeMap3
+```
+
+3. MapTo: 类似于 map，但它每一次都把源值映射成同一个输出值。
+```ts
+of(1, 2, 3).pipe(mapTo(33)).subscribe(data => {console.log(data);});
+// 浏览器输出: 3个33
+```
+
+4. scan: 对源 Observable 使用累加器函数，返回生成的中间值，可选的初始值
+```ts
+from([1, 2]).pipe(
+  scan((acc, item) => acc += item, 10)) // acc为一个新变量，item为[1,2]中的每一项， 10为新变量acc的默认初始值；返回新生成的中间值acc reduce同理
+  .subscribe(v => console.log(v))
+  //  浏览器输出 11  13
+```
+
+5. reduce: 和scan同理；只不过中间变量的值不会清0，会保留上一次源操作之后的得到的中间值；并且只会输出最后一个值；
+```ts
+from([1, 2]).pipe(
+  reduce((acc, item) => acc += item, 10))
+  .subscribe(v => console.log(v))
+// 输出13
+```
+
+* 过滤操作符
+
+1. filter: 数据进行过滤返回你想要的数据
+```ts
+from([2, 3, 4]).pipe(
+    filter(item => item <= 3))
+    .subscribe(v => console.log(v))
+// 浏览器输出: 2 3
+```
+
+2. throttleTime: 在一定时间范围内不管产生了多少事件，它只放第一个过去，剩下的都将舍弃
+```ts
+@ViewChild('child') child;
+
+ngAfterViewInit() {
+  this.do()
+}
+
+do() {
+  // 一秒内只触发一次点击事件
+  fromEvent(this.child.nativeElement, 'click').pipe(
+    throttleTime(1000),
+    scan(count => count + 1, 0))
+    .subscribe(data => {
+      console.log('点击了' + data + '次');
+    });
+}
+```
+
+3. distinctUntilChanged: 把相同的元素过滤掉，如果提供了比较器功能，则将为每个项目调用它以测试是否应该发出该值。如果未提供比较器功能，则默认使用相等性检查
+```ts
+of(1, 1, 2, 2, 2, 1, 1, 2, 3, 3, 4)
+    .pipe(distinctUntilChanged())
+    .subscribe(val => {
+      console.log(val)
+    })
+    //1 2 1 2 3 4
+```
+
+4. throttle: 以某个时间间隔为阈值，在 durationSelector 完成前将抑制新值的发出
+```ts
+const source = interval(1000);
+// 节流2秒后才发出最新值
+const example = source.pipe(throttle(val => interval(2000)));
+// 输出: 0...3...6...9
+const subscribe = example.subscribe(val => console.log(val));
+```
+
+5. debounce: 根据一个选择器函数，舍弃掉在两次输出之间小于指定时间的发出值。
+```ts
+// 每1秒发出值, 示例: 0...1...2
+const interval$ = interval(1000);
+// 每1秒都将 debounce 的时间增加200毫秒
+const debouncedInterval = interval$.pipe(debounce(val => interval(val * 200)));
+/*
+  5秒后，debounce 的时间会大于 interval 的时间，之后所有的值都将被丢弃
+  输出: 0...1...2...3...4......(debounce 的时间大于1秒后则不再发出值)
+*/
+const subscribe = debouncedInterval.subscribe(val =>
+  console.log(`Example Two: ${val}`)
+);
+```
+
+6. debounceTime: 舍弃掉在两次输出之间小于指定时间的发出值。
+```ts
+@ViewChild('child') child;
+
+ngAfterViewInit() {
+  this.do()
+}
+
+do() {
+  // 一秒内只触发一次点击事件
+  fromEvent(this.child.nativeElement, 'click').pipe(
+    debounceTime(1000),
+    scan(count => count + 1, 0))
+    .subscribe(data => {
+      console.log('点击了' + data + '次');
+    });
 }
 ```
