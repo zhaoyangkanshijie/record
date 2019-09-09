@@ -21,6 +21,7 @@
 * [使用cookie](#使用cookie)
 * [使用插槽](#使用插槽)
 * [axios请求响应拦截](#axios请求响应拦截)
+* [keep-alive](#keep-alive)
 
 ## vue自带指令
 
@@ -1049,3 +1050,107 @@ this.$ajax({
 　　console.log(res)
 })
 ```
+
+## keep-alive
+
+keep-alive是vue内置组件，把你想要缓存的东西缓存到内存，避免重新渲染Dom，vue本身是单页面，而keep-alive对单页面以及mode:history模式下有效。
+版本2.1.0后提供了include/exclude两个属性 可以针对性缓存相应的组件，2.2后加入了beforeRouteUpdate钩子函数。
+
+* 属性介绍
+1. include 定义了需要缓存的组件名，参数可以使用字符串或者正则字符串，例如“a,b” 或者/a|b/
+2. exclude 定义了不需要缓存的组件名, 用法同上
+3. max 定义最大缓存数量，超过max，会默认把最久没有被使用过的从缓存里剔除（见源码注释）
+
+* 钩子函数
+1. 当组件第一次渲染的时候会先跟传统组件一样触发到mounted钩子，然后触发activated钩子。之后就只会触发下面两个钩子。
+2. activated  当前组件处于激活状态，当组件显示的时候触发该钩子
+3. deactivated 当前组件处于非激活状态，当组件隐藏的时候触发该钩子
+
+* 常见用法
+```html
+<keep-alive include="test-keep-alive">
+  <!-- 将缓存name为test-keep-alive的组件 -->
+  <component></component>
+</keep-alive>
+
+<keep-alive include="a,b">
+  <!-- 将缓存name为a或者b的组件，结合动态组件使用 -->
+  <component :is="view"></component>
+</keep-alive>
+
+<!-- 使用正则表达式，需使用v-bind -->
+<keep-alive :include="/a|b/">
+  <component :is="view"></component>
+</keep-alive>
+
+<!-- 动态判断 -->
+<keep-alive :include="includedComponents">
+  <router-view></router-view>
+</keep-alive>
+
+<keep-alive exclude="test-keep-alive">
+  <!-- 将不缓存name为test-keep-alive的组件 -->
+  <component></component>
+</keep-alive>
+```
+```js
+export default {
+  name: 'test-keep-alive',
+  data () {
+    return {
+        includedComponents: "test-keep-alive"
+    }
+  }
+}
+```
+
+* 结合router，缓存部分页面
+1. 配置路由 router文件
+```js
+export default new Router({
+  routes: [
+    {
+      path: '/',
+      name: 'Hello',
+      component: Hello,
+      meta: {
+        keepAlive: false // 不需要缓存
+      }
+    },
+    {
+      path: '/page1',
+      name: 'Page1',
+      component: Page1,
+      meta: {
+        keepAlive: true // 需要被缓存
+      }
+    }
+  ]
+})
+```
+2. 配置app.vue
+```html
+<keep-alive>
+  <router-view v-if="$route.meta.keepAlive"></router-view>
+</keep-alive>
+<router-view v-if="!$route.meta.keepAlive"></router-view>
+```
+3. 可设置路由守卫（可选）
+```js
+beforeRouteEnter(to,from,next){
+  if(to.name == 'test'){
+    from.meta.keepAlive = true;
+  }
+  else{
+    from.meta.keepAlive = false;
+  }
+  next();
+}
+```
+
+* 注意事项
+1. 不要在keep-alive 同时渲染多个组件，会被忽略.
+2. keep-alive 里包裹组件的子组件们都会触发activated和deactivate钩子（2.2.0+）版本后
+3. keep-alive是虚拟组件，不会生成任何dom
+
+
