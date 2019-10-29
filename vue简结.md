@@ -22,6 +22,7 @@
 * [使用插槽](#使用插槽)
 * [axios请求响应拦截](#axios请求响应拦截)
 * [keep-alive](#keep-alive)
+* [url与pushState](#url与pushState)
 
 ## vue自带指令
 
@@ -1153,4 +1154,46 @@ beforeRouteEnter(to,from,next){
 2. keep-alive 里包裹组件的子组件们都会触发activated和deactivate钩子（2.2.0+）版本后
 3. keep-alive是虚拟组件，不会生成任何dom
 
+## url与pushState
 
+* history.pushState(state, title, url) 与 history.replaceState(state, title, url)
+
+  * state是一个对象，具体内容除了最大640KB之外没有别的限制，设置后用于popState事件中，能够获取state对象
+  * title是预留参数，没作用
+  * url会修改当前url最后/***的内容
+
+  pushState方法就是向history中push一条记录，更改页面url，但是不刷新页面
+
+* popstate 事件
+
+  popstate与pushState相对应，主要在页面url变更的时候触发，一般绑定在window对象下
+
+  ```js
+  window.addEventListener('popstate', e => {
+    console.log(e);
+  });
+  // bubbles: false
+  // cancelBubble: false
+  // cancelable: false
+  // composed: false
+  // currentTarget: Window {postMessage: ƒ, blur: ƒ, focus: ƒ, close: ƒ, parent: Window, …}
+  // defaultPrevented: false
+  // eventPhase: 0
+  // isTrusted: true
+  // path: [Window]
+  // returnValue: true
+  // srcElement: Window {postMessage: ƒ, blur: ƒ, focus: ƒ, close: ƒ, parent: Window, …}
+   state: {a: 1}
+  // target: Window {postMessage: ƒ, blur: ƒ, focus: ƒ, close: ƒ, parent: Window, …}
+  // timeStamp: 807874.8699999414
+  // type: "popstate"
+  // __proto__: PopStateEvent
+  ```
+
+* vue-router页面跳转但不刷新
+
+  vue实现的单页应用中一般不会刷新页面，因为刷新之后页面中的vuex数据就不见了。
+  
+  一般情况下，url变更的时候，如location.href、history.push、replace等，页面就会刷新。
+
+  ue-router利用pushState，在页面前进的时候动态改变history的内容，添加一条记录，接着location跟着改变。同时根据router前往的路由获取对应的js资源文件并挂载到目标dom上实现页面内容的更新，但是页面本身并没有刷新。
