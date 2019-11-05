@@ -41,7 +41,8 @@
     * 注释符：#
     * 文件内容
     ```conf
-    #全局块:配置影响nginx全局的指令。一般有运行nginx服务器的用户组，nginx进程pid存放路径，日志存放路径，配置文件引入，允许生成worker process数等。
+    #全局块:配置影响nginx全局的指令。
+    #一般有运行nginx服务器的用户组，nginx进程pid存放路径，日志存放路径，配置文件引入，允许生成worker process数等。
     ...
 
     #例如：
@@ -57,7 +58,8 @@
     #制定日志路径，级别。这个设置可以放入全局块，http块，server块，级别以此为：debug|info|notice|warn|error|crit|alert|emerg
     error_log log/error.log debug;  
 
-    #events块:配置影响nginx服务器或与用户的网络连接。有每个进程的最大连接数，选取哪种事件驱动模型处理连接请求，是否允许同时接受多个网路连接，开启多个网络连接序列化等。
+    #events块:配置影响nginx服务器或与用户的网络连接。
+    #有每个进程的最大连接数，选取哪种事件驱动模型处理连接请求，是否允许同时接受多个网路连接，开启多个网络连接序列化等。
     events {
         ...
         #例如：
@@ -74,7 +76,8 @@
         worker_connections 1024;
     }
 
-    #http块:可以嵌套多个server，配置代理，缓存，日志定义等绝大多数功能和第三方模块的配置。如文件引入，mime-type定义，日志自定义，是否使用sendfile传输文件，连接超时时间，单连接请求数等。
+    #http块:可以嵌套多个server，配置代理，缓存，日志定义等绝大多数功能和第三方模块的配置。
+    #如文件引入，mime-type定义，日志自定义，是否使用sendfile传输文件，连接超时时间，单连接请求数等。
     http
     {
         #http全局块
@@ -96,7 +99,9 @@
         #$time_local:用来记录访问时间与时区；
         #$request:用来记录请求的url与http协议；
         #$status:用来记录请求状态；成功是200，
-        #$body_bytes_s ent:记录发送给客户端文件主体内容大小；#$http_referer:用来记录从那个页面链接访问过来的；#$http_user_agent:记录客户端浏览器的相关信息；
+        #$body_bytes_s ent:记录发送给客户端文件主体内容大小；
+        #$http_referer:用来记录从那个页面链接访问过来的；
+        #$http_user_agent:记录客户端浏览器的相关信息；
         log_format myFormat '$remote_addr–$remote_user [$time_local] $request $status $body_bytes_sent $http_referer $http_user_agent $http_x_forwarded_for';
 
         #combined为日志格式的默认值
@@ -118,7 +123,7 @@
         }
 
         #错误页
-        error_page 404 https://www.baidu.com; 
+        error_page 404 https://www.baidu.com;
 
         #server块:配置虚拟主机的相关参数，一个http中可以有多个server。
         server
