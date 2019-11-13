@@ -422,9 +422,10 @@ this.router.navigate(['user', 1],{ fragment: 'top' });
 * 获取参数
     * snapshot
     ```ts
-    constructor( public activeRoute: ActivateRoute ) { };
+    import { ActivatedRoute } from '@angular/router';
+    constructor( public activatedRoute: ActivatedRoute ) { };
     ngOnInit(){
-        this.id= this.activeRoute.snapshot.params['id'];
+        this.id= this.activatedRoute.snapshot.params['id'];
     };
     ```
     * queryParams
