@@ -257,6 +257,22 @@
     * -n ：后面接数字，代表显示几行
     * -f ：表示持续侦测后面所接的档名，要等到按下[ctrl]-c才会结束tail的侦测
 
+* cat [-AbeEnstTuv] [--help] [--version] fileName
+
+    把文档串连接后传到基本输出
+    * -n 或 --number 由 1 开始对所有输出的行数编号
+    * -b 或 --number-nonblank 和 -n 相似，只不过对于空白行不编号
+    * -s 或 --squeeze-blank 当遇到有连续两行以上的空白行，就代换为一行的空白行
+    * -v 或 --show-nonprinting
+
+    例子：
+    * 显示整个文件：cat filename
+    * 创建一个文件：cat > filename
+    * 把textfile1的内容加上行号后输入到textfile2里：cat -n textfile1 > textfile2
+    * 把textfile1和textfile2的内容加上行号（空白行不加）之后将内容加到textfile3：cat -b textfile1 textfile2 >> textfile3
+
+
+
 ## 文本编辑器
 
 * 参考链接：[Linux vi/vim](https://www.w3cschool.cn/linux/linux-vim.html)
@@ -319,6 +335,15 @@
 * ifconfig
 
     显示以太网卡的配置 
+
+* curl [option] [url]
+
+    在命令行中利用URL进行数据或者文件传输
+    * 发送GET请求来获取链接内容到标准输出：curl http://www.linux.com
+    * 显示HTTP头，而不显示文件内容：curl -l http://www.linux.com
+    * 同时显示HTTP头和文件内容：curl -i http://www.linux.com
+    * 将返回结果保存到文件：curl -o save.txt http://www.linux.com
+    * 同时下载多个文件:curl -o save.txt http://www.linux.com  -o save2.txt http://www.linux2.com
 
 ## 进程管理
 
