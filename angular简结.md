@@ -401,8 +401,8 @@ export class Child2Component implements OnInit {
 
 * 使用routerLink跳转
 ```html
-<a routerLink=["/exampledetail",id]></a>
-<a routerLink=["/exampledetail",{queryParams:object}] ></a>
+<a routerLink=["/exampledetail",id]></a>url为/exampledetail/id，使用snapshot.params获取参数
+<a routerLink=["/exampledetail",{queryParams:object}] ></a>url为/exampledetail?...=...&...，使用snapshot.queryParams获取参数
 ```
 * 使用navigate跳转
 ```ts
@@ -416,7 +416,7 @@ this.router.navigate(['user', 1],{ queryParams: {id: '1',status: true});//使用
 路由中传参数 /user/1?id=1
 
 this.router.navigate(['user', 1],{ queryParams: {id: '1',status: true},skipLocationChange: true });
-路由中传参数 /user/1 隐藏?后面的内容，但功能同上
+路由中传参数同上,但url不会变化
 
 this.router.navigate(['user', 1],{ fragment: 'top' });
 路由中锚点跳转 /user/1#top
@@ -443,6 +443,10 @@ this.router.navigate(['user', 1],{ fragment: 'top' });
         })
     }
     ```
+
+* 注意
+
+  跟vue不同无法通过router.push做到既传参数，url又不显示参数
 
 ## 使用cookie
 1. npm install ngx-cookie-service
