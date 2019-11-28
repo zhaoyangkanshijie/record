@@ -406,14 +406,17 @@ export class Child2Component implements OnInit {
 ```
 * 使用navigate跳转
 ```ts
-this.router.navigate(['user', 1]);
+this.router.navigate(['user', 1]);//使用snapshot.params
 以根路由为起点跳转
 
 this.router.navigate(['user', 1],{relativeTo: route});
 默认值为根路由，设置后相对当前路由跳转，route是ActivatedRoute的实例，使用需要导入ActivatedRoute
 
-this.router.navigate(['user', 1],{ queryParams: {id: '1',status: true} });
+this.router.navigate(['user', 1],{ queryParams: {id: '1',status: true});//使用snapshot.queryParams
 路由中传参数 /user/1?id=1
+
+this.router.navigate(['user', 1],{ queryParams: {id: '1',status: true},skipLocationChange: true });
+路由中传参数 /user/1 隐藏?后面的内容，但功能同上
 
 this.router.navigate(['user', 1],{ fragment: 'top' });
 路由中锚点跳转 /user/1#top
