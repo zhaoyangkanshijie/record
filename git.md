@@ -170,3 +170,40 @@ head:指向当前分支
 
     1. [git stash的基本使用方法](https://jingyan.baidu.com/article/49ad8bceacac6b5834d8fa9a.html)
     2. [git 冲突解决](https://www.cnblogs.com/jiangxiaobo/p/9856697.html)
+
+## 撤销操作
+
+通过git log查看commitID
+
+* 从缓存区中撤销到上一个版本
+
+    1. git reset HEAD .
+    2. git reset HEAD a.txt
+
+* 回滚到上一个版本
+
+    git revert HEAD
+
+    回滚后需重新推送git push origin master，同时也留下一条提交记录
+
+* 回滚到某一操作
+
+    git revert commitID
+
+* 具体场景和操作
+
+    [Git撤销&回滚操作(git reset 和 get revert)](https://blog.csdn.net/asoar/article/details/84111841)
+
+## 推送分支
+
+* 将本地仓库与远程库关联
+
+    git remote add origin git@xxx
+
+* 查看远程库详细信息
+
+    git remote -v
+
+* 推送该分支到远程仓库对应的分支(如master)
+
+    git push origin master
