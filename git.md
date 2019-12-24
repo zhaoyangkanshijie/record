@@ -194,6 +194,59 @@ head:指向当前分支
 
     [Git撤销&回滚操作(git reset 和 get revert)](https://blog.csdn.net/asoar/article/details/84111841)
 
+## 标签
+
+打标签（tag）标记一个版本号
+
+* 创建标签
+
+    git tag -a "指定标签名" -m "指定说明文字"
+
+* 给指定的commit打标签
+
+    git tag -a "指定标签名" commitID
+
+* 删除标签
+
+    git tag -d 标签名
+
+* 删除远程标签
+
+    git push origin --delete tag <tagname>
+
+* 本地标签推送到远程
+
+    1. 推送指定标签 git push origin v1.0.0
+    2. 一次性推送全部尚未推送到远程的本地标签 git push origin --tags
+
+* 重命名tag
+
+    1. 删除原有tag，重新添加
+
+        git tag -d <old-tag>  
+
+        git tag -a <new-tag> -m"information" 
+
+    2. 强制替换，再删除原有
+
+        git tag -f <new-tag> <old-tag>
+
+        git tag -d <old-tag>
+
+* 获取指定tag代码
+
+    1. 切换到指定标签，提示你当前处于一个“detached HEAD" 状态，因为 tag 相当于是一个快照，是不能更改它的代码的
+
+        git checkout v1.0.0
+
+    2. 如果要在 tag 代码的基础上做修改，你需要一个分支
+
+        git checkout -b branch_name tag_name
+
+    3. 切回到之前的HEAD指向（以master为例）
+
+        git checkout master
+
 ## 推送分支
 
 * 将本地仓库与远程库关联
