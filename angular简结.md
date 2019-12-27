@@ -15,6 +15,7 @@
 * [宿主事件监听器](#宿主事件监听器)
 * [请求响应拦截](#请求响应拦截)
 * [rxjs](#rxjs)
+* [引入外部js](#引入外部js)
 
 ## angular项目结构
 * e2e文件夹：end to end，测试目录，主要用于集成测试。
@@ -903,3 +904,25 @@ do() {
     });
 }
 ```
+
+### 引入外部js
+
+参考链接：[Angular 引入外部 js 文件的方法（引入 jQuery）](https://segmentfault.com/a/1190000020051868)
+
+1. tsconfig.json
+
+    在compilerOptions下新增："allowJs":true
+
+2. 外部js文件放置
+
+    例如放在：assets/lib/jquery-3.4.1.js
+
+3. angular.json
+
+    找到architect下的scripts，加入"src/assets/lib/jquery-3.4.1.js"
+
+4. 调用
+
+    import * as ejs from 'src/assets/lib/jquery-3.4.1.js';
+
+    console.log(ejs("body").height());

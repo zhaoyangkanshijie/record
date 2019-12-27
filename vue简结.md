@@ -23,6 +23,7 @@
 * [axios请求响应拦截](#axios请求响应拦截)
 * [keep-alive](#keep-alive)
 * [url与pushState](#url与pushState)
+* [引入外部js](#引入外部js)
 
 ## vue自带指令
 
@@ -1197,3 +1198,38 @@ beforeRouteEnter(to,from,next){
   一般情况下，url变更的时候，如location.href、history.push、replace等，页面就会刷新。
 
   ue-router利用pushState，在页面前进的时候动态改变history的内容，添加一条记录，接着location跟着改变。同时根据router前往的路由获取对应的js资源文件并挂载到目标dom上实现页面内容的更新，但是页面本身并没有刷新。
+
+## 引入外部js
+
+1. 方法1
+
+    改造外部js
+    ```js
+    var MD5 = function (string) {
+
+    }
+    export {
+      MD5
+    }
+    ```
+    页面局部引用import * as md5 from '路径'
+
+2. 方法2
+
+    * main.js
+
+        import XX from “路径”
+
+        Vue.prototype.aa=XX
+
+    * 引入的js
+
+        ```js
+        export {
+          用到的函数名
+        }
+        ```
+
+    * 调用
+
+        this.aa.函数()
