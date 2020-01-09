@@ -1239,7 +1239,9 @@ beforeRouteEnter(to,from,next){
 
   * vue的初始化
 
-    vue2中，new Vue的时候，调用Observer，通过Object.defineProperty监听data、computed、props属性变化，在调用Compiler解析模板指令，解析到属性时再通过Watcher绑定更新函数，使属性值变化时，Observer的setter调用对应watcher，在更新dom。
+    vue2中，new Vue的时候，调用Observer，通过Object.defineProperty监听data、computed、props属性变化，在调用Compiler解析模板指令，解析到属性时再通过Watcher绑定更新函数，使属性值变化时，Observer的setter通知对应watcher，再更新dom，在render的时候，需要读取对象值，触发getter进行依赖收集，把watcher存到订阅者数组中。
+
+    ![vue.png](vue.png)
 
     当Object.defineProperty遍历属性时，数据规模大，则占用内存多，而且无法监听es6的Set、WeakSet、Map、WeakMap、Class、属性的新加或者删除、数组元素的增加和删除，因此使用proxy代替，但因proxy不兼容IE，因此IE中会依然使用defineProperty。
 
