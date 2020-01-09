@@ -24,6 +24,7 @@
 * [keep-alive](#keep-alive)
 * [url与pushState](#url与pushState)
 * [引入外部js](#引入外部js)
+* [从defineProperty到proxy](#从defineProperty到proxy)
 
 ## vue自带指令
 
@@ -1233,3 +1234,24 @@ beforeRouteEnter(to,from,next){
     * 调用
 
         this.aa.函数()
+
+## 从defineProperty到proxy
+
+  * vue的初始化
+
+    vue2中，new Vue的时候，调用Observer，通过Object.defineProperty监听data、computed、props属性变化，在调用Compiler解析模板指令，解析到属性时再通过Watcher绑定更新函数，使属性值变化时，Observer的setter调用对应watcher，在更新dom。
+
+    当Object.defineProperty遍历属性时，数据规模大，则占用内存多，而且无法监听es6的Set、WeakSet、Map、WeakMap、Class、属性的新加或者删除、数组元素的增加和删除，因此使用proxy代替，但因proxy不兼容IE，因此IE中会依然使用defineProperty。
+
+    ```js
+    const observable = (obj) => {
+      return new Proxy(obj, {
+        get(target, property, receiver) {
+          return Reflect.get(target, property, receiver)
+        },
+        set(target, property, value, receiver) {
+          return Reflect.set(target, property, value, receiver)
+        }
+      })
+    }
+    ```
