@@ -26,6 +26,7 @@
 * [引入外部js](#引入外部js)
 * [从defineProperty到proxy](#从defineProperty到proxy)
 * [按需加载之路由懒加载](#按需加载之路由懒加载)
+* [开启gzip模式](#开启gzip模式)
 
 ## vue自带指令
 
@@ -1336,3 +1337,21 @@ beforeRouteEnter(to,from,next){
       ]
     })
     ```
+
+## 开启gzip模式
+
+  vue.config.js配置，与outputDir同级
+  ```js
+  configeWebpack: config => {
+    if(process.env.NODE_ENV === 'production') {
+       return {
+         plugins: [new CompressionPligin({
+           test: /\.js$|\.html$|\.css/,
+           threshold: 10240,//超过10k压缩
+           deleteOriginalAssets: false//是否删除原文件
+         })]
+       }
+    }
+  }
+  ```
+  生成.js.gz文件，一般浏览器会支持，根据Request Headers的Accept-Encoding标签进行鉴别
