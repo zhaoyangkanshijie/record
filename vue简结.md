@@ -25,6 +25,7 @@
 * [url与pushState](#url与pushState)
 * [引入外部js](#引入外部js)
 * [从defineProperty到proxy](#从defineProperty到proxy)
+* [按需加载之路由懒加载](#按需加载之路由懒加载)
 
 ## vue自带指令
 
@@ -1256,4 +1257,82 @@ beforeRouteEnter(to,from,next){
         }
       })
     }
+    ```
+
+## 按需加载之路由懒加载
+
+* 为什么要按需加载
+
+  打包大型应用，js大，影响加载，所以需要把不同路由对应的组件分割成不同的代码块，加载才高效。
+
+* 方法
+
+  1. es提案的import() (推荐)
+
+    * Webpack 自动代码分割的异步组件 (需要webpack>2)
+
+      ```js
+      const router = new VueRouter({
+        routes: [
+          {
+            path: '/',
+            name: 'home',
+            component: () => import('./Home.vue')
+          }
+        ]
+      })
+      ```
+
+    * 把组件按组分块
+    
+      把某个路由下的所有组件都打包在同个异步块 (chunk) 中,用注释语法来提供 chunk name(Webpack > 2.4)
+
+      ```js
+      const router = new VueRouter({
+        routes: [
+          {
+            path: '/',
+            name: 'home',
+            component: () => import(/* webpackChunkName: "login" */ './forgetAccount.vue')
+          },
+          {
+            path: '/',
+            name: 'home',
+            component: () => import(/* webpackChunkName: "login" */ './forgetPassword.vue')
+          },
+          {
+            path: '/',
+            name: 'home',
+            component: () => import(/* webpackChunkName: "login" */ './resetPassword.vue')
+          }
+        ]
+      })
+      ```
+
+  2. webpack提供的require.ensure()
+
+    ```js
+    const router = new VueRouter({
+      routes: [
+        {
+          path: '/',
+          name: 'home',
+          component: resolve => require.ensure([], () => resolve(require('../components/Home')), 'demo')
+        }
+      ]
+    })
+    ```
+
+  3. 异步组件
+
+    ```js
+    const router = new VueRouter({
+      routes: [
+        {
+          path: '/',
+          name: 'home',
+          component: resolve => require(['../components/Home'], resolve)
+        }
+      ]
+    })
     ```
