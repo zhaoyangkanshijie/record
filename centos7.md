@@ -20,7 +20,7 @@ systemctl restart mariadb.service
 1. cd /usr/jexus/ 
 2. vim jws
 3. 将#export MONO_IOMAP="all"前面的“#”去掉!
-4. 重启Jexus服务: /usr/jexus/jws restart
+4. 重启Jexus服务: /usr/jexus/jws restart [siteName]
 
 
 ## .net 环境搭建
