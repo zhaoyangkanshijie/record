@@ -6,6 +6,27 @@
 * [初始化过程](#初始化过程)
 * vue实例
     * [initMixin](#initMixin)
+        * 合并option,统一数据格式
+        * 初始化生命周期
+        * 初始化事件
+        * 初始化render(vdom相关)
+        * 生命周期函数钩子callHook
+        * 初始化依赖注入数据
+            * defineReactive值变为响应式
+                * dep依赖收集器
+                * defineProperty/proxy劫持getter和setter
+                * dep.subs 添加订阅者
+                * dep.notify() 派发更新
+        * 初始化state
+            * 初始化props
+            * 初始化methods
+            * 初始化data
+                * Observer给对象添加getter和setter
+            * 初始化computed
+                * dirty 
+                * 延时watcher
+            * 初始化watch
+        * 初始化provide
 
 ## 目录结构
 
@@ -82,6 +103,10 @@
     [深入理解响应式原理（一）](https://blog.csdn.net/messizhao/article/details/103529315)
 
     [【vue】源码解析（2）vue中的监听器watcher用法](https://www.jianshu.com/p/7cd99f07fccf)
+
+    [Vue $mount （解析 $mount 源码）](https://www.jianshu.com/p/402e712ab90f)
+
+    [Vue编译器源码分析(三) -compileToFunctions的作用](https://zhuanlan.zhihu.com/p/87596719)
 
 2. 详解
 
@@ -230,19 +255,19 @@
 
             结果传递给defineReactive处理。
 
-            defineReactive 中的 Dep 是一个处理依赖关系的对象，具体实现在 core/observer/dep.js，Dep 主要起到连接 reactive data 与 watcher的作用，每一个 reactive data 的创建，都会随着创建一个 dep 实例。
+            defineReactive 中的 Dep 是一个处理依赖关系的对象(依赖收集器)，具体实现在 core/observer/dep.js，Dep 主要起到连接 reactive data 与 watcher的作用，每一个 reactive data 的创建，都会随着创建一个 dep 实例。
 
             创建完 dep 实例后，通过 Observer 遍历data对象对每一个键值调用defineReactive 方法，再通过defineProperty劫持data的getter和setter。
             
-            当 watcher 执行 getter 的时候，watcher 会被塞入 Dep.target，然后通过调用 dep.depend() 方法，这个数据的 dep 就和 watcher 创建了连接，即把this存入subs数组中，这个过程即为依赖收集。
+            当 watcher 执行 getter 的时候，watcher 会被塞入 Dep.target，用来存放监听器里面的update()，然后通过调用 dep.depend() 方法，这个数据的 dep 就和 watcher 创建了连接，即把this存入subs数组中。
 
             创建连接之后，当 data 被更改，触发了 setter 就可以通过 dep.notify() 通知到所有与 data的dep 创建了关联的 watcher。从而让各个 watcher 做出响应。
 
             具体的update方法在src/core/observer/watcher.js，其派发更新的逻辑在 src/core/observer/scheduler.js 的queueWatcher(this)，其实现逻辑为：watcher 先添加到⼀个队列⾥，⽤ has 对象保证同⼀个 Watcher 只添加⼀次，通过 wating 保证对 nextTick(flushSchedulerQueue) 的调⽤逻辑只有⼀次，这样不会每次数据改变都触发 watcher 的回调。
 
-            flushSchedulerQueue在对 queue 排序后，行遍历，拿到对应的 watcher ，执⾏ watcher.run()
+            flushSchedulerQueue在对 queue 排序后，遍历拿到对应的 watcher ，执⾏ watcher.run()
 
-            run 函数执⾏ this.get()获取当前的值，对于渲染 watcher ⽽⾔，它在执⾏ this.get() ⽅法求值的时候，会执⾏ getter ⽅法，触发updateComponent更新视图。
+            run 函数执⾏ this.get()获取当前的值，对于渲染 watcher ⽽⾔，它在执⾏ this.get() ⽅法求值的时候，会执⾏ getter ⽅法，把watcher移入渲染队列targetStack，排队更新视图，最后逐一清除队列元素，移除所有 subs 中的 watcer 的订阅,重新赋值。
 
         6. 初始化state(data,props,methods,watch,computed)
 
@@ -268,13 +293,13 @@
 
             * computed
 
-                从vm.$options获取到computed的key和value，在非ssr模式下，watchers[key]创建watcher实例，以便依赖收集
+                从vm.$options获取到computed的key和value，在非ssr模式下，watchers[key]创建watcher实例，以便依赖收集。
 
                 创建完 watcher，就通过 Object.defineProperty 把 computed 的 key 挂载到 vm 上。
 
                 在get中，调用 createComputed 方法，Gettercomputed data 的 watcher 是 lazy 的，当 computed data 中引用的 data 发生改变后，是不会立马重新计算值的，而只是标记一下 dirty 为 true，然后当这个 computed data 被引用的时候，上面的 getter 逻辑就会判断 watcher 是否为 dirty，如果是，就重新计算值。
 
-                watcher.depend 收集 computed data 中用到的 data 的依赖，从而能够实现当 computed data 中引用的 data 发生更改时，也能触发到 render
+                watcher.depend 收集 computed data 中用到的 data 的依赖，从而能够实现当 computed data 中引用的 data 发生更改时，也能触发到 render。
 
             * watch
 
@@ -283,4 +308,38 @@
                 $watch位于/src/core/observer/watcher.js，第一个参数expOrFn是要监听的属性或方法，数据变化后后触发watcher的run()更新视图，原理在initInjections提及
 
         7. initProvide(vm)
+
+            $options里的provide赋值到当前实例上。
+
         8. 调用created生命周期callHook(vm, 'created')
+
+    * $mount渲染函数
+
+        现分析位于dist/vue.js，还有其它版本dist/vue.esm.js,dist/vue.common.dev.js
+
+        限制el不能挂载到 body、HTML 的跟节点上
+
+        如果没有定义 render 方法，则会把 el 或者 options.template 字符串转成 render 方法，过程调用compileToFunctions
+
+            * 函数参数
+
+                参数1：模板字符串template
+
+                参数2：选项对象
+
+                    1/2 换行符或制表符做兼容处理
+                    3/4 编译{{}}完整可用和是否保留html注释
+
+            * 函数执行
+
+                获取key，缓存字符串模板的编译结果，防止重复编译
+
+
+
+
+
+
+
+                
+
+        最后调用原型上的 $mount 方法挂载
