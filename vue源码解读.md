@@ -347,6 +347,20 @@
 
                     baseCompile函数传入字符串模板(template)和最终的编译器选项(finalOptions)，通过抽象语法树来检查模板中是否存在错误表达式的，通过 detectErrors 函数实现，将compiled.ast 作为参数传递给 detectErrors 函数，该函数最终返回一个数组，该数组中包含了所有错误的收集
 
+                    baseCompile 函数是在 createCompilerCreator 函数调用时传递的实参。
+                    
+                    里面 parse 方法会用正则等方式解析 template 模板中的指令、class、style等数据，形成AST
+
+                        parseHTML 函数进行词法分析
+
+                        
+
+                    optimize 的主要作用是标记 static 静态节点，这是 Vue 在编译过程中的一处优化，后面当 update 更新界面时，会有一个 patch 的过程， diff 算法会直接跳过静态节点，从而减少了比较的过程，优化了 patch 的性能。
+
+                    generate 方法生成目标平台所需的代码，将 AST 转化成 render function 字符串的过程，得到结果是 render 的字符串以及 staticRenderFns 字符串。
+
+                    baseCompile最终返回了抽象语法树( ast )，渲染函数( render )，静态渲染函数( staticRenderFns )组成的对象
+
                 在 res 对象上添加一个 render 属性，这个 render 属性，就是最终生成的渲染函数，它的值是通过 createFunction 创建出来的。
 
                     * 第一个参数 code 为函数体字符串，该字符串将通过new Function(code) 的方式创建为函数
