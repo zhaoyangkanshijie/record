@@ -27,6 +27,7 @@
                 * 延时watcher
             * 初始化watch
         * 初始化provide
+        * $mount渲染函数
 
 ## 目录结构
 
@@ -107,6 +108,10 @@
     [Vue $mount （解析 $mount 源码）](https://www.jianshu.com/p/402e712ab90f)
 
     [Vue编译器源码分析(三) -compileToFunctions的作用](https://zhuanlan.zhihu.com/p/87596719)
+
+    [Vue编译器源码分析(四) - compile 解析](https://zhuanlan.zhihu.com/p/88105240)
+
+    [Vue编译器源码分析(五) - AST 抽象语法树](https://zhuanlan.zhihu.com/p/88363312)
 
 2. 详解
 
@@ -334,12 +339,22 @@
 
                 获取key，缓存字符串模板的编译结果，防止重复编译
 
+                compile函数对模板进行编译，返回结果对象compiled
+
+                    compile 的源码也位于vue.js中，方法createCompilerCreator
+
+                    挂载配置选项到finalOptions，添加warn方法，收集错误信息到errors数组，收集提示信息到tips数组
+
+                    baseCompile函数传入字符串模板(template)和最终的编译器选项(finalOptions)，通过抽象语法树来检查模板中是否存在错误表达式的，通过 detectErrors 函数实现，将compiled.ast 作为参数传递给 detectErrors 函数，该函数最终返回一个数组，该数组中包含了所有错误的收集
+
+                在 res 对象上添加一个 render 属性，这个 render 属性，就是最终生成的渲染函数，它的值是通过 createFunction 创建出来的。
+
+                    * 第一个参数 code 为函数体字符串，该字符串将通过new Function(code) 的方式创建为函数
+
+                    * 第二个参数 errors 是一个数组，创建函数发生错误时用来收集错误
+
+                res.staticRenderFns 是一个函数数组，是通过对compiled.staticRenderFns遍历生成的，说明：compiled 除了包含 render 字符串外，还包含一个字符串数组staticRenderFns ，且这个字符串数组最终也通过 createFunction 转为函数。staticRenderFns 的主要作用是渲染优化。
 
 
-
-
-
-
-                
 
         最后调用原型上的 $mount 方法挂载
