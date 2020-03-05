@@ -34,10 +34,21 @@
     * [stateMixin](#stateMixin)
 * [事件绑定](#事件绑定)
     * [eventsMixin](#eventsMixin)
+        * $on
+        * $once
+        * $off
+        * $emit
 * [生命周期](#生命周期)
     * [lifecycleMixin](#lifecycleMixin)
+        * _update()
+        * patch
+        * diff
+        * $forceUpdate
+        * $destroy
 * [渲染方法](#渲染方法)
     * [renderMixin](#renderMixin)
+        * $nextTick
+        * _render
 * [vue-router](#vue-router)
 * [vuex](#vuex)
 
@@ -287,6 +298,9 @@
             run 函数执⾏ this.get()获取当前的值，对于渲染 watcher ⽽⾔，它在执⾏ this.get() ⽅法求值的时候，会执⾏ getter ⽅法，把watcher移入渲染队列targetStack，排队更新视图，最后逐一清除队列元素，移除所有 subs 中的 watcer 的订阅,重新赋值。
 
             更新视图后，如果已经mounted，又没destroy，触发updated生命周期
+
+            如果组件为keep-alive，触发activated生命周期
+
 
         6. 初始化state(data,props,methods,watch,computed)
 
@@ -644,12 +658,62 @@
 
             vm.$off()移除事件
 
+        生命周期deactivated与destroy位于同一级，判断到组件为keep-alive执行
+
 ## 渲染方法
 
 ### renderMixin
 
 1. 参考链接
 
-    []()
+    [Vue源码笔记本（一）](https://zhuanlan.zhihu.com/p/25994997)
+
+    [Vue.nextTick 的原理和用途](https://segmentfault.com/a/1190000012861862)
 
 2. 详解
+
+    定义Vue.prototype.$nextTick函数，函数主体位于/src/core/util/next-tick.js
+
+        作用：在下次 DOM 更新循环结束之后执行延迟回调。在修改数据之后立即使用这个方法，获取更新后的 DOM。
+
+        问题:Vue 在修改数据后，视图不会立刻更新，而是等同一事件循环中的所有数据变化完成之后，再统一进行视图更新
+
+        事件循环：同步代码执行 -> 查找异步队列，推入执行栈，执行Vue.nextTick[事件循环1] ->查找异步队列，推入执行栈，执行Vue.nextTick[事件循环2]
+
+        应用场景：在同一方法里，修改了数据后，想立即操作DOM元素(如获取refs，document.getElementById)，会不生效，需要用this.$nextTick(function () {...})包住才生效
+
+        例子：
+
+        ```js
+        showsou(){
+            this.showit = true //修改 v-show
+            document.getElementById("keywords").focus()  //在第一个 tick 里，获取不到输入框，自然也获取不到焦点
+        }
+        //改为：
+        showsou(){
+            this.showit = true
+            this.$nextTick(function () {
+                // DOM 更新了
+                document.getElementById("keywords").focus()
+            })
+        }
+        ```
+
+    定义Vue.prototype._render函数
+
+        规范化插槽slot
+
+        调用render函数，函数具体执行见"生命周期"
+
+## vue-router
+
+
+
+## vuex
+
+
+
+
+
+
+
