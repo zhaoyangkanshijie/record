@@ -28,6 +28,18 @@
             * 初始化watch
         * 初始化provide
         * $mount渲染函数
+            * 正则标签识别
+            * ast生成
+* [数据绑定](#数据绑定)
+    * [stateMixin](#stateMixin)
+* [事件绑定](#事件绑定)
+    * [eventsMixin](#eventsMixin)
+* [生命周期](#生命周期)
+    * [lifecycleMixin](#lifecycleMixin)
+* [渲染方法](#渲染方法)
+    * [renderMixin](#renderMixin)
+* [vue-router](#vue-router)
+* [vuex](#vuex)
 
 ## 目录结构
 
@@ -274,6 +286,8 @@
 
             run 函数执⾏ this.get()获取当前的值，对于渲染 watcher ⽽⾔，它在执⾏ this.get() ⽅法求值的时候，会执⾏ getter ⽅法，把watcher移入渲染队列targetStack，排队更新视图，最后逐一清除队列元素，移除所有 subs 中的 watcer 的订阅,重新赋值。
 
+            更新视图后，如果已经mounted，又没destroy，触发updated生命周期
+
         6. 初始化state(data,props,methods,watch,computed)
 
             判断vm.$options类型，对props，methods，data，computed，watch进行初始化。
@@ -351,9 +365,106 @@
                     
                     里面 parse 方法会用正则等方式解析 template 模板中的指令、class、style等数据，形成AST
 
-                        parseHTML 函数进行词法分析
+                        * 正则匹配关系：
 
-                        
+                        1. ([^\s"'<>\/=]+) 匹配 [^xyz] 反向字符集
+
+                        2. (?:"([^"]*)"+ 匹配 id="app"
+
+                        3. '([^']*)'+ 匹配 id='app'
+
+                        4. ([^\s"'=<>`]+ 匹配 name=name
+
+                        5. var ncname = '[a-zA-Z_][\\w\\-\\.]*'; 匹配 合法xml
+
+                        6. var qnameCapture = "((?:" + ncname + "\\:)?" + ncname + ")"; 匹配 <src
+
+                        7. var startTagOpen = new RegExp(("^<" + qnameCapture)); 匹配开始标签 <div></div>的话会匹配到 <div
+
+                        8. var startTagClose = /^\s*(\/?)>/; 检测标签是否为单标签 。 例如：<img / >
+
+                        9 .var doctype = /^<!DOCTYPE [^>]+>/i; 匹配<!DOCTYPE> 
+
+                        10 .var comment =/^<!\--/; 匹配注释
+
+                        * parseHTML 函数进行词法分析
+
+                        1. 变量声明
+
+                            (1) stack = []
+
+                                html：<div><p><span></p></div>
+
+                                stack执行：push(div),push(p),push(span),语法错误(提示，如果有</span>，则pop(span)),pop(p),pop(div)
+
+                            (2) expectHTML 编译器选项
+
+                            (3) isUnaryTag 检测一个标签是否是一元标签
+
+                            (4) canBeLeftOpenTag 检测一个标签是否是可以省略闭合标签的非一元标签
+
+                            (5) index 字符流的读入位置
+
+                            (6) last 存储剩余还未编译的 html 字符串
+
+                            (7) lastTag 始终存储着位于 stack 栈顶的元素
+
+                        2. while(html)循环
+
+                            (1) parse 的内容不是在纯文本标签里
+
+                            (2) parse 的内容是在纯文本标签里 (script,style,textarea)
+
+                        3. 初步产出
+
+                            ```html
+                            <div id="app">
+                                <p>{{ message }}</p>
+                            </div>
+                            ```
+                            ```js
+                            {
+                                attrs: [" id="app"", "id", "=", "app", undefined, undefined]
+                                end: 14
+                                start: 0
+                                tagName: "div"
+                                unarySlash: ""
+                            }
+
+                            {
+                                attrs: []
+                                end: 21
+                                start: 18
+                                tagName: "p"
+                                unarySlash: ""
+                            }
+                            ```
+
+                        4. 最终产出ast
+
+                            ```js
+                            {
+                                type: 1,
+                                tag: "div",
+                                parent: null,
+                                attrsList: [],
+                                children: [{
+                                    type: 1,
+                                    tag: "p",
+                                    parent: div,
+                                    attrsList: [],
+                                    children:[
+                                        {
+                                        type: 3,
+                                        tag:"",
+                                        parent: p,
+                                        attrsList: [],
+                                        text:"{{ message }}"
+                                        }
+                                    ]
+                                }],
+                            }
+                            ```
 
                     optimize 的主要作用是标记 static 静态节点，这是 Vue 在编译过程中的一处优化，后面当 update 更新界面时，会有一个 patch 的过程， diff 算法会直接跳过静态节点，从而减少了比较的过程，优化了 patch 的性能。
 
@@ -369,6 +480,176 @@
 
                 res.staticRenderFns 是一个函数数组，是通过对compiled.staticRenderFns遍历生成的，说明：compiled 除了包含 render 字符串外，还包含一个字符串数组staticRenderFns ，且这个字符串数组最终也通过 createFunction 转为函数。staticRenderFns 的主要作用是渲染优化。
 
-
-
         最后调用原型上的 $mount 方法挂载
+
+## 数据绑定
+
+### stateMixin
+
+1. 参考链接
+
+    [每天读一点源码---vue的初始化](https://segmentfault.com/a/1190000010603894?utm_source=tag-newest)
+
+2. 详解
+
+    将data,props,$set,$delete,watch绑定在vue.prototype上
+
+    ```js
+    //定义$data,$props的get和set，只读返回_data和_props
+    Object.defineProperty(Vue.prototype, '$data', dataDef)
+    Object.defineProperty(Vue.prototype, '$props', propsDef)
+    //设置响应式对象属性和通知变化的函数
+    Vue.prototype.$set = set
+    //删除属性和通知变化的函数
+    Vue.prototype.$delete = del
+    //watcher作用查看“初始化state中的watch”
+    Vue.prototype.$watch = function(...)
+    ```
+
+## 绑定事件
+
+### 
+
+1. 参考链接
+
+    [Vue.js源码学习三 —— 事件 Event 学习](https://www.jianshu.com/p/cafce3ea6bb9)
+
+2. 详解
+
+    上接initMixin中的初始化事件
+
+    * 定义Vue.prototype.$on方法
+
+        如果 event 是数组则遍历递归执行 $on 方法，否则 向 vm._events[event] 中push回调函数 fn
+
+    * 定义Vue.prototype.$once方法
+
+        定义一个 $on 事件监听，回调函数中使用 $off 方法取消事件监听，并执行回调函数
+
+    * 定义Vue.prototype.$off方法
+
+        用于移除自定义事件监听器，
+        
+        如果 event 是数组则遍历递归执行 $off 方法，
+        
+        如果没有具体的监听事件，直接返回vm，
+        
+        如果没有回调函数 fn，将事件监听器变为null，返回vm，
+        
+        如果有回调函数，从后往前逐一移除事件监听
+
+    * 定义Vue.prototype.$emit方法
+
+        触发当前实例上的事件
+
+## 生命周期
+
+### lifecycleMixin
+
+1. 参考链接
+
+    [【Vue】Vue源码第三步——初始化（lifecycleMixin、stateMixin）](https://blog.csdn.net/qq_24884131/article/details/103591405)
+
+    [Vue源码笔记本（一）](https://zhuanlan.zhihu.com/p/25994997)
+
+    [Vue 实例挂载方法($mount)的实现](https://blog.csdn.net/zjq_1314520/article/details/88912218)
+
+    [Vue patch](https://www.jianshu.com/p/9130c32755f0)
+
+    [Vue 视图更新patch过程源码解析](https://segmentfault.com/a/1190000021057420)
+
+2. 详解
+
+    * $mount
+
+        上接initMixin中的$mount，生成ast树和render函数，来到/src/core/instance/lifecycle.js中的mountComponent
+
+        初步检查vm.$options.render函数后，执行用户写的beforeMount函数
+
+        调用vm._update(vm._render(), hydrating)，传入render函数，该方法将 vnode 渲染为真实的DOM
+
+        new 一个 Watcher ，并在 Watcher 调用updateComponent方法，如果调用方法时已经mounted，但又没destroy，执行beforeUpdate
+
+        执行用户写的mounted函数
+
+    * lifecycleMixin
+
+        定义Vue.prototype._update函数
+
+        调用vm.\_\_patch\_\_()做diff，方法位于src/core/vdom/patch.js,在createPatchFunction函数中返回patch()函数，是用于比较新老节点的封装函数
+
+            * 如果是首次patch，就创建一个新的节点
+
+            * 老节点存在
+
+                * 老节点不是真实DOM并且和新节点相似
+
+                    调用patchVnode修改现有节点
+
+                * 新老节点不相同
+
+                    * 如果老节点是真实DOM，创建对应的vnode节点
+
+                    * 为新的Vnode创建元素/组件实例，若parentElm存在，则插入到父元素上
+
+                    * 如果组件根节点被替换，遍历更新父节点element。然后移除老节点
+
+                * 调用insert钩子
+
+                    * 是首次patch并且vnode.parent存在，设置vnode.parent.data.pendingInsert = queue
+
+                    * 如果不满足上面条件则对每个vnode调用insert钩子
+
+                * 返回vnode.elm真实DOM内容
+
+        patch相关：
+
+            DOM的操作对象nodeOps
+
+                nodeOps上封装了针对各种平台对于DOM的操作，modules表示各种模块，这些模块都提供了create和update钩子，用于创建完成和更新完成后处理对应的模块;有些模块还提供了activate、remove、destory等钩子。
+
+            创建节点函数createElm(vnode, insertedVnodeQueue, parentElm, refElm)
+
+                * 创建标签，调用nodeOps.createElementNS(vnode.ns, tag)或nodeOps.createElement(tag, vnode)
+
+                * 数据钩子，invokeCreateHooks(vnode, insertedVnodeQueue)，详细看[参考文档5](https://segmentfault.com/a/1190000021057420)
+
+                * 遍历子节点创建DOM，createChildren(vnode, children, insertedVnodeQueue) 
+
+                * 创建注释，nodeOps.createComment(vnode.text);
+
+                * 创建文本，nodeOps.createTextNode(vnode.te)
+
+                * 元素插入真实DOM，insert(parentElm, vnode.elm, refElm)
+
+            修改节点函数patchVnode(oldVnode, vnode, insertedVnodeQueue, removeOnly)
+
+            省略解析若干函数，详细看[参考文档5](https://segmentfault.com/a/1190000021057420)
+
+            diff算法位于updateChildren()函数，通过diff算法尽可能的复用先前的DOM节点。
+
+                图解见另一篇md，"网站开发常见问题"之"virtualDOM_Diff"
+
+        定义Vue.prototype.$forceUpdate函数
+
+            调用watcher.update()强制更新视图
+
+        定义Vue.prototype.$destroy 函数
+
+            触发生命周期beforeDestroy
+
+            移除vm.$parent，vm._watcher，vm._data.__ob__，移除vnode：vm.__patch__(vm._vnode, null)
+
+            触发生命周期destroyed
+
+            vm.$off()移除事件
+
+## 渲染方法
+
+### renderMixin
+
+1. 参考链接
+
+    []()
+
+2. 详解
