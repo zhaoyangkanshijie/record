@@ -2,7 +2,7 @@
 
 于2020-02-21从https://github.com/vuejs/vue处clone的版本
 
-* [目录结构](#目录结构)
+* [vue目录结构](#vue目录结构)
 * [初始化过程](#初始化过程)
 * vue实例
     * [initMixin](#initMixin)
@@ -50,9 +50,19 @@
         * $nextTick
         * _render
 * [vue-router](#vue-router)
+    * [vue-router目录结构](#vue-router目录结构)
+    * [插件使用和实现](#插件使用和实现)
+        * install.js
+            * mixin
+                * beforeCreate
+                * destroy
+            * RouterView
+            * RouterLink
+                * url路由对象route
+    * [主文件与初始化](#主文件与初始化)
 * [vuex](#vuex)
 
-## 目录结构
+## vue目录结构
 
 1. 参考链接
 
@@ -707,7 +717,297 @@
 
 ## vue-router
 
+### vue-router目录结构
 
+1. 参考链接
+
+    [vue-router源码解析（一）](https://segmentfault.com/a/1190000017968083)
+
+2. 详解
+
+    ```txt
+    ├── components  // 组件
+    │   ├── link.js   // route-link的实现
+    │   └── view.js   // route-view的实现
+    ├── create-matcher.js  // 创建匹配
+    ├── create-route-map.js  // 创建路由的映射
+    ├── history  // 操作浏览器记录的一系列内容
+    │   ├── abstract.js  // 非浏览器的history
+    │   ├── base.js    // 基本的history
+    │   ├── hash.js    // hash模式的history
+    │   └── html5.js   // html5模式的history
+    ├── index.js   // 入口文件
+    ├── install.js  // 插件安装的方法
+    └── util   // 工具类库
+    ├── async.js    // 异步操作的工具库
+    ├── dom.js    // dom相关的函数
+    ├── location.js     // 对location的处理
+    ├── misc.js     // 一个工具方法
+    ├── params.js   // 处理参数
+    ├── path.js     // 处理路径
+    ├── push-state.js  // 处理html模式的 pushState
+    ├── query.js  //对query的处理
+    ├── resolve-components.js  //异步加载组件
+    ├── route.js  // 路由
+    ├── scroll.js  //处理滚动
+    └── warn.js  // 打印一些警告
+    ```
+
+### 插件使用和实现
+
+1. 参考链接
+
+    [vue-router源码解析（一）](https://segmentfault.com/a/1190000017968083)
+
+    [vue-router源码解析（二）插件实现](https://segmentfault.com/a/1190000017968216)
+
+2. 详解
+
+    * 使用
+
+        1. 安装插件：Vue.use(VueRouter);
+        2. 创建对象：const router = new VueRouter({...});
+        3. 挂载：const app = new Vue({router}).$mount('#app');
+        4. 使用：\<div id="app">\<router-view>\</router-view>\</div>
+
+    * 实现
+
+        1. 样例
+
+            ```js
+            //Vue.js 要求插件应该有一个公开方法 install
+            MyPlugin.install = function (Vue, options) {
+                // 1. 添加全局方法或属性
+                Vue.myGlobalMethod = function () {
+                    
+                }
+
+                // 2. 添加全局资源
+                Vue.directive('my-directive', {
+                    bind (el, binding, vnode, oldVnode) {
+                    
+                    }
+                    ...
+                })
+
+                // 3. 注入组件
+                Vue.mixin({
+                    created: function () {
+                    
+                    }
+                    ...
+                })
+
+                // 4. 添加实例方法
+                Vue.prototype.$myMethod = function (methodOptions) {
+                    
+                }
+            }
+            ```
+
+        2. vue-router的install.js
+
+            * 全局变量install.installed来确保只安装一次
+
+            * 全局 mixin 注入一些生命周期的处理
+
+                * beforeCreate
+
+                    1. 保存vm和router
+                    2. 执行初始化函数init()
+                    3. 通过defineReactive使_route变为响应式
+                    4. 注册实例registerInstance()
+
+                * destroyed
+
+                    清除实例
+
+            * 挂载变量到原型上
+
+                defineProperty,把$router、$route挂载到vue.prototype上，通过get实现，使其只读
+
+            * 注册touter-view以及router-link组件
+
+                位于/components下
+
+                1. Vue.component('RouterView', View);
+
+                    * RouterView是一个函数式组件，无data和this，用一个简单的 render 函数返回虚拟节点使他们更容易渲染。
+
+                    * render函数
+
+                        * 定义常量和变量
+
+                            父组件的createElement函数为h()，props的name表示路由名，option中的VueRouter是用户写的路由，parent上缓存对象cache用于keep-alive
+
+                            定义组件深度，alive状态
+
+                            如果在keep-alive组件中，直接从缓存中取虚拟节点return h(cache[name], data, children)
+
+                            如果没有匹配到的路由!route.matched[depth]，则渲染一个空节点return h()
+
+                            匹配成功，取出组件matched.components[name]
+
+                            定义注册实例的registration钩子，在beforeCreate与destroyed调用，获取组件实例并赋值matched.instances[name] = val，val为null表示注销
+
+                            匹配成功，渲染节点
+
+                2. Vue.component('RouterLink', Link);
+
+                    props中定义标签为a，事件为click
+
+                    通过createRoute()方法生成路径
+
+                        生成路由对象,位于/util/route.js
+
+                        ```js
+                        const route: Route = {
+                            name: location.name || (record &&record.name),
+                            meta: (record && record.meta) || {},
+                            path: location.path || '/',
+                            hash: location.hash || '',
+                            query,
+                            params: location.params || {},
+                            fullPath: getFullPath(location, stringifyQuery),
+                            matched: record ? formatMatch(record) : []
+                        }
+                        ```
+
+                    事件守卫，禁止键盘事件alt等
+
+                    生成a标签，设置属性href，绑定onclick事件，h(this.tag, data, this.$slots.default)生成节点
+
+### 主文件与初始化
+
+1. 参考链接
+
+    [Vue-Router源码学习之index.js(vue-router类)](https://baijiahao.baidu.com/s?id=1611182012934115489&wfr=spider&for=pc)
+
+    [Vue-Router源码分析之index.js](https://blog.csdn.net/weixin_34122810/article/details/88014790)
+
+    [VueRouter源码分析(2)--实例分析matcher和history](https://www.jianshu.com/p/8822ef1b1341)
+
+    [vue-router 结合源码分析原理](https://www.cnblogs.com/evaling/p/10304466.html)
+
+    [前端路由实现原理（history）](https://blog.csdn.net/weixin_34377919/article/details/88069239)
+
+2. 详解
+
+    * constructor
+
+        1. 引入路由匹配函数createMatcher，位于/create-matcher.js
+
+            createRouteMap函数将routes转化成对象，循环调用addRouteRecord函数完善pathList, pathMap, nameMap
+
+                ```js
+                ref:{
+                    nameMap:Object      //name路由
+                    pathList:Array(3)
+                    pathMap:Object      //path路由
+                    __proto__:Object
+                }
+                //本实例中是path路由，生成的pathMap如下：
+                pathMap:{
+                    "":Object
+                    /bar:Object
+                    /foo:Object
+                }
+                //其中第一个Object如下，该对象即是路由记录record：
+                {
+                    beforeEnter:undefined
+                    components:Object
+                    instances:Object
+                    matchAs:undefined
+                    meta:Object
+                    name:undefined
+                    parent:undefined
+                    path:""
+                    props:Object
+                    redirect:undefined
+                    regex:/^(?:\/(?=$))?$/i
+                    __proto__:Object
+                }
+                ```
+
+            addRouteRecord函数中，主要根据传入的route构造路由记录record对象，遇到嵌套和别名，会进行递归处理，最后填充pathList,pathMap,nameMap
+
+                ```js
+                const record: RouteRecord = {
+                    path: normalizedPath,
+                    regex: compileRouteRegex(normalizedPath, pathToRegexpOptions),
+                    components: route.components || { default: route.component },
+                    instances: {},
+                    name,
+                    parent,
+                    matchAs,
+                    redirect: route.redirect,
+                    beforeEnter: route.beforeEnter,
+                    meta: route.meta || {},
+                    props: route.props == null
+                    ? {}
+                    : route.components
+                        ? route.props
+                        : { default: route.props }
+                }
+                ```
+
+        2. 定义模式mode
+
+            history相关位于/history下，History为基类，子类：HTML5History、HashHistory、AbstractHistory
+
+            * base.js 定义Histroy基类
+
+                ```js
+                class History {
+                    router: Router;
+                    base: string;//基路径
+                    current: Route;
+                    pending: ?Route;//描述阻塞状态
+                    cb: (r: Route) => void;//监听时的回调函数
+                    ready: boolean;//描述就绪状态
+                    readyCbs: Array<Function>;//就绪状态的回调数组
+                    readyErrorCbs: Array<Function>;//就绪时产生错误的回调数组
+                    errorCbs: Array<Function>;//错误的回调数组
+
+                    // 子类实现用户用的方法
+                    +go: (n: number) => void;
+                    +push: (loc: RawLocation) => void;
+                    +replace: (loc: RawLocation) => void;
+                    +ensureURL: (push?: boolean) => void;
+                    +getCurrentLocation: () => string;
+
+                    listen:function(){...},
+                    onReady:function(){...},
+                    onError:function(){...},
+                    transitionTo:function(){...},//路由跳转的封装
+                    confirmTransition:function(){...},//确认跳转
+                    updateRoute:function(){...}  
+                }
+                ```
+
+            * html.js 定义HTML5History
+
+                back,forward,go三个方法，对应浏览器的前进，后退，跳转操作
+
+                pushState向history中push一条记录
+
+                replaceState：向history中替换一条记录
+
+                监听popState，监听地址栏变化并更新视图
+
+            * hash.js 定义HashHistory
+
+                监听hashchange，获取路径并更新视图
+
+                #后内容改变会再history产生一条记录，不会刷新页面
+
+            * abstract.js 定义AbstractHistory
+
+                abstract 模式是用于原生开发,不能使用window对象,用数组模拟路由储存
+
+        3. 定义初始化函数
+
+        4. 定义路由守卫
 
 ## vuex
 
