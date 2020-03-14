@@ -28,6 +28,7 @@
 * [从defineProperty到proxy](#从defineProperty到proxy)
 * [按需加载之路由懒加载](#按需加载之路由懒加载)
 * [开启gzip模式](#开启gzip模式)
+* [注意或优化的地方](#注意或优化的地方)
 
 ## vue自带指令
 
@@ -1368,3 +1369,18 @@ beforeRouteEnter(to,from,next){
   }
   ```
   生成.js.gz文件，一般浏览器会支持，根据Request Headers的Accept-Encoding标签进行鉴别
+
+## 注意或优化的地方
+
+  * 注意
+
+    * v-if适用于数据不大可能变化的场景，因为有装载和卸载过程，更消耗性能，v-show只是css切换
+    * style 写上scope，避免不同组件命名冲突
+
+  * 优化
+
+    * 使用v-for时，加唯一标识符:key，加快diff速度
+    * 开启gzip压缩响应信息
+    * 路由懒加载
+    * 页面图片多时，使用v-lazy(src替换为v-lazy)或v-lazy-container
+    * 长期不变的列表页使用keep-alive
