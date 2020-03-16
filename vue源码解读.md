@@ -60,6 +60,13 @@
             * RouterLink
                 * url路由对象route
     * [主文件与初始化](#主文件与初始化)
+        * Histroy基类
+        * HTML5History
+            * 监听popState
+        * HashHistory
+            * 监听hashchange
+            * setupScroll回调：解决bug
+        * AbstractHistory
 * [vuex](#vuex)
 
 ## vue目录结构
@@ -688,6 +695,8 @@
 
         问题:Vue 在修改数据后，视图不会立刻更新，而是等同一事件循环中的所有数据变化完成之后，再统一进行视图更新
 
+        原理:Vue内部有一个列表(flushCallbacks)来存储nextTick参数中提供的回调(callbacks)，microTimerFunc添加任务时pending为true，当任务触发时，以此执行列表里的所有回调并清空列表
+
         事件循环：同步代码执行 -> 查找异步队列，推入执行栈，执行Vue.nextTick[事件循环1] ->查找异步队列，推入执行栈，执行Vue.nextTick[事件循环2]
 
         应用场景：在同一方法里，修改了数据后，想立即操作DOM元素(如获取refs，document.getElementById)，会不生效，需要用this.$nextTick(function () {...})包住才生效
@@ -762,6 +771,8 @@
     [vue-router源码解析（二）插件实现](https://segmentfault.com/a/1190000017968216)
 
 2. 详解
+
+    ![vue-router.jpg](vue-router.jpg)
 
     * 使用
 
@@ -854,7 +865,7 @@
 
                 2. Vue.component('RouterLink', Link);
 
-                    props中定义标签为a，事件为click
+                    props中定义标签为a，事件为click，当用户触发后，会调用 router 的 push 或 replace 方法来更新路由
 
                     通过createRoute()方法生成路径
 
@@ -890,6 +901,10 @@
     [vue-router 结合源码分析原理](https://www.cnblogs.com/evaling/p/10304466.html)
 
     [前端路由实现原理（history）](https://blog.csdn.net/weixin_34377919/article/details/88069239)
+
+    [vue-router 源码分析-history](https://zhuanlan.zhihu.com/p/24574970?refer=ddfe-weekly)
+
+    [前端路由原理学习记录之二](https://zhuanlan.zhihu.com/p/61091042?from_voters_page=true)
 
 2. 详解
 
@@ -985,7 +1000,77 @@
                 }
                 ```
 
+            * transitionTo
+
+                调用 match 得到匹配的 route 对象
+
+                确认过渡函数confirmTransition 
+
+                    如果是相同路由，直接返回
+
+                    定义整个切换周期的队列，包括leave 的钩子，全局 router before hooks，将要更新的路由的 beforeEnter 钩子，异步组件
+
+                        路由对象的 matched 实例，是匹配到的路由记录的合集
+
+                        resolveQueue 就是交叉比对当前路由的路由记录和现在的这个路由的路由记录来决定调用哪些路由记录的钩子函数(取得最大深度,从根开始对比 一旦不一样的话 就可以停止了,舍掉相同的部分 只保留不同的)
+
+                更新当前 route 对象
+
+                子类实现的更新url地址
+
+                对于 hash 模式的话 就是更新 hash 的值
+
+                对于 history 模式的话 就是利用 pushstate / replacestate 来更新
+
+            * cb
+
+                用于更新vue实例（组件）中的_route响应式属性，从而重新渲染页面
+
+            * runQueue
+
+                如果当前的 index 值和整个队列的长度值齐平了(index >= queue.length) ，说明队列已经执行完成，执行队列执行完成的回调函数cb
+
+                如果queue[index]存在的话 调用传入的迭代函数fn执行step(index + 1)
+
+            * iterator
+
+                调用钩子，
+                
+                如果钩子函数在调用第三个参数时传入了 false，则意味着要终止本次的路由切换
+
+                如果传入的是字符串 或者对象的话 认为是一个重定向操作，直接调用 push
+
+                其他情况 意味着此次路由切换没有问题 继续队列下一个
+
+            * extractEnterGuards
+
+                调用 flatMapComponents推平数组，调用 extractGuard 得到组件上的 beforeRouteEnter 钩子
+
+            * extractLeaveGuards
+
+                打平组件的flatMapComponents 钩子函数们，按照顺序得到 然后再 reverse,因为 leave 的过程是从内层组件到外层组件的过程，取得 leave 的由深到浅的顺序组合组件的 beforeRouteLeave 钩子函数们
+
+            * hash.js 定义HashHistory
+
+                * 原理
+
+                监听hashchange，获取路径并更新视图
+
+                #后内容改变会再history产生一条记录，不会刷新页面
+
+                * 具体
+
+                constructor针对于不支持 history api 的降级处理，以及保证默认进入的时候对应的 hash 值是以 / 开头的，如果不是则替换。
+
+                setupScroll处理了滚动行为，并且添加事件监听，在transitionTo方法结束完之后执行
+
+                值得注意的是这里并没有监听 hashchange 事件来响应对应的逻辑，而是写在setupScroll这个回调函数中，为了解决 异步调用根路径beforeEnter注册2次 的问题
+
+                具体bug：this is delayed until the app mounts to avoid the hashchange listener being fired too early
+
             * html.js 定义HTML5History
+
+                * 原理
 
                 back,forward,go三个方法，对应浏览器的前进，后退，跳转操作
 
@@ -995,19 +1080,13 @@
 
                 监听popState，监听地址栏变化并更新视图
 
-            * hash.js 定义HashHistory
+                * 具体
 
-                监听hashchange，获取路径并更新视图
-
-                #后内容改变会再history产生一条记录，不会刷新页面
+                处理滚动行为，然后添加监听事件。不同于hashHistory，它是在创建的时候就添加事件监听popstate。
 
             * abstract.js 定义AbstractHistory
 
                 abstract 模式是用于原生开发,不能使用window对象,用数组模拟路由储存
-
-        3. 定义初始化函数
-
-        4. 定义路由守卫
 
 ## vuex
 
