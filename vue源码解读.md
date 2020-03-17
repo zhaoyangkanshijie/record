@@ -68,6 +68,21 @@
             * setupScroll回调：解决bug
         * AbstractHistory
 * [vuex](#vuex)
+    * [vuex目录结构](#vuex目录结构)
+    * [vuex混入](#vuex混入)
+        * 公用store
+    * [store初始化](#store初始化)
+        * 初始化方法installModule
+            * makeLocalContext上下文
+            * registerMutation注册mutation
+                * commit
+            * registerAction注册action
+            * registerGetter注册getter
+            * installModule注册子module
+        * resetStoreVM注册state以及computed
+        * 注册插件
+            * 时空穿梭state
+    * [其它api](#其它api)
 
 ## vue目录结构
 
@@ -1090,9 +1105,261 @@
 
 ## vuex
 
+### vuex目录结构
+
+1. 参考链接
+
+    [Vuex源码阅读分析](https://segmentfault.com/a/1190000014363436?utm_source=index-hottest)
+
+2. 详解
+
+    ![vuex.jpg](vuex.jpg)
+
+    ![vuex.png](vuex.png)
+
+    ```txt
+    ├── module  // state处理，构建module tree
+    │   ├── module-collection.js
+    │   └── module.js
+    ├── plugins  // 提供调试功能
+    │   ├── devtools.js
+    │   └── logger.js
+    ├── helper.js  // 提供如mapActions、mapMutations的api
+    ├── index.esm.js  // 源码的主入口，用于es module的打包
+    ├── index.js  // 源码的主入口,用于commonjs的打包
+    ├── mixin.js  // 提供install方法，用于注入$store
+    ├── store.js  // vuex的核心代码
+    └── util.js  // 工具函数，如deepClone、isPromise、assert
+    ```
+
+### vuex混入
+
+1. 参考链接
+
+    [Vuex源码阅读分析](https://segmentfault.com/a/1190000014363436?utm_source=index-hottest)
+
+2. 详解
+
+    插件的使用见vue-router之[插件使用和实现](#插件使用和实现)
+
+    从index.js开始，引入了store和helper
+
+    store中调用install(window.Vue)，即applyMixin(Vue)，进入mixin进行混入
+
+    如果vue版本大于等于2，将vuexInit混入到Vue实例的beforeCreate钩子中
+
+    如果vue版本为1.x，将vuexInit放入_init中调用
+
+    vuexInit中，如果store是function，则执行，若不是，则使用，同时保证子组件从父组件获取store，则全局公用一份store
+
+### store初始化
+
+1. 参考链接
+
+    [Vuex源码阅读分析](https://segmentfault.com/a/1190000014363436?utm_source=index-hottest)
+
+    [2019-04-16 面试题：VUE](https://www.jianshu.com/p/41a0285d63f0)
+
+2. 详解
+
+    * 内部变量
+
+        1. options
+
+            plugins
+
+            一个数组，包含应用在 store 上的插件方法。这些插件直接接收 store 作为唯一参数，可以监听 mutation（用于外部地数据持久化、记录或调试）或者提交 mutation （用于内部数据，例如 websocket 或 某些观察者）
+
+            strict
+
+            Vuex store 是否进入严格模式。在严格模式下，任何 mutation 处理函数以外修改 Vuex state 都会抛出错误
+
+            state
+
+            如果state是function则执行，最终得到一个对象
+
+        2. _committing
+
+            用来判断严格模式下是否是用mutation修改state
+
+        3. _actions
+
+            存放action
+
+        4. _mutations
+
+            存放mutation
+
+        5. _wrappedGetters
+
+            存放getter
+
+        6. _modules
+
+            module收集器
+
+        7. _modulesNamespaceMap
+
+            根据namespace存放module
+
+        8. _subscribers
+
+            存放订阅者
+
+        9. _watcherVM
+
+            实现Watch的Vue实例
+
+        10. 绑定store为this自身，dispatch和commit方法使用store对象本身方法
+
+    * 初始化方法
+
+        1. installModule
+
+            * 概述
+
+                初始化根module，这也同时递归注册了所有子modle，收集所有module的getter到_wrappedGetters中去，this._modules.root代表根module才独有保存的Module对象
+
+            * 具体
+
+                获取module的namespace，如果有namespace则在_modulesNamespaceMap中注册，即把module放进_modulesNamespaceMap数组
+
+                如果不是根节点，则获取父级的state，通过vue.set将子module设置称响应式的
+
+                makeLocalContext设置module的上下文，绑定对应的dispatch、commit、getters、state
+
+                    1. local对象：
+
+                        dispatch：
+
+                        统一参数风格为{ type, payload, options }
+
+                        如果不是根节点，则需要加上命名空间后，通过store.dispatch提交根的action
+
+                        commit：
+
+                        与dispatch同理，store.commit提交根的mutation
+
+                    2. 劫持local对象getters和state属性
+
+                        这里的getters和state需要延迟处理，需要等数据更新后才进行计算，所以使用getter函数，当访问的时候再进行一次计算
+
+                        makeLocalGetters 函数中，如果getter不在该命名空间下 直接return，给getters加一层代理，这样在module中获取到的getters不会带命名空间，实际返回的是store.getters[type] type是有命名空间的
 
 
+                registerMutation逐一注册mutation
+
+                    首先判断store._mutations是否存在，否则为空数组
+
+                    将mutation包一层函数，push到数组中
+
+                    包一层，commit执行时只需要传入payload
+
+                    执行时让this指向store，参数为当前module上下文的state和用户额外添加的payload
+
+                    当用户调用this.$store.commit(mutations方法名, payload)时会触发
+
+                        commit方法：
+
+                        统一格式，因为支持对象风格和payload风格
+
+                        获取当前type对应保存下来的mutations数组
+
+                        包裹在_withCommit中执行mutation，mutation是修改state的唯一方法
+
+                        执行mutation，只需要传入payload，在mutation的包裹函数中已经处理了其他参数
+
+                        执行mutation的订阅者
+
+                        执行this.$store.commit的时候会调用对应的mutation，而且第一个参数是state，然后再执行mutation的订阅函数
+
+                registerAction逐一注册action
+
+                    获取_actions数组，不存在即赋值为空数组
+
+                    将actions包一层函数，push到数组中
+
+                    包一层，执行时需要传入payload和cb
+
+                    执行action，如果action的执行结果不是promise，将他包裹为promise，支持链式调用
+
+                    使用devtool处理一次error
+
+                    当用户调用this.$store.dispatch(action方法名, payload)时会触发
+
+                        dispatch方法：
+
+                        获取actions数组
+
+                        不存在action，则提示
+
+                        执行action的订阅者
+
+                        如果action大于1，需要用Promise.all包裹
 
 
+                registerGetter逐一注册getter
 
+                    重复定义getters，则提示
 
+                    包一层，保存到_wrappedGetters中，执行时传入store，执行对应的getter函数
+
+                installModule逐一注册子module
+
+                    递归回初始方法installModule
+
+        2. resetStoreVM
+
+            * 概述
+
+                通过vm重设store，新建Vue对象使用Vue内部的响应式实现注册state以及computed
+
+            * 具体
+
+                循环所有getters，通过Object.defineProperty方法为getters对象建立属性，这样就可以通过this.$store.getters.xxx访问
+
+                getter保存在computed中，执行时只需要给上store参数，这个在registerGetter时已经做处理
+
+                new了一个Vue对象，运用Vue内部的响应式实现注册state以及computed(getter)
+
+                若存在oldVm，解除对state的引用，等dom更新后把旧的vue实例销毁
+
+                严格模式使用$watch来观察state的变化，如果此时的store._committing不会true，便是在mutation之外修改state，报错
+
+        3. 注册插件devtoolPlugin(this)
+
+            dev 模式下所有的 state change 都会被记录下来，'时空穿梭' 功能其实就是将当前的 state 替换为记录中某个时刻的 state 状态，利用 store.replaceState(targetState) 方法将执行 this._vm.state = state 实现。
+
+### 其它api
+
+1. 参考链接
+
+    [Vuex源码阅读分析](https://segmentfault.com/a/1190000014363436?utm_source=index-hottest)
+
+2. 详解
+
+    * watch (getter, cb, options)
+
+        判断getter必须是函数类型，使用$watch方法来监控getter的变化，传入state和getters作为参数，当值变化时会执行cb回调。调用此方法返回的函数可停止侦听。
+
+    * replaceState(state)
+
+        用于修改state，主要用于devtool插件的时空穿梭功能，直接修改_vm.$$state
+
+    * registerModule (path, rawModule, options = {})
+
+        用于动态注册module
+
+        统一path的格式为Array，调用store._modules.register方法收集module，调用installModule进行模块的安装，最后调用resetStoreVM更新_vm
+
+    * unregisterModule (path)
+
+        根据path注销module
+
+        统一path的格式为Array，调用store._modules.unregister方法注销module，在store._withCommit中将该module的state通过Vue.delete移除，最后调用resetStore方法，将_actions _mutations _wrappedGetters _modulesNamespaceMap都清空，然后调用installModule和resetStoreVM重新进行全部模块安装和_vm的设置
+
+    * _withCommit (fn)
+
+        在执行mutation的时候，会将_committing设置为true，执行完毕后重置，在开启strict模式时，会监听state的变化，当变化时_committing不为true时会给出警告
+
+    * Vuex中内置了devtool和logger
