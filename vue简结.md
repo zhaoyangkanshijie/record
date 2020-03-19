@@ -29,6 +29,7 @@
 * [按需加载之路由懒加载](#按需加载之路由懒加载)
 * [开启gzip模式](#开启gzip模式)
 * [注意或优化的地方](#注意或优化的地方)
+* [vue3.0新特性](#vue3.0新特性)
 
 ## vue自带指令
 
@@ -1467,7 +1468,36 @@ beforeRouteEnter(to,from,next){
   * 优化
 
     * 使用v-for时，加唯一标识符:key，加快diff速度
+    * 列表绑定多个事件，改为事件代理
     * 开启gzip压缩响应信息
-    * 路由懒加载
+    * 路由懒加载(异步组件)
     * 页面图片多时，使用v-lazy(src替换为v-lazy)或v-lazy-container
     * 长期不变的列表页使用keep-alive
+    * 对于不需要改变的数据，使用Object.freeze，这样对象就不会被劫持
+    * 可视区域动态加载 https://tangbc.github.io/vue-virtual-scroll-list
+    * 按需加载 bable-plugin-component
+
+  * 体验
+
+    * app-skeleton骨架屏
+    * app-shell
+    * pwa serviceworker
+
+  * SEO
+
+    * 预渲染插件prerender-spa-plugin
+    * ssr服务端渲染
+
+## vue3.0新特性
+
+  1. Object.defineProperty 改为 Proxy
+
+    proxy代理对象而非对象属性，颗粒度大，开销小
+
+  2. vdom优化
+
+    性能由与模版整体大小相关提升为与动态内容的数量相关(动态节点更新)
+
+  3. 支持typescript
+
+  4. composition API
