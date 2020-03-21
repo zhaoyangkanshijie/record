@@ -356,6 +356,8 @@
 
                 Observer 是一个类，它的作用是给对象的属性添加 getter 和 setter，用于依赖收集和派发更新。其构造函数实例化 Dep 对象，执行 def 函数把自身实例添加到数据对象 value 的 \_\_ob\_\_ 属性上,如果value为数组，会调用 observeArray 方法，再次执行 observe，如果value是对象，调用 walk 方法遍历对象的 key 调用 defineReactive 方法
 
+                注意：vue2的object.defineProperty是无法劫持数组的，因此通过另外一种方法实现：修改数组原型为arrayMethod，它继承了Array，然后重写了能改变数组的方法（push/pop/shift/unshift/splice/sort/reverse），手动notify更新。
+
             * computed
 
                 从vm.$options获取到computed的key和value，在非ssr模式下，watchers[key]创建watcher实例，以便依赖收集。
