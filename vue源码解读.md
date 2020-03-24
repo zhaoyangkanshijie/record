@@ -49,6 +49,8 @@
     * [renderMixin](#renderMixin)
         * $nextTick
         * _render
+* [额外补充](#额外补充)
+    * [keep-alive](#keep-alive)
 * [vue-router](#vue-router)
     * [vue-router目录结构](#vue-router目录结构)
     * [插件使用和实现](#插件使用和实现)
@@ -735,11 +737,122 @@
         }
         ```
 
+        实现原理:
+
+            * callbacks：存放异步执行的回调函数
+            * timerFunc：根据兼容性执行nextTickHandler
+                * 能够使用Promise，则Promise.resolve().then(nextTickHandler)
+                * 能够使用MutationObserver：新建一个textNode的DOM对象，用MutationObserver绑定该DOM并指定回调函数，在DOM变化的时候则会触发回调,该回调会进入主线程（比任务队列优先执行），即textNode.data = String(counter)时便会加入该回调
+                ```js
+                var counter = 1
+                var observer = new MutationObserver(nextTickHandler)
+                var textNode = document.createTextNode(String(counter))
+                observer.observe(textNode, {
+                    characterData: true
+                })
+                timerFunc = () => {
+                    counter = (counter + 1) % 2
+                    textNode.data = String(counter)
+                }
+                ```
+                * 以上都不行：setTimeout(nextTickHandler, 0)
+            * nextTickHandler：下一个任务队列函数
+                * pending：标记等待状态，避免timerFunc多次推入任务队列或者主线程
+                * copies：用于执行所有callback
+            * queueNextTick：推送指定函数到下一个任务队列中执行，callbacks.push(cb.call(ctx))，非pending状态下执行timerFunc()
+            
+
     定义Vue.prototype._render函数
 
         规范化插槽slot
 
         调用render函数，函数具体执行见"生命周期"
+
+## 额外补充
+
+### keep-alive
+
+1. 参考链接
+
+    [vue keep-alive的实现原理和缓存策略](https://www.cnblogs.com/everlose/p/12541934.html)
+
+    [keep-alive实现原理](https://www.jianshu.com/p/9523bb439950)
+
+    [浅析Vue中keep-alive实现原理以及LRU缓存算法](https://segmentfault.com/a/1190000020515898)
+
+2. 详解
+
+    * 位置
+
+        src/core/components/keep-alive.js
+
+    * 作用
+
+        keep-alive是一个抽象组件：它自身不会渲染一个DOM元素，也不会出现在父组件链中；使用keep-alive包裹动态组件时，会缓存不活动的组件实例
+
+    * 场景
+
+        用户在某个列表页面选择筛选条件过滤出一份数据列表，由列表页面进入数据详情页面，再返回该列表页面，我们希望：列表页面可以保留用户的筛选（或选中）状态。
+
+    * 用法
+
+        include定义缓存白名单，keep-alive会缓存命中的组件；exclude定义缓存黑名单，被命中的组件将不会被缓存；max定义缓存组件上限，超出上限使用LRU的策略置换缓存数据。
+
+        ```html
+        <keep-alive :include="whiteList" :exclude="blackList" :max="amount">
+            <router-view></router-view>
+        </keep-alive>
+        ```
+
+        * LRU策略(最少最近使用)
+
+            * 新数据插入到链表头部；
+            * 每当缓存命中（即缓存数据被访问），则将数据移到链表头部；
+            * 当链表满的时候，将链表尾部的数据丢弃。
+    
+    * 实现
+
+        * created
+
+            创建cache对象，定义缓存数组(用于LRU)
+
+        * mounted
+
+            * $watch分别对include和exclude监听
+
+                * pruneCacheEntry更新（删除）this.cache对象数据
+
+        * destroyed
+
+            遍历删除所有的缓存
+
+            * cached.componentInstance.$destroyed() 执行组件的destroy钩子函数
+
+            * cache[key] = null
+
+            * 移除缓存数组键remove(keys, key)
+
+        * render函数(函数式组件常用函数)
+
+            * 得到slot插槽中的第一个组件
+
+                * 获取组件名称，优先获取组件的name字段，否则是组件的tag
+
+                * name不在inlcude中或者在exlude中则直接返回vnode（没有取缓存）
+
+                * 定义组件的缓存key
+
+                * 如果已经做过缓存了则直接从缓存中获取组件实例给vnode，还未缓存过则进行缓存
+
+                ```js
+                if (this.cache[key]) {
+                    vnode.componentInstance = this.cache[key].componentInstance
+                } else {
+                    this.cache[key] = vnode
+                }
+                ```
+
+                * keepAlive标记位
 
 ## vue-router
 
