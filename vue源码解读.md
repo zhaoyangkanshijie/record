@@ -780,6 +780,8 @@
 
     [浅析Vue中keep-alive实现原理以及LRU缓存算法](https://segmentfault.com/a/1190000020515898)
 
+    * [十道大厂面试题(含答案)总结](https://mp.weixin.qq.com/s/o553cr1FHLz40PpxbO8oOw)
+
 2. 详解
 
     * 位置
@@ -809,6 +811,39 @@
             * 新数据插入到链表头部；
             * 每当缓存命中（即缓存数据被访问），则将数据移到链表头部；
             * 当链表满的时候，将链表尾部的数据丢弃。
+
+            模拟实现
+            ```js
+            class LRUCache {
+                constructor(capacity,intervalTime){
+                    this.cache = new Map();
+                    this.capacity = capacity;
+                    this.intervalTime = intervalTime;
+                }
+                get(key){
+                    if(!this.cache.has(key)){
+                        return null
+                    }
+                    const tempValue = this.cache.get(key)
+                    this.cache.delete(key);
+                    if(Date.now() - tempValue.time > this.intervalTime){
+                        return null
+                    }
+                    this.cache.set(key, {value: tempValue.value, time: Date.now()})
+                    return tempValue.value
+                }
+                put(key, value){
+                    if(this.cache.has(key)){
+                        this.cache.delete(key)
+                    }
+                    if(this.cache.size >= capacity){ //满了
+                        const keys = this.cache.keys()
+                        this.cache.delete(keys.next().value)
+                    }
+                    this.cache.set(key, {value,time:Date.now()})
+                }
+            }
+            ```
     
     * 实现
 
