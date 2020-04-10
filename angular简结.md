@@ -126,7 +126,7 @@ private highlight(color: string) {
 ## angular生命周期
 * ngOnInit() 用于初始化属性，ajax
 * ngOnChanges() 用于监听组件传值变化、绑定数据变化，!!注意：首次调用一定会发生在ngOnInit()之前，整个输入对象改变才能触发，只改变对象属性值不能触发
-* ngDoCheck() 发生Angular无法或不愿意自己检测的变化时作出反应。
+* ngDoCheck() 发生Angular无法或不愿意自己检测的变化时作出反应。脏检查触发，触发场景多不建议用。
 * ngAfterContentInit() 当父组件向子组件投影内容的时.在子组件内会初始化父组件的投影内容,此时会调用
 * ngAfterContentChecked() 当父组件向子组件的投影内容发生改变时会调用
 * ngAfterViewInit() 可dom操作
