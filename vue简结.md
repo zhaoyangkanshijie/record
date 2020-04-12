@@ -26,7 +26,7 @@
 * [url与pushState](#url与pushState)
 * [引入外部js](#引入外部js)
 * [从defineProperty到proxy](#从defineProperty到proxy)
-* [按需加载之路由懒加载](#按需加载之路由懒加载)
+* [动态组件与异步组件](#动态组件与异步组件)
 * [开启gzip模式](#开启gzip模式)
 * [注意或优化的地方](#注意或优化的地方)
 * [vue3.0新特性](#vue3.0新特性)
@@ -1362,7 +1362,7 @@ beforeRouteEnter(to,from,next){
     }
     ```
 
-## 按需加载之路由懒加载
+## 动态组件与异步组件
 
 * 为什么要按需加载
 
@@ -1439,6 +1439,23 @@ beforeRouteEnter(to,from,next){
       ]
     })
     ```
+
+* 动态组件
+
+  * 使用场景
+
+    点击标签动态切换组件
+
+  * 使用
+
+    每次切换都会动态创建新组件
+    ```html
+    <component v-bind:is="currentTabComponent"></component>
+    ```
+
+  * 缓存
+
+    如果希望组件第一次被创建的时候缓存下来，可以在外面包一层keep-alive
 
 ## 开启gzip模式
 
