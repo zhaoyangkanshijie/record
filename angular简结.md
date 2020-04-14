@@ -1,7 +1,7 @@
 # angular简结
 
 * [angular项目结构](#angular项目结构)
-* [angular自带属性和指令](#angular自带属性和指令)
+* [angular自带属性和指令与装饰器](#angular自带属性和指令与装饰器)
 * [angular命令](#angular命令)
 * [angular自定义属性指令directive](#angular自定义属性指令directive)
 * [angular生命周期](#angular生命周期)
@@ -50,8 +50,12 @@
 * .tsconfig.json：typescript配置文件。
 * .tslint.json：typescript代码检测配置文件。
 
-## angular自带属性和指令
+* 构建块：组件、模板、元数据、数据绑定、指令、服务、依赖注入
+
+
+## angular自带属性和指令与装饰器
 * 条件判断 *ngIf="..."
+* 显示隐藏 [hidden]=""
 * 循环 *ngFor="let i of/in is"
     * for in遍历的是数组的索引（即键名），而for of遍历的是数组元素值。
     * 带索引：
@@ -83,6 +87,9 @@ public flag=false;
 public attr='red';
 <div [ngStyle]="{'background-color':attr}">你好 ngStyle</div>
 ```
+* 装饰器负责把元数据附加到类上
+
+  常用装饰器：@Component,@Input,@Output,@Directive,@viewChildren,@HostListener,@Injectable
 
 ## angular命令
 * 创建新项目：ng new {项目名}
@@ -98,6 +105,8 @@ public attr='red';
     其中generate可省略为g
 
 ## angular自定义属性指令directive
+
+directive可以对DOM元素添加行为，且可以添加多个，但它没有view
 ```ts
 import { Directive, ElementRef, HostListener, Input } from '@angular/core';
 
@@ -135,7 +144,7 @@ private highlight(color: string) {
 
 ## angular双向数据绑定原理
 
-Angular通过脏检测来进行双向数据绑定，在$digest cycle流程里面，会从rootscope开始遍历，检查所有的watcher。
+Angular通过脏检测来进行双向数据绑定，在$digest cycle流程里面，会从rootscope开始遍历，检查每个元素绑定的watcher。
 
 Angular只有指定事件触发，才会进入$digest cycle：
 * DOM事件，比如用户输入文本，点击按钮等.

@@ -726,6 +726,10 @@
         showsou(){
             this.showit = true //修改 v-show
             document.getElementById("keywords").focus()  //在第一个 tick 里，获取不到输入框，自然也获取不到焦点
+            //改变数据
+            vm.message = 'changed'
+            //想要立即使用更新后的DOM。这样不行，因为设置message后DOM还没有更新
+            console.log(vm.$el.textContent)
         }
         //改为：
         showsou(){
@@ -733,6 +737,10 @@
             this.$nextTick(function () {
                 // DOM 更新了
                 document.getElementById("keywords").focus()
+            })
+            //这样可以，nextTick里面的代码会在DOM更新后执行
+            Vue.nextTick(function(){
+                console.log(vm.$el.textContent) //可以得到'changed'
             })
         }
         ```
