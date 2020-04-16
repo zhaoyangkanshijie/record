@@ -1505,6 +1505,343 @@ beforeRouteEnter(to,from,next){
     * 预渲染插件prerender-spa-plugin
     * ssr服务端渲染
 
+  * webpack(vue.config.js)
+
+    ```js
+    //npm install compression-webpack-plugin --save-dev
+    const CompressionWebpackPlugin = require('compression-webpack-plugin')
+    //定义gzip压缩插件
+    const compress = new CompressionWebpackPlugin(
+      {
+        filename: info => {
+          return `${info.path}.gz${info.query}`
+        },
+        algorithm: 'gzip', 
+        threshold: 10240,
+        test: new RegExp(
+          '\\.(' +
+          ['js'].join('|') +
+          ')$'
+        ),
+        minRatio: 0.8,
+        deleteOriginalAssets: false
+      }
+    )
+
+    module.exports = {//如果有报错，可查看是否需要在main.js中import
+      publicPath: process.env.NODE_ENV === 'production' ?
+          '/' : '/',
+      //放置生成的静态资源 (js、css、img、fonts) 的目录
+      assetsDir: 'static',
+      //关闭生产环境的 source map 以加速生产环境构建
+      productionSourceMap: false,
+      // 默认在生成的静态资源文件名中包含hash以控制缓存
+      filenameHashing: true,
+      // 是否为 Babel 或 TypeScript 使用 thread-loader。该选项在系统的 CPU 有多于一个内核时自动启用，仅作用于生产构建。
+      parallel: require('os').cpus().length > 1,
+      // PWA 插件相关配置 see https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-pwa
+      pwa: {}, 
+      chainWebpack: config => {
+          //生产环境中删除console.log
+          if (process.env.NODE_ENV === 'production') {
+            config.optimization.minimizer[0].options.terserOptions.compress.warnings = false
+            config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true
+            config.optimization.minimizer[0].options.terserOptions.compress.drop_debugger = true
+            config.optimization.minimizer[0].options.terserOptions.compress.pure_funcs = ['console.log']
+          }
+          //最小化代码
+          config.optimization.minimize(true);
+          //分割代码
+          config.optimization.splitChunks({
+              chunks: 'all'
+          });
+          //压缩图片,npm install image-webpack-loader --save
+          config.module
+              .rule('images')
+              .use('image-webpack-loader')
+              .loader('image-webpack-loader')
+              .options({
+                  bypassOnDebug: true
+              })
+              .end()
+      },
+      configureWebpack: {
+          plugins: [compress]
+      },
+      devServer: {
+          //在本地服务器开启gzip，线上服务器都支持gzip不需要设置
+          before(app) {
+              app.get(/.*.(js)$/, (req, res, next) => {
+                  req.url = req.url + '.gz';
+                  res.set('Content-Encoding', 'gzip');
+                  next();
+              })
+          }
+      }
+    }
+    ```
+
+    * postcss(新版本集成到package.kson)
+
+      ```js
+      module.exports = () => ({
+        plugins: [
+          require('autoprefixer')({
+              browsers : ['last 100 versions']//必须设置支持的浏览器才会自动添加添加浏览器兼容
+          }),
+          require('postcss-pxtorem')({
+            rootValue: 37.5,
+            propList: ['*']
+          })
+        ]
+      });
+      ```
+
+    * babel
+
+      ```js
+      module.exports = {
+        presets: [
+          //'@vue/app',
+          ['@vue/app', {
+            polyfills: [//npm install后，main中需import '@babel/polyfill'
+              'es6.promise',
+              'es6.symbol'
+            ]
+          }]
+        ],
+        //针对element-ui
+        plugins: [
+          [
+            "component",
+            {
+              libraryName: "element-ui",
+              styleLibraryName: "theme-chalk"
+            }
+          ]
+        ]
+      }
+
+      //babel-plugin-component按需引入element组件
+      //main.js=
+      import { Button, Select } from 'element-ui';
+      Vue.use(Button)
+      Vue.use(Select)
+      ```
+
+    * typescript
+
+      * 参考
+
+        https://segmentfault.com/a/1190000011744210?utm_source=tuicool&utm_medium=referral
+
+      * vue-cli选择typescript后可配置tsconfig.json
+
+        ```json
+        {
+          // 编译选项
+          "compilerOptions": {
+            // 输出目录
+            "outDir": "./output",
+            // 是否包含可以用于 debug 的 sourceMap
+            "sourceMap": true,
+            // 以严格模式解析
+            "strict": true,
+            // 采用的模块系统
+            "module": "esnext",
+            // 如何处理模块
+            "moduleResolution": "node",
+            // 编译输出目标 ES 版本
+            "target": "es5",
+            // 允许从没有设置默认导出的模块中默认导入
+            "allowSyntheticDefaultImports": true,
+            // 将每个文件作为单独的模块
+            "isolatedModules": false,
+            // 启用装饰器
+            "experimentalDecorators": true,
+            // 启用设计类型元数据（用于反射）
+            "emitDecoratorMetadata": true,
+            // 在表达式和声明上有隐含的any类型时报错
+            "noImplicitAny": false,
+            // 不是函数的所有返回路径都有返回值时报错。
+            "noImplicitReturns": true,
+            // 从 tslib 导入外部帮助库: 比如__extends，__rest等
+            "importHelpers": true,
+            // 编译过程中打印文件名
+            "listFiles": true,
+            // 移除注释
+            "removeComments": true,
+            "suppressImplicitAnyIndexErrors": true,
+            // 允许编译javascript文件
+            "allowJs": true,
+            // 解析非相对模块名的基准目录
+            "baseUrl": "./",
+            // 指定特殊模块的路径
+            "paths": {
+              "jquery": [
+                "node_modules/jquery/dist/jquery"
+              ]
+            },
+            // 编译过程中需要引入的库文件的列表
+            "lib": [
+              "dom",
+              "es2015",
+              "es2015.promise"
+            ]
+          }
+        }
+        ```
+
+      * 引入ts规范，tslint.json文件
+
+        ```json
+        {
+          "extends": "tslint-config-standard",
+          "globals": {
+            "require": true
+          }
+        }
+        ```
+
+      * 引入typescript前后对比
+
+        前
+        ```js
+        export default {
+          data () {
+            return {
+              msg: 123
+            }
+          },
+
+          // 声明周期钩子
+          mounted () {
+            this.greet()
+          },
+
+          // 计算属性
+          computed: {
+            computedMsg () {
+              return 'computed ' + this.msg
+            }
+          },
+
+          // 方法
+          methods: {
+            greet () {
+              alert('greeting: ' + this.msg)
+            }
+          },
+
+          props: {
+            checked: Boolean,
+            propA: Number,
+            propB: {
+              type: String,
+              default: 'default value'
+            },
+            propC: [String, Boolean],
+            propD: { type: null }
+          },
+
+          watch: {
+            'child': {
+              handler: 'onChildChanged',
+              immediate: false,
+              deep: false
+            }
+          }
+        }
+        ```
+
+        后
+        ```html
+        <template>
+          <div>
+            <input v-model="msg">
+            <p>msg: {{ msg }}</p>
+            <p>computed msg: {{ computedMsg }}</p>
+            <button @click="greet">Greet</button>
+          </div>
+        </template>
+
+        <script lang="ts">
+          import Vue from 'vue'
+          import Component from 'vue-class-component'
+
+          @Component
+          export default class App extends Vue {
+            // 初始化数据
+            msg = 123
+
+            // 声明周期钩子
+            mounted () {
+              this.greet()
+            }
+
+            // 计算属性
+            get computedMsg () {
+              return 'computed ' + this.msg
+            }
+
+            // 方法
+            greet () {
+              alert('greeting: ' + this.msg)
+            }
+
+            @Prop()
+            propA: number = 1
+
+            @Prop({ default: 'default value' })
+            propB: string
+
+            @Prop([String, Boolean])
+            propC: string | boolean
+
+            @Prop({ type: null })
+            propD: any
+
+            @Watch('child')
+            onChildChanged(val: string, oldVal: string) { }
+          }
+        </script>
+        ```
+
+        app.vue
+        ```html
+        <template>
+          <div id="app">
+            <img src="./assets/logo.png">
+            <router-view/>
+          </div>
+        </template>
+
+        <script lang="ts">
+        import Vue from 'vue'
+        import Component from 'vue-class-component'
+
+        @Component({})
+        export default class App extends Vue {
+        }
+        </script>
+
+        <style>
+        #app {
+          font-family: 'Avenir', Helvetica, Arial, sans-serif;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          text-align: center;
+          color: #2c3e50;
+          margin-top: 60px;
+        }
+
+        </style>
+        ```
+
+    * 优秀实例参考
+
+      https://blog.csdn.net/tzllxya/article/details/93507394
+
 ## vue3.0新特性
 
   1. Object.defineProperty 改为 Proxy
