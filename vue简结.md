@@ -30,6 +30,7 @@
 * [开启gzip模式](#开启gzip模式)
 * [注意或优化的地方](#注意或优化的地方)
 * [vue3.0新特性](#vue3.0新特性)
+* [vue-loader原理](#vue-loader原理)
 
 ## vue自带指令
 
@@ -1207,12 +1208,31 @@ export default {
     return {
         includedComponents: "test-keep-alive"
     }
+  },
+  deactivated: function () {
+      this.productclass.name=""//查询条件
+      this.loaddata(1) //查询结果的方法
+  }
+  activated: function () {
+      this.productclass.name=""//查询条件
+      this.loaddata(1) //查询结果的方法
   }
 }
 ```
 
 * 结合router，缓存部分页面
 1. 配置路由 router文件
+```html
+<keep-alive>
+    <router-view v-if="$route.meta.keepAlive">
+        <!-- 这里是会被缓存的视图组件，比如 page1-->
+    </router-view>
+</keep-alive>
+ 
+<router-view v-if="!$route.meta.keepAlive">
+    <!-- 这里是不被缓存的视图组件，比如,page2 , page3 -->
+</router-view>
+```
 ```js
 export default new Router({
   routes: [
@@ -1540,15 +1560,18 @@ beforeRouteEnter(to,from,next){
       // 是否为 Babel 或 TypeScript 使用 thread-loader。该选项在系统的 CPU 有多于一个内核时自动启用，仅作用于生产构建。
       parallel: require('os').cpus().length > 1,
       // PWA 插件相关配置 see https://github.com/vuejs/vue-cli/tree/dev/packages/%40vue/cli-plugin-pwa
-      pwa: {}, 
+      pwa: {},
+      // 是否启用dll
+      // See https://github.com/vuejs/vue-cli/blob/dev/docs/cli-service.md#dll-mode
+      //dll: false,
       chainWebpack: config => {
           //生产环境中删除console.log
-          if (process.env.NODE_ENV === 'production') {
-            config.optimization.minimizer[0].options.terserOptions.compress.warnings = false
-            config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true
-            config.optimization.minimizer[0].options.terserOptions.compress.drop_debugger = true
-            config.optimization.minimizer[0].options.terserOptions.compress.pure_funcs = ['console.log']
-          }
+          //if (process.env.NODE_ENV === 'production') {
+          //  config.optimization.minimizer[0].options.terserOptions.compress.warnings = false
+          //  config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true
+          //  config.optimization.minimizer[0].options.terserOptions.compress.drop_debugger = true
+          //  config.optimization.minimizer[0].options.terserOptions.compress.pure_funcs = ['console.log']
+          //}
           //最小化代码
           config.optimization.minimize(true);
           //分割代码
@@ -1855,3 +1878,24 @@ beforeRouteEnter(to,from,next){
   3. 支持typescript
 
   4. composition API
+
+## vue-loader原理
+
+  * 概念
+
+    基于webpack的loader，解析和转换.vue文件，提取template,script,style，核心是提取
+
+  * 作用
+
+    1. 允许组件各部分使用其它loader，如sass-loader
+    2. 允许.vue自定义块和loader链
+    3. 把template和style作为模块依赖
+    4. 为每个组件模拟scope css
+    5. 开发环境热加载
+
+  * 实现
+
+    1. selector拆解template,script,style
+    2. template-compiler解析template
+    3. style-compiler解析style
+    4. babel-loader解析script
