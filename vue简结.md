@@ -1388,6 +1388,19 @@ beforeRouteEnter(to,from,next){
 
   打包大型应用，js大，影响加载，所以需要把不同路由对应的组件分割成不同的代码块，加载才高效。
 
+* 原理
+
+  懒加载也可理解为按需加载，即路由去到未访问过的页面才通过jsonp异步加载相应js，通常首页无需配置懒加载，因为一进来就需要加载。
+
+  懒加载原理是把配置中，不同chunkname的模块分开打包为各个js，没配置chunkname的会以数字命名。
+
+  router中，普通import组件，相当于编译执行加载组件，而通过匿名函数import的方式是进入相应路由后才编译执行加载组件。相当于promise在何处写then的问题。
+
+  import和require的区别：
+
+  * require 是 AMD规范引入方式，require是运行时调用，所以require理论上可以运用在代码的任何地方
+  * import是es6的一个语法标准，如果要兼容浏览器的话必须转化成es5的语法，import是编译时调用，所以必须放在文件开头
+
 * 方法
 
   1. es提案的import() (推荐)
