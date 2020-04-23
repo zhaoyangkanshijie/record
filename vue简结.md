@@ -9,6 +9,7 @@
 * [路由vue-router](#路由vue-router)
 * [自定义组件(创建组件步骤)](#自定义组件(创建组件步骤))
 * [父子组件通信](#父子组件通信)
+* [兄弟组件通信](#兄弟组件通信)
 * [vuex状态管理(组件间通信)](#vuex状态管理(组件间通信))
 * [vue与jquery的区别](#vue与jquery的区别)
 * [vuejs与angularjs以及react的区别](#vuejs与angularjs以及react的区别)
@@ -458,6 +459,107 @@ export default {
 }
 ```
 
+
+## 兄弟组件通信
+
+1. 父元素中介
+
+  父元素与子元素A/B通过props和emit通信,A的emit通过父元素改变B的props传值，B同理
+
+  缺点：大型项目父元素变得混乱
+
+2. eventbus
+
+  通过创建新的vue实例，在兄弟组件之间引入，即可使用vue的$on和$emit
+  ```js
+  // main.js
+  import Vue from 'vue'
+  import App from './App'
+  
+  export const eventBus = new Vue()
+  
+  new Vue({
+      el: '#app',
+      render: h => h(App)
+  })
+  ```
+  ```vue
+  <!-- SisterCard.vue -->
+  <template>
+      <div class="message">
+          <div class="message-header">
+              <h5 v-text="theCardTitle"></h5>
+          </div>
+          <div class="message-body">
+              <p class="message-text">我是Sister组件</p>
+              <button @click="messageBrother" class="btn">给哥哥发消息</button>
+  
+              <div v-if="fromBrother" class="alert" v-html="fromBrother"></div>
+          </div>
+      </div>
+  </template>
+  
+  <script>
+      import { eventBus } from "../main";
+  
+      export default {
+          name: "SisterCard",
+          data: () => ({
+              theCardTitle: "Sister Card",
+              fromBrother: ""
+          }),
+          methods: {
+              messageBrother() {
+                  eventBus.$emit("sisterSaid", "妈妈说，该做作业了！(^_^)!!!");
+              }
+          },
+          created() {
+              eventBus.$on("brotherSaid", message => {
+                  this.fromBrother = message;
+              });
+          }
+      };
+  </script>
+  ```
+  ```vue
+  <!-- BrotherCard.vue -->
+  <template>
+      <div class="message">
+          <div class="message-header">
+              <h5 v-text="theCardTitle"></h5>
+          </div>
+          <div class="message-body">
+              <p class="message-text">我是Brother组件</p>
+              <button @click="messageSister" class="btn">给妹妹发消息</button>
+  
+              <div v-if="fromSister" class="alert" v-html="fromSister"></div>
+          </div>
+      </div>
+  </template>
+  
+  <script>
+      import { eventBus } from "../main.js";
+  
+      export default {
+          name: "BrotherCard",
+          data: () => ({
+              theCardTitle: "Brother Card",
+              fromSister: ""
+          }),
+          methods: {
+              messageSister() {
+                  eventBus.$emit("brotherSaid", "妈妈说，该做作业了！(^_^)!!!");
+              }
+          },
+          created() {
+              eventBus.$on("sisterSaid", message => {
+                  this.fromSister = message;
+              });
+          }
+      };
+  </script>
+  ```
+
 ## vuex状态管理(组件间通信)
 
 Store是Vuex的一个仓库。组件一般在计算属性（computed）获取state的数据（return this.$store.state.name）,当组件从store中读取状态（state），若状态发生更新时，它会及时的响应给其他的组件（类似双向数据绑定），而且不能直接改变store的状态，改变状态的唯一方法就是提交更改（mutations）
@@ -466,6 +568,34 @@ Store是Vuex的一个仓库。组件一般在计算属性（computed）获取sta
 * getters：state的数据的筛选和过滤，可以把getters看成是store的计算属性。getters下的函数接收接收state作为第一个参数。过滤的数据会存放到$store.getters对象中。
 * mutations：实际改变状态(state) 的唯一方式是通过提交(commit) 一个 mutation。mutations下的函数接收state作为参数，接收payload（载荷）作为第二个参数，用来记录开发者使用该函数的一些信息，如提交了什么，提交的东西用来干什么，包含多个字段，所以载荷一般是对象，mutations方法必须是同步方法。
 * actions：mutations只能处理同步函数，actions处理异步函数。actions提交的是 mutations，而不是直接变更状态。actions可以包含任意异步操作：ajax、setTimeout、setInterval。actions 通过 store.dispatch(方法名) 触发
+
+问题：vuex为什么用action进行异步操作，而不在mutation一起处理？
+
+1. vuex文档说法
+
+    一条重要的原则就是要记住 mutation 必须是同步函数。
+    ```js
+      mutations: {
+        someMutation (state) {
+          api.callAsyncMethod(() => {
+            state.count++
+          })
+        }
+      }
+    ```
+    现在想象，我们正在 debug 一个 app 并且观察 devtool 中的 mutation 日志。每一条 mutation 被记录，devtools 都需要捕捉到前一状态和后一状态的快照。然而，在上面的例子中 mutation 中的异步函数中的回调让这不可能完成：因为当 mutation 触发的时候，回调函数还没有被调用，devtools 不知道什么时候回调函数实际上被调用——实质上任何在回调函数中进行的状态的改变都是不可追踪的。
+
+    在 mutation 中混合异步调用会导致你的程序很难调试。例如，当你调用了两个包含异步回调的 mutation 来改变状态，你怎么知道什么时候回调和哪个先回调呢？这就是为什么我们要区分这两个概念。在 Vuex 中，mutation 都是同步事务。
+
+2. 尤雨溪(vue作者)说法
+
+    中文翻译可能有些偏差（不是我翻的）。区分 actions 和 mutations 并不是为了解决竞态问题，而是为了能用 devtools 追踪状态变化。
+    
+    事实上在 vuex 里面 actions 只是一个架构性的概念，并不是必须的，说到底只是一个函数，你在里面想干嘛都可以，只要最后触发 mutation 就行。异步竞态怎么处理那是用户自己的事情。vuex 真正限制你的只有 mutation 必须是同步的这一点（在 redux 里面就好像 reducer 必须同步返回下一个状态一样）。
+    
+    同步的意义在于这样每一个 mutation 执行完成后都可以对应到一个新的状态（和 reducer 一样），这样 devtools 就可以打个 snapshot 存下来，然后就可以随便 time-travel 了。
+    
+    如果你开着 devtool 调用一个异步的 action，你可以清楚地看到它所调用的 mutation 是何时被记录下来的，并且可以立刻查看它们对应的状态。其实我有个点子一直没时间做，那就是把记录下来的 mutations 做成类似 rx-marble 那样的时间线图，对于理解应用的异步状态变化很有帮助。
 
 ```js
 import Vue from 'vue'
@@ -1163,6 +1293,13 @@ this.$ajax({
 
 keep-alive是vue内置组件，把你想要缓存的东西缓存到内存，避免重新渲染Dom，vue本身是单页面，而keep-alive对单页面以及mode:history模式下有效。
 版本2.1.0后提供了include/exclude两个属性 可以针对性缓存相应的组件，2.2后加入了beforeRouteUpdate钩子函数。
+
+* 原理
+1. 通过slot获取keep-alive包裹着的第一个子组件对象及其组件名
+2. 根据设定的黑白名单（如果有）进行条件匹配，决定是否缓存。不匹配，直接返回组件实例（VNode）
+3. 根据组件ID和tag生成缓存Key，并在缓存对象中查找是否已缓存过该组件实例。如果存在，直接取出缓存值并更新该key在this.keys中的位置（更新key的位置是实现LRU置换策略的关键）
+4. 在this.cache对象中存储该组件实例并保存key值，之后检查缓存的实例数量是否超过max设置值，超过则根据LRU置换策略删除最近最久未使用的实例（即是下标为0的那个key）
+5. 将该组件实例的keepAlive属性值设置为true
 
 * 属性介绍
 1. include 定义了需要缓存的组件名，参数可以使用字符串或者正则字符串，例如“a,b” 或者/a|b/
