@@ -32,6 +32,16 @@
 * [注意或优化的地方](#注意或优化的地方)
 * [vue3.0 新特性](#vue3.0新特性)
 * [vue-loader 原理](#vue-loader原理)
+* [新增属性不能响应的问题](#新增属性不能响应的问题)
+* [v-show与v-if](#v-show与v-if)
+* [data为什么是一个函数](#data为什么是一个函数)
+* [子组件为什么不可以修改父组件传递的Prop](#子组件为什么不可以修改父组件传递的Prop)
+* [v-model是如何实现双向绑定](#v-model是如何实现双向绑定)
+* [虚拟Dom以及key属性的作用](#虚拟Dom以及key属性的作用)
+* [mixin](#mixin)
+* [Vue模版编译原理](#Vue模版编译原理)
+* [SSR](#SSR)
+* [SPA单页面的理解](#SPA单页面的理解)
 
 ## vue 自带指令
 
@@ -656,6 +666,12 @@ Store 是 Vuex 的一个仓库。组件一般在计算属性（computed）获取
    同步的意义在于这样每一个 mutation 执行完成后都可以对应到一个新的状态（和 reducer 一样），这样 devtools 就可以打个 snapshot 存下来，然后就可以随便 time-travel 了。
 
    如果你开着 devtool 调用一个异步的 action，你可以清楚地看到它所调用的 mutation 是何时被记录下来的，并且可以立刻查看它们对应的状态。其实我有个点子一直没时间做，那就是把记录下来的 mutations 做成类似 rx-marble 那样的时间线图，对于理解应用的异步状态变化很有帮助。
+
+问题2：Vuex和单纯的全局对象有什么区别
+
+1. Vuex 的状态存储是响应式的。当 Vue 组件从 store 中读取状态的时候，若 store 中的状态发生变化，那么相应的组件也会相应地得到高效更新。
+
+2. 不能直接改变 store 中的状态。改变 store 中的状态的唯一途径就是显式地提交 (commit) mutation。这样使得我们可以方便地跟踪每一个状态的变化，从而让我们能够实现一些工具帮助我们更好地了解我们的应用。
 
 ```js
 import Vue from "vue";
@@ -1628,9 +1644,22 @@ beforeRouteEnter(to,from,next){
 
   vue2 中，new Vue 的时候，调用 Observer，通过 Object.defineProperty 监听 data、computed、props 属性变化，在调用 Compiler 解析模板指令，解析到属性时再通过 Watcher 绑定更新函数，使属性值变化时，Observer 的 setter 通知对应 watcher，再更新 dom，在 render 的时候，需要读取对象值，触发 getter 进行依赖收集，把 watcher 存到订阅者数组中。
 
+  Object.defineProperty无法监听数组变化，当利用索引直接设置一个数组项时，vm.items[indexOfItem] = newValue，解决方法如下：
+  ```js
+  Vue.set:Vue.set(vm.items, indexOfItem, newValue)
+  vm.$set:Vue.set的一个别名vm.$set(vm.items, indexOfItem, newValue)
+  Array.prototype.splice:vm.items.splice(indexOfItem, 1, newValue)
+  ```
+  当修改数组的长度时，vm.items.length = newLength，解决方法如下：
+  ```js
+  vm.items.splice(newLength)
+  ```
+
   ![vue.png](vue.png)
 
   当 Object.defineProperty 遍历属性时，数据规模大，则占用内存多，而且无法监听 es6 的 Set、WeakSet、Map、WeakMap、Class、属性的新加或者删除、数组元素的增加和删除，因此使用 proxy 代替，但因 proxy 不兼容 IE，因此 IE 中会依然使用 defineProperty。
+
+  Proxy只会代理对象的第一层，判断当前Reflect.get的返回值是否为Object，如果是则再通过reactive方法做代理，这样就实现了深度观测。监测数组的时候可能触发多次get/set，可以判断key是否为当前被代理对象target自身属性，也可以判断旧值与新值是否相等，只有满足以上两个条件之一时，才有可能执行trigger
 
   ```js
   const observable = (obj) => {
@@ -2448,3 +2477,98 @@ configeWebpack: (config) => {
   2. template-compiler 解析 template
   3. style-compiler 解析 style
   4. babel-loader 解析 script
+
+## 新增属性不能响应的问题
+
+用 vm.$set() 解决对象新增属性不能响应
+
+实现原理:
+
+1. 数组
+
+直接使用数组的 splice 方法触发相应式
+
+2. 对象
+
+先判读属性是否存在、对象是否是响应式，最终如果要对属性进行响应式处理，则是通过调用 defineReactive 方法进行响应式处理
+
+## v-show与v-if
+
+1. 区别
+
+* 当条件不成立时，v-if不会渲染DOM元素，v-show操作的是样式(display)，切换当前DOM的显示和隐藏。
+* v-if 适用于在运行时很少改变条件，不需要频繁切换条件的场景；
+* v-show 则适用于需要非常频繁切换条件的场景。
+
+2. 为什么 v-for 和 v-if 不建议用在一起
+
+当 v-for 和 v-if 处于同一个节点时，v-for 的优先级比 v-if 更高，这意味着 v-if 将分别重复运行于每个 v-for 循环中。如果要遍历的数组很大，而真正要展示的数据很少时，这将造成很大的性能浪费。
+
+这种场景建议使用 computed，先对数据进行过滤。
+
+## data为什么是一个函数
+
+一个组件被复用多次的话，也就会创建多个实例。本质上，这些实例用的都是同一个构造函数。
+
+如果data是对象的话，对象属于引用类型，会影响到所有的实例。所以为了保证组件不同的实例之间data不冲突，data必须是一个函数。
+
+## 子组件为什么不可以修改父组件传递的Prop
+
+* Vue提倡单向数据流,即父级props的更新会流向子组件,但是反过来则不行。
+* 这是为了防止意外的改变父组件状态，使得应用的数据流变得难以理解。
+* 如果破坏了单向数据流，当应用复杂时，debug 的成本会非常高。
+
+## v-model是如何实现双向绑定
+
+v-model是用来在表单控件或者组件上创建双向绑定的,本质是v-bind和v-on的语法糖,在一个组件上使用v-model，默认会为组件绑定名为value的prop和名为input的事件
+
+## 虚拟Dom以及key属性的作用
+
+* 由于在浏览器中操作DOM是很昂贵的。频繁的操作DOM，会产生一定的性能问题。这就是虚拟Dom的产生原因。
+* Virtual DOM本质就是用一个原生的JS对象去描述一个DOM节点。
+* 虚拟 DOM 的实现原理:
+  * 用 JavaScript 对象模拟真实 DOM 树，对真实 DOM 进行抽象
+  * diff 算法 — 比较两棵虚拟 DOM 树的差异
+  * patch 算法 — 将两个虚拟 DOM 对象的差异应用到真正的 DOM 树
+* key 是为 Vue 中 vnode 的唯一标记，通过这个 key，我们的 diff 操作可以更准确(唯一key避免复用)、更快速(利用key生成map对象获取对应节点，比遍历快)
+
+## mixin
+
+* Mixin 使我们能够为 Vue 组件编写可插拔和可重用的功能。
+* 多个组件之间重用一组组件选项，例如生命周期 hook、 方法等，则可以将其编写为 mixin，并在组件中引用。
+* 如果你在 mixin 中定义生命周期 hook，执行时将优先于组件自已的 hook。
+
+## Vue模版编译原理
+
+Vue的编译过程就是将template转化为render函数的过程
+
+1. 解析模版，生成AST语法树
+
+使用大量的正则表达式对模板进行解析，遇到标签、文本的时候都会执行对应的钩子进行相关处理
+
+2. 优化静态节点
+
+有一些数据首次渲染后就不会再变化，对应的DOM也不会变化。那么优化过程就是深度遍历AST树，按照相关条件对树节点进行标记。这些被标记的节点(静态节点)我们就可以跳过对它们的比对，对运行时的模板起到很大的优化作用。
+
+3. 编译
+
+将优化后的AST树转换为可执行的代码
+
+## SSR
+
+* 服务端渲染，将Vue在客户端把标签渲染成HTML的工作放在服务端完成，然后再把html直接返回给客户端。
+* SSR有着更好的SEO、并且首屏加载速度更快等优点。
+* 开发条件会受到限制，服务器端渲染只支持beforeCreate和created两个钩子，应用程序需要处于Node.js的运行环境。
+* 服务器会有更大的负载需求。
+
+## SPA单页面的理解
+
+SPA(single-page application)仅在 Web 页面初始化时加载资源。一旦页面加载完成，SPA 不会因为用户的操作而进行页面的重新加载或跳转；取而代之的是利用路由机制实现 HTML 内容的变换，UI 与用户的交互，避免页面的重新加载。
+
+* 优点
+
+用户体验好、快，内容的改变不需要重新加载整个页面，避免了不必要的跳转和重复渲染，对服务器压力小，前后端职责分离，架构清晰，前端进行交互逻辑，后端负责数据处理
+
+* 缺点
+
+初次加载耗时多，前进后退路由管理，SEO 难度较大
