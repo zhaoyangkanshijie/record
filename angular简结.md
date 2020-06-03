@@ -21,6 +21,7 @@
 - [构建块](#构建块)
 - [组件和指令的区别](#组件和指令的区别)
 - [ngBootstrap](#ngBootstrap)
+- [路由守卫](#路由守卫)
 
 ## angular 项目结构
 
@@ -1086,4 +1087,76 @@ classApp Module implements Do Bootstrap {
     appRef.bootstrap(AppComponent);
   }
 }
+```
+
+## 路由守卫
+
+auth.guard.ts
+```ts
+import { Injectable } from '@angular/core';
+import { CanActivate, ActivatedRouteSnapshot, RouterStateSnapshot, Router } from '@angular/router';
+import { StorageService } from '../services/storage.service';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthGuard implements CanActivate {
+
+    constructor(private router: Router, private storage: StorageService) {}
+
+    // 路由守卫
+    canActivate(next: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
+        //console.log(next,state)
+        if (navigator.userAgent.indexOf('Mobile') >-1){
+            window.location.href = 'https://www.baidu.com';
+        }
+        this.storage.sendMessage({message: 'sendMessage', goToURL: state.url});
+        return true;
+    }
+}
+```
+app-routing.module.ts
+```ts
+const routes: Routes = [
+  {
+    path: '',
+    component: IndexComponent,
+    canActivate: [AuthGuard]
+  }
+]
+```
+storage.service.ts
+```ts
+import { Injectable } from '@angular/core';
+import { Subject, Subscription, Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class StorageService {
+  private subject = new Subject<any>();
+  
+  sendMessage(message){
+    this.subject.next(message);
+  }
+
+  clearMessage(){
+    this.subject.next();
+  }
+
+  getMessage():Observable<any> {
+    return this.subject.asObservable();
+  }
+
+  constructor(){}
+}
+```
+某页面
+```ts
+ngAfterViewInit() {
+    this.subscription = this.storage.getMessage().subscribe(
+      msg => {
+        console.log(msg);
+      }
+    )
 ```
