@@ -4717,6 +4717,8 @@
 
   [《你不知道的 Blob》番外篇](https://segmentfault.com/a/1190000022875544)
 
+  [谁说前端不需要懂二进制](https://mp.weixin.qq.com/s/tFi74DRJRFQjWlCVcSzHmg)
+
 2.  详解
 
   * 概念
@@ -5103,3 +5105,91 @@
 
         Blob URL 只能在当前应用内使用，把 Blob URL 复制到浏览器地址栏是无法获取数据，而 Data URL 则可以在任意浏览器中使用。
 
+  * 二进制相关数据类型
+
+    ArrayBuffer，TypedArray，Blob，DataURL，ObjectURL，Text
+
+    * TypedArray
+
+      抽象类/接口，不可以被实例化，不可访问，有如下数据类型：Uint8Array/Int8Array/Uint16Array/Int16Array,uint表示无符号，数字表示长度
+
+      实现类数组concat
+      ```js
+      function concatenate(constructor, ...arrays) {
+          let length = 0;
+          for (let arr of arrays) {
+            length += arr.length;
+          }
+          let result = new constructor(length);
+          let offset = 0;
+          for (let arr of arrays) {
+            result.set(arr, offset);
+            offset += arr.length;
+          }
+          return result;
+      }
+
+      concatenate(Uint8Array, new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6]))
+      ```
+
+    * ArrayBuffer
+
+      二进制数据结构，只读，需要转化为 TypedArray 进行写操作，直接new TypedArray下的具体类型即可
+
+    * FileReader
+
+      可以把 Blob 转化为其它数据
+
+      * FileReader.prototype.readAsArrayBuffer
+      * FileReader.prototype.readAsText
+      * FileReader.prototype.readAsDataURL
+      * FileReader.prototype.readAsBinaryString
+
+      ```js
+      const blob = new Blob('hello'.split(''))
+
+      // 表示文件的大小
+      blob.size
+
+      const array = new Uint8Array([128, 128, 128])
+      const blob2 = new Blob([array])
+
+      function readBlob (blob, type) {
+        return new Promise(resolve => {
+          const reader = new FileReader()
+          reader.onload = function (e) {
+            resolve(e.target.result)
+          }
+          reader.readAsArrayBuffer(blob)
+        })
+      }
+
+      readBlob(blob, 'DataURL').then(url => console.log(url))
+      ```
+
+    * base64编解码
+
+      使用 atob(编码) 和 btoa(解码) 编码解码数据，a表示ascii，b表示binary
+
+    * 拼接两个音频文件
+
+      fetch请求音频资源 -> ArrayBuffer -> TypedArray -> 拼接成一个 TypedArray -> ArrayBuffer -> Blob -> Object URL
+
+    * 把 json 数据转化为 demo.json 并下载文件
+
+      ```js
+      const json = {
+        a: 3,
+        b: 4,
+        c: 5
+      }
+      const str = JSON.stringify(json, null, 2)
+
+      // 方案一：Text -> DataURL
+      const dataUrl = `data:,${str}`
+      download(dataUrl, 'demo.json')
+
+      // 方案二：Text -> Blob -> ObjectURL
+      const url = URL.createObjectURL(new Blob(str.split('')))
+      download(url, 'demo1.json')
+      ```
