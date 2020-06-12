@@ -1,0 +1,1789 @@
+# js运行机制
+
+- [绑定事件的不同种方式，执行顺序，事件委托](#绑定事件的不同种方式，执行顺序，事件委托)
+- [js 数据类型与隐式转换](#js数据类型与隐式转换)
+- [js 事件循环机制](#js事件循环机制)
+- [闭包数据缓存](#闭包数据缓存)
+- [DOM 树解析和更改与遍历](#DOM树解析和更改与遍历)
+- [运算符优先级](#运算符优先级)
+- [作用域与变量等题目](#作用域与变量等题目)
+- [严格模式](#严格模式)
+- [前端路由原理](#前端路由原理)
+- [virtualDOM_Diff](#virtualDOM_Diff)
+- [抽象语法树 AST 与 babel](#抽象语法树AST与babel)
+
+---
+
+### 绑定事件的不同种方式，执行顺序，事件委托
+
+1. 参考链接：
+
+   [看懂此文，不再困惑于 javascript 中的事件绑定、事件冒泡、事件捕获和事件执行顺序](https://blog.csdn.net/aitangyong/article/details/43231111)
+
+   [js 中的事件委托或是事件代理详解](https://www.cnblogs.com/liugang-vip/p/5616484.html)
+
+2. 详解：
+
+   - 3 种方式：
+
+   ```html
+   <p id="btn" onclick="hello()"></p>
+   <script>
+     document.getElementById("btn").onclick = function () {};
+     document.getElementById("btn").addEventListener("click", function () {});
+   </script>
+   ```
+
+   其中 addEventListener 可重复绑定同一元素，先绑定先执行。
+
+   对于层叠元素，则需要区分事件冒泡和事件捕获，冒泡：从底向面，捕获：从面向底。addEventListener((type, listener, useCapture)
+
+   阻止冒泡：只执行当前元素事件，不执行层叠元素事件。event.stopPropagation()
+
+   事件委托：利用事件冒泡，只指定一个事件处理程序，就可以管理某一类型的所有事件。例如 ul 下有很多 li，逐一绑定事件很影响性能，且新 li 加入也要重新绑定事件，会十分麻烦，所以 li 事件需要委托其上一级 ul 代为执行事件。
+
+   ```js
+   window.onload = function () {
+     var oUl = document.getElementById("ul1");
+     oUl.onclick = function (ev) {
+       var ev = ev || window.event;
+       var target = ev.target || ev.srcElement;
+       if (target.nodeName.toLowerCase() == "li") {
+         alert(123);
+         alert(target.innerHTML);
+       }
+     };
+   };
+   ```
+
+   - 关于 onclick,addEventListener('click'),\$('...').on('click')
+
+     1. 实际上，3 种写法都可以转化为 addEventListener('click',function,options)的形式
+
+     2. 在没有设置 options 的情况下，click 后会先事件捕获，然后事件冒泡，options 中默认捕获为 false，所以 function 是在冒泡阶段执行，由内层冒泡至外层
+
+     3. options 中设置为 true，则 function 在捕获阶段执行
+
+     4. options 还有其它 2 个参数，可与 capture 一起以对象的形式传入
+
+        ```js
+        document
+          .getElementsByClassName("middle")[0]
+          .addEventListener("click", handler, {
+            capture: true,
+            once: true, //只执行一次
+            passive: true, //永不调用 preventDefault(),如果调用，控制台会出现警告
+          });
+        ```
+
+     5. click 的元素指向内层的元素，外层捕获进来后到达最内层，最内层按先后顺序执行完 function，再冒泡向上
+
+     6. event.stopPropagation()表示停止传播，在哪一层的事件中设置了，就不会传播到下一层，例如在 middle 层设置 capture 为 true，则不会再向下捕获再冒泡
+
+     7. 点击哪一层元素，则以哪一层元素为捕获和冒泡的底部
+
+     8. 例子
+
+        ```html
+        <div class="out" onclick="console.log('out')">
+          <div class="middle" onclick="console.log('middle')">
+            <div class="inner" onclick="console.log('inner')"></div>
+          </div>
+        </div>
+        <style>
+          .out {
+            width: 100px;
+            height: 100px;
+            border: 1px solid red;
+          }
+          .middle {
+            width: 80px;
+            height: 80px;
+            border: 1px solid blue;
+          }
+          .inner {
+            width: 40px;
+            height: 40px;
+            border: 1px solid green;
+          }
+        </style>
+        <script>
+          $(() => {
+            $(".out").on("click", function () {
+              console.log("out1");
+            });
+            $(".middle").on("click", function () {
+              console.log("middle1");
+            });
+            $(".inner").on("click", function () {
+              console.log("inner1");
+            });
+            document
+              .getElementsByClassName("out")[0]
+              .addEventListener("click", function () {
+                console.log("out2");
+              });
+            document
+              .getElementsByClassName("middle")[0]
+              .addEventListener("click", function () {
+                console.log("middle2");
+              });
+            document
+              .getElementsByClassName("inner")[0]
+              .addEventListener("click", function () {
+                console.log("inner2");
+              });
+            document.getElementsByClassName("out")[0].addEventListener(
+              "click",
+              function () {
+                console.log("out3");
+              },
+              true
+            );
+            document.getElementsByClassName("middle")[0].addEventListener(
+              "click",
+              function () {
+                console.log("middle3");
+              },
+              true
+            );
+            document.getElementsByClassName("inner")[0].addEventListener(
+              "click",
+              function () {
+                console.log("inner3");
+              },
+              true
+            );
+          });
+        </script>
+        <!--点击inner的输出：
+            out3 middle3 inner inner1 inner2 inner3 middle middle1 middle2 out out1 out2
+            点击middle的输出：
+            out3 middle middle1 middle2 middle3 out out1 out2
+        -->
+        ```
+
+
+
+### js 数据类型与隐式转换
+
+1. 参考链接：
+
+   [JS 的隐式转换 从 [] ==false 说起](https://www.cnblogs.com/nanchen/p/7905528.html)
+
+   [JS 中 [] == ![]结果为 true，而 {} == !{}却为 false， 追根刨底](https://blog.csdn.net/magic_xiang/article/details/83686224)
+
+   [JavaScript 中 valueOf、toString 的隐式调用](https://www.cnblogs.com/barrior/p/4598354.html)
+
+   [JavaScript 中的变量在内存中的具体存储形式](https://www.jianshu.com/p/80bb5a01857a)
+
+   [JavaScript 的数据类型](https://www.cnblogs.com/cider/p/11875832.html)
+
+   [null 与 undefined 的区别？](https://www.cnblogs.com/shengmo/p/8671803.html)
+
+2. 详解：
+
+   - js 数据类型
+
+     原始值（primitives）：undefined， null， booleans， numbers，strings， symbol（es6）
+
+     对象值（objects）：Object
+
+   - 变量储存形式
+
+     1. 普通变量存在栈，对象(如 object，array)存在堆。
+     2. let b = { x: 10 };b 存在栈，值为对象访问地址，指向{ x: 10 }的堆空间。
+     3. 基本类型复制会在栈中分配新空间，引用类型复制(浅复制)栈中的新空间的值会指向旧堆的地址。
+
+     - 栈
+
+       储存基本数据类型，按值访问，储存的值大小固定，系统分配内存空间，空间小，运行效率高，先进后出。
+
+     - 堆
+
+       储存引用类型，按引用访问，储存的值大小不固定，可动态调整，代码进行指定分配，空间大，运行效率低，无序储存。
+
+   - 有了基本类型为什么还要包装类型？
+
+     3 个特殊的引用类型：Boolean、Number 和 String，每当读取一个基本类型值的时候，会创建一个对应的基本包装类型的对象，从而能够调用一些方法来操作这些基本类型(substring 等)。每个包装类型都映射到同名的基本类型。
+
+   - 装箱和拆箱
+
+     1. 装箱就是把基本类型转换为对应的内置对象，这里可分为隐式和显式装箱。
+
+        - 隐式装箱
+
+          ```txt
+          var s1 = "stringtext";
+          var s2 = s1.substring(2); 基本类型本来是没方法的，装箱后就有了
+          （1）创建String类型的一个实例 var s1 = new String("stringtext");
+          （2）在实例上调用指定的方法 var s2 = s1.substring(2);
+          （3）摧毁这个实例 s1 = null;
+          ```
+
+        - 显式装箱
+
+          ```js
+          var obj = new Object("stringtext");
+          console.log(obj instanceof String);
+          //true
+          ```
+
+     2. 拆箱就是与装箱相反，把对象转变为基本类型的值。
+
+        调用了 JavaScript 引擎内部的抽象操作，ToPrimitive(转换为原始值)，对原始值(null,undefined,number,string,boolen,symbol)不发生转换处理，只针对引用类型(object)
+
+   - 数学运算
+
+     a+b=a 的原数据类型+b 的原数据类型
+
+     有 string 为 string，没 string 为 number，[].toString()->""，{}.toString()->"[object Object]"
+
+     - [] + [] = "" + "" = ""
+     - [] + {} = "" + "[object Object]" = "[object Object]"
+
+   - 比较运算
+
+     - x===y,只有类型和值相等为 true,否则为 false
+     - x == y
+       - xy 都为 Null 或 undefined 为 true, null == undefined->true, null === undefined->false
+       - x 或 y 为 NaN 为 false, NaN == NaN->false
+       - 如果 x 和 y 为 String，Number，Boolean 并且类型不一致，都转为 Number 再进行比较
+       - 如果存在 Object，转换为原始值，比较
+       - !可将变量转换成 boolean 类型，null、undefined、NaN 以及空字符串('')取反都为 true，其余都为 false
+
+     | value      | toNumber | toString          | toBoolean |
+     | ---------- | -------- | ----------------- | --------- |
+     | NaN        | NaN      | "NaN"             | false     |
+     | Infinity   | Infinity | "Infinity"        | true      |
+     | []         | 0        | ""                | true      |
+     | [1]        | 1        | "1"               | true      |
+     | null       | 0        | "null"            | false     |
+     | undefined  | NaN      | "undefined"       | false     |
+     | {}         | NaN      | "[object Object]" | true      |
+     | function() | NaN      | "function"        | true      |
+
+     ```txt
+     []==false,[]==![],[]==0,''==0,""=="" true
+     {}==false,{}==!{},{}==0,NaN==0 false
+     ```
+
+   - 隐式调用：对象生成时会自动调用(不同对象会有不同的隐式调用)
+
+     - function:toString/valueOf
+     - 事件:handleEvent
+     - JSON 对象:toJSON
+     - promise:then
+     - object:get/set
+     - 遍历器接口:Symbol.iterator
+
+   - 每个对象的 toString 和 valueOf 方法都可以被改写，每个对象执行完毕，如果被用以操作 JavaScript 解析器就会自动调用对象的 toString 或者 valueOf 方法
+
+### js 事件循环机制
+
+1. 参考链接：
+
+   [详解 JavaScript 中的 Event Loop（事件循环）机制](https://www.cnblogs.com/cangqinglang/p/8967268.html)
+
+   [谈谈 Event Loop（事件循环）机制](https://www.jianshu.com/p/6e9f4eb7fdbb)
+
+   [Javascript 异步编程之 setTimeout 与 setInterval 详解分析](https://www.cnblogs.com/tugenhua0707/p/4083475.html)
+
+   [理解 JavaScript 执行机制及异步回调（setTimeout/setInterval/Promise）](https://blog.csdn.net/zuggs_/article/details/82381558)
+
+   [js 异步执行顺序](https://www.jianshu.com/p/ca480f9e7dea)
+
+   [为什么要用 setTimeout 模拟 setInterval?](https://blog.csdn.net/b954960630/article/details/82286486)
+
+   [详解 setTimeout、setImmediate、process.nextTick 的区别](https://www.cnblogs.com/onepixel/articles/7605465.html)
+
+   [setTimeout/setImmediate/process.nextTick 的区别](https://www.jianshu.com/p/77f03673aa06)
+
+   [简单理解 Vue 中的 nextTick](https://www.jianshu.com/p/a7550c0e164f)
+
+   [浅谈 async/await](https://www.jianshu.com/p/1e75bd387aa0)
+
+   [async 函数的含义和用法](http://www.ruanyifeng.com/blog/2015/05/async.html)
+
+   [面试向：Async/Await 代替 Promise.all()](https://juejin.im/post/5d56f89b518825415d0608be)
+
+   [ECMAScript 6 入门](https://es6.ruanyifeng.com/#docs/async)
+
+   [Async/Await 替代 Promise 的 6 个理由](https://www.cnblogs.com/fundebug/p/6667725.html)
+
+   [js 基础之 setTimeout 与 setInterval 原理分析](https://blog.csdn.net/qq_41694291/article/details/93974595)
+
+   [关于 setTimeout 和 setInterval 的实现原理](https://blog.csdn.net/sinat_30443713/article/details/78128088)
+
+   [什么是事件循环？](https://cloud.tencent.com/developer/news/566935)
+
+2. 详解：
+
+   - js 是单线程的非阻塞语言：因为如果是多线程，一边绑定事件，一边移除元素，会引起冲突。另外，如果引入锁，则大大增加复杂度，所以采取单线程。
+
+   - 执行栈：方法排队执行的地方，每个单元对应一个 context，包含作用域中的 this。
+
+   - 事件(消息)队列：异步事件返回结果后，js 会将这个事件加入与当前执行栈不同的另一个队列，被放入事件队列不会立刻执行其回调，而是等待当前执行栈中的所有任务都执行完毕，主线程处于闲置状态时，再把事件放回执行栈。
+
+   - 事件循环：主线程不断的从消息队列中取消息，执行消息，这个过程称为事件循环，这种机制叫事件循环机制，取一次消息并执行的过程叫一次循环。
+
+   - 事件循环机制：由执行栈和事件队列构成的无限循环
+
+   - 事件循环描述：所有同步任务都在主线程上执行，形成一个执行栈，主线程之外，还存在一个”任务队列”，只要异步任务有了运行结果，就在”任务队列”之中放置一个事件。一旦”执行栈”中的所有同步任务执行完毕，系统就会读取”任务队列”，于是异步任务结束等待状态，进入执行栈，开始执行。主线程从”任务队列”中读取事件，这个过程是循环不断的，所以整个的这种运行机制又称为 Event Loop（事件循环）。
+
+   - 宏任务：setInterval()，setTimeout()
+
+     - setTimeout：在指定的毫秒数后，将定时任务处理的函数添加到事件队列的队尾。
+     - setInterval：按照指定的周期(以毫秒数计时)，将定时任务处理函数添加到事件队列的队尾。
+       - 因为 js 是单线程的，如果处于堵塞状态计不了时，它必须依赖外部计时并触发定时，所以队列中的定时事件也是异步事件。
+       - 每个 setTimeout 产生的任务会直接 push 到任务队列中；而 setInterval 在每次把任务 push 到任务队列前，都要进行一下判断(看上次的任务是否仍在队列中)。
+       - setInterval 有两个缺点：
+         - 某些间隔会被跳过；
+         - 可能多个定时器会连续执行；
+       - setTimeout 模拟 setInterval,解决 setInterval 缺点
+       ```js
+       //每次执行的时候都会创建一个新的定时器
+       var a = setTimeout(function () {
+         // 任务
+         setTimeout(a, interval); //获取当前函数的引用，并且为其设置另一个定时器
+       }, interval);
+       //在前一个定时器执行完前，不会向队列插入新的定时器
+       //保证定时器间隔
+       ```
+
+   - 微任务 1：new Promise()
+
+     - Promise 是异步的，是指他的 then()和 catch()方法，Promise 本身还是同步的
+     - 有 resolve()后，才能执行 then(),有 reject()，不执行 then()
+
+   - 微任务 2：async await
+
+     - async function(){} 表示函数内存在异步操作
+     - await 强制下面代码等待，直到这行代码得出结果(await setTimeout 无效，适用于 ajax)
+
+   - 事件优先级：同步任务>异步任务(微任务>宏任务(取决于延时时间))
+
+   - Node.js 是一个基于 Chrome V8 引擎的 JavaScript 运行环境，比 js 少了 DOM/BOM,多了 http/file system,事件执行顺序与 js 不同
+
+     - 浏览器是先把一个栈以及栈中的微任务走完，才会走下一个栈。node 环境里面是把所以栈走完，才走微任务
+     - setTimeout setImmediate 都是宏任务
+     - nextTick 和 then 都属于微任务
+     - i/o 文件操作为宏任务
+
+   - nextTick、setTimeout、setImmediate 的区别
+
+     nodejs 中，setTimeout、setImmediate 是宏任务，process.nextTick()是微任务，因此 setTimeout、setImmediate 回调函数插入到任务队列的尾部，nextTick 回调函数加入到当前执行栈的尾部，所以 nextTick 会先执行。
+
+     setTimeout、setImmediate 相差不大，但延时设为 0 时，setImmediate 会更快加入任务队列。
+
+     vue 中，created()钩子函数进行的 DOM 操作一定要放在 Vue.nextTick()的回调函数中，因为此时 DOM 没渲染，需要等到 mounted()后执行。另外，数据变化导致 DOM 变化，也应用 Vue.nextTick()
+
+   - setInterval，setTimeout 注意的地方
+
+     1. function 中代码执行时间超过指定等待时间，settimeout 会在执行完后立即输出，setinterval 不会再这段时间向任务队列添加回调函数(因为已经存在上一个回调函数没执行完)，但不会影响后续计时。
+
+     ```js
+     var start = new Date();
+     setTimeout(function () {
+       var end = new Date();
+       console.log("Time elapsed: ", end - start, "ms");
+     }, 500);
+
+     while (new Date() - start <= 1000) {}
+     //Time elapsed:  1018 ms
+     ```
+
+     2. 如果 setinterval 执行时间略小于等待时间，则可能会出现连续执行的情况，所以需要用 settimeout 模拟 setinterval
+
+     ```js
+     function func(args){
+         //函数本身的逻辑
+         ...
+     }
+     var timer = setInterval(func, 100, args);
+
+     var timer;
+     function func(args){
+         //函数本身的逻辑
+         ...
+         //函数执行完后，重置定时器
+         timer = setTimeout(func, 100, args);
+     }
+     timer = setTimeout(func, 100, args);
+     ```
+
+     3. 延时设为 0，也不会马上执行，因为浏览器有各自最低等待时间
+
+     ```js
+     function a() {
+       setTimeout(function () {
+         console.log(1);
+       }, 0);
+       console.log(2);
+     }
+     a();
+     // 2 1
+     ```
+
+   - 例题：
+
+   ```js
+   //浏览器
+   (function () {
+     setTimeout(() => {
+       console.log(0);
+     });
+
+     new Promise((resolve) => {
+       console.log(1);
+
+       setTimeout(() => {
+         resolve();
+         Promise.resolve().then(() => {
+           console.log(2);
+           setTimeout(() => console.log(3));
+           Promise.resolve().then(() => console.log(4));
+         });
+       });
+
+       Promise.resolve().then(() => console.log(5));
+     }).then(() => {
+       console.log(6);
+       Promise.resolve().then(() => console.log(7));
+       setTimeout(() => console.log(8));
+     });
+
+     console.log(9);
+   })();
+   //1、9、5、0、6、2、7、4、8、3
+   //node.js
+   console.log("1");
+   setTimeout(function () {
+     console.log("2");
+     process.nextTick(function () {
+       console.log("3");
+     });
+     new Promise(function (resolve) {
+       console.log("4");
+       resolve();
+     }).then(function () {
+       console.log("5");
+     });
+   });
+   process.nextTick(function () {
+     console.log("6");
+   });
+   new Promise(function (resolve) {
+     console.log("7");
+     resolve();
+   }).then(function () {
+     console.log("8");
+   });
+   setTimeout(function () {
+     console.log("9");
+     process.nextTick(function () {
+       console.log("10");
+     });
+     new Promise(function (resolve) {
+       console.log("11");
+       resolve();
+     }).then(function () {
+       console.log("12");
+     });
+   });
+   //1，7，6，8，2，4，3，5，9，11，10，12
+   let test = async function () {
+     await new Promise((resolve, reject) => {
+       console.log(1);
+       setTimeout(() => {
+         resolve();
+       }, 3000);
+     }).then(() => {
+       console.log(2);
+     });
+     console.log(3);
+     await new Promise((resolve, reject) => {
+       console.log(4);
+       setTimeout(() => {
+         resolve();
+       }, 1000);
+     }).then(() => {
+       console.log(5);
+     });
+     console.log(6);
+   };
+   test();
+   //1
+
+   //2
+   //3
+   //4
+
+   //5
+   //6
+   ```
+
+### 闭包数据缓存
+
+1. 参考链接：
+
+   [JS 闭包异步获取数据并缓存](https://blog.csdn.net/weixin_43820866/article/details/87107035)
+
+   [js async await 终极异步解决方案](https://www.cnblogs.com/CandyManPing/p/9384104.html)
+
+   [闭包+内存泄露+垃圾回收](https://blog.csdn.net/yushuangyushuang/article/details/79301694)
+
+2. 详解：
+
+   - 闭包的形成原理
+
+     活动对象被引用着无法被销毁而导致的
+
+   - 闭包 2 个作用
+
+     1. 内层函数可通过作用域链访问外层函数变量
+     2. 缓存机制(垃圾回收机制)：函数执行完会释放内存，但如果内层函数被引用，则不会释放内存，所以可能会造成内存泄露
+
+        - 注意：闭包指向同一处内存才能共享数据
+
+        ```js
+        function F() {
+          let i = 0;
+          return function () {
+            console.log(i++);
+          };
+        }
+
+        let f1 = new F();
+        let f2 = new F();
+        f1(); //0
+        f1(); //1
+        f2(); //0
+        ```
+
+   - 优点
+
+     1. 避免全局变量被污染
+     2. 方便调用上下文的局部变量
+     3. 加强封装性
+
+   - 缺点
+
+     1. 闭包常驻内存，内存消耗很大
+     2. 可能导致内存泄露
+
+        例子
+
+        ```js
+        window.onload = function () {
+          var el = document.getElementById("id");
+          el.onclick = function () {
+            alert(el.id);
+          };
+        };
+        ```
+
+        解决方法
+
+        ```js
+        window.onload = function () {
+          var el = document.getElementById("id");
+          var id = el.id; //解除循环引用
+          el.onclick = function () {
+            alert(id);
+          };
+          el = null; // 将闭包引用的外部函数中活动对象清除
+        };
+        ```
+
+   - 例子
+
+   向接口请求数据时，数据多次使用，但不想保存在全局变量中，就需要将数据存储在缓存中。查找数据时，如果缓存找不到，则调用 API，然后设置缓存，如果找到，直接返回查找到的值即可。闭包正好可以做到这一点，且不会释放外部的引用，从而函数内部的值可以得以保留。
+
+   ```js
+   const getList = (function() {
+       // 闭包存储data
+       let data = {};
+       const getData = () => {
+           return new Promise((resolve, reject) => {
+               $.ajax({
+                   url: '/your/api',
+                   data: {
+                       normal: 1
+                   },
+                   success: function (result) {
+                       data = result.data;
+                       resolve();
+                   }
+               });
+           })
+       }
+       // 异步函数，当调用一个 async 函数时，会返回一个 Promise 对象。
+       const result = async function (type) {
+           if (JONS.stringify(data) === '{}') {
+               //await 只能出现在 async 函数中。
+               await getData();//等待异步操作执行完成，再执行后面的操作，相当于把后面的代码写在success里，但用await会比较简洁
+               //如果 async 函数没有返回值，它会返回 Promise.resolve(undefined)。如果有返回值data，就会resolve(data),把data传入then
+               //当 async 函数抛出异常时，Promise 的 reject 方法也会传递这个异常值。
+               return data;
+           } else {
+               return data;
+           }
+       }
+
+       return result;
+   })();
+
+   // 第一次调用通过api请求数据
+   getList().then(res => {
+       console.log(res);
+
+       // 第二次调用则直接拿取缓存数据
+       getList().then(res => {
+           console.log(res);
+       }
+   });
+   ```
+
+
+### DOM 树解析和更改与遍历
+
+1. 参考链接：
+
+   [Window](https://developer.mozilla.org/zh-CN/docs/Web/API/Window)
+
+2. 详解：
+
+   - XML/HTML 源代码解析为 DOM Document：DOMParser.parseFromString，相反操作：XMLSerializer.serializeToString
+
+   ```js
+   let parser = new DOMParser(),
+     doc = parser.parseFromString(
+       XML / HTML源代码(可url),
+       指定类型字符串(
+         "application/xml",
+         "image/svg+xml",
+         "text/html",
+         "application/xml"
+       )
+     );
+
+   var s = new XMLSerializer();
+   var d = document;
+   var str = s.serializeToString(d);
+   ```
+
+   - 监视对 DOM 树所做更改
+
+   ```js
+   let targetNode = document.querySelector(`#id`);
+
+   // 配置
+   let config = {
+     attributeFilter: [特定属性名称], //要监视的特定属性名称的数组
+     attributeOldValue: true, //记录任何有改动的属性的上一个值,无默认值
+     attributes: true, //监视元素属性值变更,默认false
+     characterData: true, //监视目标节点子树节点所包含的字符数据的变化,无默认值
+     characterDataOldValue: true, //记录节点文本的先前值.无默认值
+     childList: true, //监视目标节点添加或删除新的子节点,默认false
+     subtree: true, //监视目标节点子树添加或删除新的子节点,默认false
+   };
+
+   // 更改被监测到时执行
+   const mutationCallback = (mutationsList) => {
+     for (let mutation of mutationsList) {
+       let type = mutation.type;
+       switch (type) {
+         case "childList":
+           console.log("A child node has been added or removed.");
+           break;
+         case "attributes":
+           console.log(`The ${mutation.attributeName} attribute was modified.`);
+           break;
+         case "subtree":
+           console.log(`The subtree was modified.`);
+           break;
+         default:
+           break;
+       }
+     }
+   };
+
+   let observer = new MutationObserver(mutationCallback);
+
+   //开始监测
+   observer.observe(targetNode, config);
+
+   //停止监测
+   observer.disconnect();
+   ```
+
+   - 遍历文档的子树中的所有节点及其位置 document.createTreeWalker()
+
+   ```js
+   treeWalker = document.createTreeWalker(根节点, 过滤某些内容节点[option], NodeFilter 对象, 标识符(已废弃));
+   ```
+
+   ```js
+   var treeWalker = document.createTreeWalker(
+     document.body,
+     NodeFilter.SHOW_ELEMENT,
+     {
+       acceptNode: function (node) {
+         return NodeFilter.FILTER_ACCEPT;
+       },
+     },
+     false
+   );
+
+   var nodeList = [];
+
+   while (treeWalker.nextNode()) nodeList.push(treeWalker.currentNode);
+   ```
+
+   1. option
+      - NodeFilter.SHOW_ALL -1 显示所有节点
+      - NodeFilter.SHOW_ATTRIBUTE 2 显示特性 Attr 节点 废弃
+      - NodeFilter.SHOW_CDATA_SECTION 8 显示 CDTA CDATASection 节点 废弃
+      - NodeFilter.SHOW_COMMENT 128 显示注释 Comment 节点
+      - NodeFilter.SHOW_DOCUMENT 256 显示文档 Document 节点
+      - NodeFilter.SHOW_DOCUMENT_FRAGMENT 1024 显示文档片段 DocumentFragment 节点
+      - NodeFilter.SHOW_DOCUMENT_TYPE 512 显示文档类型 DocumentType 节点
+      - NodeFilter.SHOW_ELEMENT 1 显示元素 Element 节点
+      - NodeFilter.SHOW_ENTITY 32 显示实体 Entity 节点 废弃
+      - NodeFilter.SHOW_ENTITY_REFERENCE 16 显示实体引用 废弃
+      - NodeFilter.SHOW_NOTATION 2048 显示符号 Notation 节点 废弃
+      - NodeFilter.SHOW_PROCESSING_INSTRUCTION 64 显示处理指令 ProcessingInstruction 节点
+      - NodeFilter.SHOW_TEXT 4 显示文字 Text nodes 节点
+   2. NodeFilter
+
+   ```js
+   var nodeIterator = document.createNodeIterator(
+     document.getElementById("someId"),
+
+     NodeFilter.SHOW_TEXT,
+
+     {
+       acceptNode: function (node) {
+         if (!/^\s*$/.test(node.data)) {
+           return NodeFilter.FILTER_ACCEPT;
+           //return NodeFilter.FILTER_REJECT;
+           //return NodeFilter.FILTER_SKIP;
+         }
+       },
+     },
+     false
+   );
+
+   var node;
+
+   while ((node = nodeIterator.nextNode())) {
+     alert(node.data);
+   }
+   ```
+
+
+### 运算符优先级
+
+1. 参考链接：
+
+   - [('b' + 'a' + + 'a' + 'a').toLowerCase()输出 banana 的剖析](https://juejin.im/post/5d537c71e51d4561c94b0faa)
+
+2. 详解：
+
+   ```txt
+   ('b' + 'a' + + 'a' + 'a').toLowerCase()
+   =('b' + 'a' + (+ 'a') + 'a').toLowerCase()//正号优先级大于加号
+   =('b' + 'a' + Number('a') + 'a').toLowerCase()//隐式转换
+   =('ba' + NaN + 'a').toLowerCase()
+   =('ba' + 'NaN' + 'a').toLowerCase()
+   =('baNaNa').toLowerCase()
+   ='banana'
+   ```
+
+### 作用域与变量等题目
+
+1. 参考链接
+
+   - [8 个问题看你是否真的懂 JS](https://juejin.im/post/5d2d146bf265da1b9163c5c9)
+   - [七个简单但棘手的 JS 面试问题](https://segmentfault.com/a/1190000020722239)
+   - [前端常见 20 道高频面试题深入解析](https://mp.weixin.qq.com/s/jx-4p32EA9cHkDzll3BoYQ)
+   - [2 万字 | 前端基础拾遗 90 问](https://juejin.im/post/5e8b261ae51d4546c0382ab4#heading-37)
+   - [JS 中的最大安全整数是多少？](https://blog.csdn.net/weixin_43675244/article/details/89518309)
+   - [BigInt](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/BigInt)
+   - [重学前端学习笔记（二十）--try 里面放 return，finally 还会执行吗？](https://www.ucloud.cn/yun/109647.html)
+   - [实现 Lazyman](https://segmentfault.com/a/1190000009018654?utm_source=tag-newest)
+   - [触及盲区，这道题前端群里发疯了](https://mp.weixin.qq.com/s/YQEBZo1pdy-5B1Jz8cvWmw)
+   - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
+   - [11 个 JavaScript 小技巧](https://mp.weixin.qq.com/s/qBuTTXzt7ZNFttXwu5ryMw)
+
+2. 详解
+
+   - 意外的全局变量
+
+     ```js
+     function foo() {
+       let a = (b = 0); //声明了全局变量b=0与局部变量a
+       a++;
+       return a;
+     }
+
+     foo();
+     typeof a; // undefined
+     typeof b; // number
+     ```
+
+   - 数组长度属性
+
+     ```js
+     const clothes = ["jacket", "t-shirt"];
+     clothes.length = 0; //改变数组长度相当于删除项
+     clothes[0]; // undefined
+     clothes.length = 2; //改回来，数据也丢失了
+     clothes[0]; // undefined
+     ```
+
+   - 自动插入分号
+
+     ```js
+     function arrayFromValue(item) {
+       return; //js不写分号也能自成一行
+       [items];
+     }
+
+     arrayFromValue(10); //undefined
+     ```
+
+   - 事件循环机制
+
+     ```js
+     let i;
+     for (i = 0; i < 3; i++) {
+       //先执行完循环，再调用时钟宏任务
+       const log = () => {
+         console.log(i);
+       };
+       setTimeout(log, 100);
+     }
+     //3 3 3
+     ```
+
+   - 实现 let 和 const
+
+     let
+
+     ```js
+     for (var i = 0; i < 10; i++) {
+       (function (i) {
+         //闭包缓存
+         setTimeout(() => {
+           console.log(i);
+         }, 0);
+       })(i);
+     }
+     ```
+
+     const
+
+     ```js
+     function _const(key, value) {
+       const desc = {
+         value,
+         writable: false,
+       };
+       Object.defineProperty(window, key, desc);
+     }
+
+     _const("obj", { a: 1 }); //定义obj
+     obj.b = 2; //可以正常给obj的属性赋值
+     obj = {}; //抛出错误，提示对象read-only
+     ```
+
+   - 精度丢失
+
+     二进制导致小数大多只能取近似值
+
+     双精度存储（double precision），占用 64 bit
+
+     1. 1 位用来表示符号位
+     2. 11 位用来表示指数
+     3. 52 位表示尾数(整数+小数)
+
+     ```js
+     (0.1 + 0.2 ===
+       0.3(
+         //false
+         0.1 * 10 + 0.2 * 10
+       ) /
+         10) ==
+       0.3; // true
+     ```
+
+     bigint 类型:小数部分会取整
+
+     ```js
+     const theBiggestInt = 9007199254740991n;
+
+     const alsoHuge = BigInt(9007199254740991);
+     // ↪ 9007199254740991n
+
+     const hugeString = BigInt("9007199254740991");
+     // ↪ 9007199254740991n
+
+     const hugeHex = BigInt("0x1fffffffffffff");
+     // ↪ 9007199254740991n
+
+     const hugeBin = BigInt(
+       "0b11111111111111111111111111111111111111111111111111111"
+     );
+     // ↪ 9007199254740991n
+     ```
+
+   - try catch finally 执行
+
+     try 里面放 return，finally 会执行完再 return
+
+     ```js
+     // return 执行了但是没有立即返回，而是先执行了finally
+     function kaimo() {
+       try {
+         return 0;
+       } catch (err) {
+         console.log(err);
+       } finally {
+         console.log("a");
+       }
+     }
+
+     console.log(kaimo()); // a 0
+     // finally 中的 return 覆盖了 try 中的 return。
+     function kaimo() {
+       try {
+         return 0;
+       } catch (err) {
+         console.log(err);
+       } finally {
+         return 1;
+       }
+     }
+
+     console.log(kaimo()); // 1
+     ```
+
+   - js 变量生命周期
+
+     ```js
+     a; // undefined 变量提升
+     b; // ReferenceError 临时死区 const
+     c; // ReferenceError 临时死区 let
+
+     var a = "value";
+     const b = 3.14;
+     let c = true;
+
+     a; //'value'
+     b; //3.14
+     c; //true
+     ```
+
+     ```js
+     var a = 10;
+     function foo() {
+       console.log(a); // undefined
+       var a = 20; // 使上面的a变成局部作用域
+     }
+     foo();
+     ```
+
+     ```js
+     var a = 10;
+     function foo() {
+       console.log(a); // ReferenceError
+       let a = 20; // 使上面的a变成局部作用域
+     }
+     foo();
+     ```
+
+     ```js
+     var a = 10;
+     function foo() {
+       console.log(a); // 全局作用域10
+     }
+     foo();
+     ```
+
+     ```js
+     var a = 10;
+     function foo() {
+       console.log(a); // undefined
+       var a = 20; // 使上面的a变成局部作用域
+       console.log(a); //20
+     }
+     console.log(a); //10
+     foo();
+     ```
+
+   - this 的指向
+
+     ```js
+     var x = 10; // global scope
+     var foo = {
+       x: 90,
+       getX: function () {
+         return this.x;
+       },
+     };
+     foo.getX(); // 90,函数里的this指向foo
+     let xGetter = foo.getX;
+     xGetter(); // 10,函数里的this指向window
+     let getFooX = foo.getX.bind(foo); //使用call和apply同理
+     getFooX(); // 90
+     ```
+
+   - 执行上下文
+
+     代码被解析和执行时所在环境的抽象概念，类型分为全局和函数，创建过程：
+
+     - 创建变量对象：首先初始化函数的参数 arguments，提升函数声明和变量声明。
+
+     - 创建作用域链（Scope Chain）：在执行期上下文的创建阶段，作用域链是在变量对象之后创建的。
+
+     - 确定 this 的值，即 ResolveThisBinding
+
+   - 执行栈
+
+     具有 LIFO (后进先出) 结构，用于存储在代码执行期间创建的所有执行上下文。
+
+     执行规则：
+
+     - 首次运行 JavaScript 代码的时候,会创建一个全局执行的上下文并 Push 到当前的执行栈中，每当发生函数调用，引擎都会为该函数创建一个新的函数执行上下文并 Push 当前执行栈的栈顶。
+
+     - 当栈顶的函数运行完成后，其对应的函数执行上下文将会从执行栈中 Pop 出，上下文的控制权将移动到当前执行栈的下一个执行上下文。
+
+   - 作用域链
+
+     从当前作用域开始一层一层向上寻找某个变量，直到找到全局作用域还是没找到，就宣布放弃。这种一层一层的关系，就是作用域链。
+
+   - 闭包
+
+     闭包是指有权访问另一个函数作用域中的变量的函数
+
+     作用：
+
+     - 能够访问函数定义时所在的作用域(阻止其被回收)
+
+     - 私有化变量(函数里声明变量)
+
+     - 模拟块级作用域(for var let 的问题)
+
+     - 创建模块(函数中的函数)
+
+     模块模式具有两个必备的条件：
+
+     - 必须有外部的封闭函数，该函数必须至少被调用一次(每次调用都会创建一个新的模块实例)
+
+     - 封闭函数必须返回至少一个内部函数，这样内部函数才能在私有作用域中形成闭包，并且可以访问或者修改私有的状态。
+
+   - 私有/公有属性/方法与变量提升
+
+     ```js
+     function Foo() {
+       getName = function () {
+         alert(1);
+       };
+       return this;
+     }
+     Foo.getName = function () {
+       alert(2);
+     };
+     Foo.prototype.getName = function () {
+       alert(3);
+     };
+     var getName = function () {
+       alert(4);
+     };
+     function getName() {
+       alert(5);
+     }
+
+     //答案：
+     Foo.getName(); //2
+     getName(); //4
+     Foo().getName(); //1，相当于this.getName()
+     getName(); //1
+     new Foo.getName(); //2,相当于(new (Foo.getName))(),.成员访问(18)->new有参数列表(18)
+     new Foo().getName(); //3,相当于(new Foo()).getName(),new有参数列表(18)->.成员访问(18)->()函数调用(17)
+     new new Foo().getName(); //3,相当于new ((new Foo()).getName)(),new有参数列表(18)->new有参数列表(18)
+     ```
+
+     - 私有/公有 属性/方法
+
+       ```js
+       function User(name) {
+         var name = name; //私有属性
+         this.name = name; //公有属性
+         function getName() {
+           //私有方法
+           return name;
+         }
+       }
+       User.prototype.getName = function () {
+         //公有方法
+         return this.name;
+       };
+       User.name = "Wscats"; //静态属性
+       User.getName = function () {
+         //静态方法
+         return this.name;
+       };
+       var Wscat = new User("Wscats"); //实例化
+       ```
+
+       - 注意：
+
+       1. 调用公有方法，公有属性，必需先 new，公有方法是不能调用私有方法和静态方法
+
+       2. 静态方法和静态属性就是我们无需 new 就可以调用
+
+       3. 私有方法和属性,外部是不可以访问
+
+     - 声明式变量提升
+
+       ```js
+       getName() //oaoafly
+           var getName = function() {
+           console.log('wscat')
+       }
+       getName() //wscat
+       function getName() {
+           console.log('oaoafly')
+       }
+       getName() //wscat
+       --------------------------------------
+       var getName;
+       console.log(getName) //undefined
+       getName() //Uncaught TypeError: getName is not a function
+       var getName = function() {
+           console.log('wscat')
+       }
+       --------------------------------------
+       var getName;
+       console.log(getName) //function getName() {console.log('oaoafly')}
+       getName() //oaoafly
+       function getName() {
+           console.log('oaoafly')
+       }
+       ```
+
+       - 注意
+
+       1. 声明式函数会被提升到作用域的最前面，即使代码写在最后
+
+       2. 声明式函数要在赋值完成才能调用
+
+     - 构造函数与原型函数和返回值
+
+       ```js
+       function Foo() {
+         this.getName = function () {
+           console.log(3);
+           return {
+             getName: getName, //这个就是第六问中涉及的构造函数的返回值问题
+           };
+         }; //这个就是第六问中涉及到的，JS构造函数公有方法和原型链方法的优先级
+         getName = function () {
+           console.log(1);
+         };
+         return this;
+       }
+       Foo.getName = function () {
+         console.log(2);
+       };
+       Foo.prototype.getName = function () {
+         console.log(6);
+       };
+       var getName = function () {
+         console.log(4);
+       };
+       function getName() {
+         console.log(5);
+       }
+       //答案：
+       Foo.getName(); //2
+       getName(); //4
+       console.log(Foo());
+       Foo().getName(); //1
+       getName(); //1
+       new Foo.getName(); //2
+       new Foo().getName(); //3
+       //多了一问
+       new Foo().getName().getName(); //3 1
+       new new Foo().getName(); //3
+       ```
+
+       - 注意
+
+       1. 如果构造函数和原型链都有相同的方法，默认会拿构造函数的公有方法(this.getName)而不是原型链(Foo.prototype.getName)
+
+       2. JS 中构造函数可以有返回值，没有返回值则按照其他语言一样返回实例化对象
+
+       3. 构造函数若有返回值为基本类型（String,Number,Boolean,Null,Undefined）则与无返回值相同，实际返回其实例化对象
+
+       4. 构造函数若有返回值为引用类型(对象)，则实际返回值为这个引用类型(返回 object 具体内容，返回 this 同理)
+
+   - lazyman
+
+     考察对象使用，链式调用，闭包缓存参数，函数队列，事件循环
+
+     题目
+
+     ```txt
+     实现一个LazyMan，可以按照以下方式调用:
+     LazyMan(“Hank”)输出:
+     Hi! This is Hank!
+
+     LazyMan(“Hank”).sleep(10).eat(“dinner”)输出
+     Hi! This is Hank!
+     //等待10秒..
+     Wake up after 10
+     Eat dinner~
+
+     LazyMan(“Hank”).eat(“dinner”).eat(“supper”)输出
+     Hi This is Hank!
+     Eat dinner~
+     Eat supper~
+
+     LazyMan(“Hank”).sleepFirst(5).eat(“supper”)输出
+     //等待5秒
+     Wake up after 5
+     Hi This is Hank!
+     Eat supper
+     ```
+
+     ```js
+     function Lazyman(name) {
+       return new _Lazyman(name);
+     }
+     class _Lazyman {
+       constructor(name) {
+         this.tasks = []; //设置任务队列
+         let self = this;
+         let task = (function (name) {
+           return function () {
+             console.log("Hello I'm " + name);
+             self.next(); //因为没法for循环执行，所以只能console完就调用next来执行下一个
+           };
+         })(name); //闭包传参能缓存参数，最终返回函数，否则无法在next中向function传参
+         this.tasks.push(task);
+         //此时首次进入构造函数，tasks为[f]，调用方式为tasks[0]()
+         //通过settimeout的方法，先执行链式调用和传参，最后才执行next()
+         setTimeout(function () {
+           self.next();
+         }, 0);
+       }
+       next() {
+         //取出一个任务并执行
+         let task = this.tasks.shift();
+         if (task) {
+           task();
+         }
+       }
+       eat(food) {
+         let self = this;
+         let task = (function (food) {
+           return function () {
+             console.log("Eat " + food);
+             self.next();
+           };
+         })(food);
+         this.tasks.push(task);
+         return this; //链式调用
+       }
+       sleep(time) {
+         let self = this;
+         let task = (function (time) {
+           return function () {
+             setTimeout(function () {
+               console.log("Wake up after " + time + " s!");
+               self.next(); //setTimeout执行完才能执行下一个
+             }, time * 1000);
+           };
+         })(time);
+         this.tasks.push(task);
+         return this;
+       }
+       sleepFirst(time) {
+         let self = this;
+         let task = (function (time) {
+           return function () {
+             setTimeout(function () {
+               console.log("Wake up after " + time + " s!");
+               self.next();
+             }, time * 1000);
+           };
+         })(time);
+         this.tasks.unshift(task); //函数最先执行，向队列头部插入函数
+         return this;
+       }
+     }
+     // Lazyman('Hank');
+     // Lazyman('Hank').sleep(5).eat('dinner');
+     // Lazyman('Hank').eat('dinner').eat('supper');
+     Lazyman("Hank").sleepFirst(5).eat("supper");
+     ```
+
+   - let 与函数块级作用域
+
+     1. 变量提升
+
+        ```js
+        console.log(a); //undefined
+        var a = 0;
+        ```
+
+        相当于
+
+        ```js
+        var a;
+        console.log(a); //undefined
+        a = 0;
+        ```
+
+     2. 暂时性死区
+
+        let,const 在同一个作用域，同一个变量只能被一次“特殊声明”,var 的声明是如果已经声明了，后者直接忽略声明
+
+
+            ```js
+            var x = 0;
+            function a(){
+                console.log(x);//Uncaught ReferenceError: Cannot access 'x' before initialization,已有x声明，但未初始化
+                let x = 1;
+            }
+            a();
+            ```
+            ```js
+            let a = a;
+            let a = a;//Uncaught SyntaxError: Identifier 'a' has already been declared，违反let只声明一次的原则
+            ```
+            同理
+            ```js
+            var a = a;
+            let a = a;//Uncaught SyntaxError: Identifier 'a' has already been declared
+            ```
+    
+        3. 函数提升
+    
+            ```js
+            console.log(a);// undfined
+            var a = function (){}
+    
+            console.log(a); // function a
+            function a(){}
+            ```
+    
+        4. 块级作用域
+    
+            ```js
+            console.log(a);// undefined
+            if(true){
+                console.log(a); // function a
+                function a(){}
+            }
+            ```
+            预解析为
+            ```js
+            var a; //  函数 a 的声明
+            console.log(a);// undefined
+            if(true){
+                function a(){} // 函数 a 的定义
+                console.log(a); // function a
+            }
+            ```
+    
+            catch 里面遵循的是块作用域
+            ```js
+            try{
+                console.log(a);// undefined
+                aa.c;
+            }catch(e){
+                var a = 1;
+            }
+            console.log(a);// 1
+            console.log(e);// Uncaught ReferenceError: e is not defined
+            ```
+    
+            ```js
+            var a = 0;
+            if(true){
+                a = 1;
+                function a(){}
+                a = 21;
+                console.log("里面",a);//里面 21
+            }
+            console.log("外部",a);//外部 1
+            ```
+            预解析如下
+            ```js
+            var a = 0;
+            if(true){
+                console.log(a,window.a);// 函数提升，是块级作用域，输出 function a 和 0
+                a = 1;  // 取作用域最近的块级作用域的 function a ,且被重置为 1了，本质又是一个 变量的赋值。
+                console.log(a,window.a);// a 是指向块级作用域的 a, 输出 1 和 0
+                function a(){} // 函数的声明，将执行函数的变量的定义同步到函数级的作用域。
+                console.log(a,window.a);// 输出 1 和 1
+                a = 21; // 仍然是函数定义块级作用域的 a ,重置为 21
+                console.log(a,window.a); // 输出为函数提升的块级作用域的 a, 输出 21，1
+                console.log("里面",a);
+            }
+            console.log("外部",a);
+            ```
+    
+    * 隐式调用
+    
+        让(a==1&&a==2&&a==3)为true
+    
+        1. toString
+    
+            ```js
+            let a = {
+                i : 1,
+                toString: function(){
+                    return a.i++
+                }
+            }
+            if(a==1&&a==2&&a==3){
+                console.log('success')
+            } else {
+                console.log('fail')
+            }
+            ```
+    
+        2. defineProperty
+    
+            ```js
+            var val = 0;
+            Object.defineProperty(window, 'a', {
+                get: function() {
+                    return ++val;
+                }
+            });
+            if (a == 1 && a == 2 && a == 3) {
+                console.log('yay');
+            }
+            ```
+    
+        3. Array.join
+    
+            ```js
+            let a = [1,2,3];
+            a.join = a.shift;
+            if(a==1&&a==2&&a==3){
+                console.log('success')
+            } else {
+                console.log('fail')
+            }
+            ```
+
+
+    * 属性读取
+    
+        cannot read property of undefined 是一个常见的错误，如果意外的得到了一个空对象或者空值，便会报错
+    
+        obj.user && obj.user.posts
+    
+        与或运算
+        ```js
+        let one = 1, two = 2, three = 3;
+        console.log(one && two && three); // Result: 3
+        console.log(0 && null); // Result: 0
+        ```
+    
+        新特性：?.操作符
+        ```js
+        this.state.data?.()
+        this.state？.data
+        ```
+
+
+### 严格模式
+
+1. 参考链接：
+
+   [JavaScript 严格模式(use strict)](https://www.runoob.com/js/js-strict.html)
+
+2. 详解
+
+   1. 变量必须用 var 等声明，变量不能重名
+   2. 不允许 delete 除变量属性的值
+   3. 不能使用 8 进制，转义字符\
+   4. 不能使用保留字段作为变量名，如 public，arguments，eval 等
+   5. 不能调用 eval 创建的变量
+   6. this 不会指向全局，而是会 undefined
+   7. 构造函数后，必须使用 new 才能访问对象属性
+
+   ```js
+   var a = function () {
+     this.b = 3;
+   };
+   var c = new a();
+   a.prototype.b = 9;
+   var b = 7;
+   a();
+
+   console.log(b); //3，a()修改this.b指向全局，覆盖b=7
+   console.log(c.b); //3
+   ```
+
+   ```js
+   "use strict";
+   var a = function () {
+     this.b = 3;
+   }; //Cannot set property 'b' of undefined，this指向全局为undefined
+   var c = new a();
+   a.prototype.b = 9;
+   var b = 7;
+   a();
+
+   console.log(b); //没有执行，直接上方报错
+   console.log(c.b);
+   ```
+
+### 前端路由原理
+
+1. 参考链接：
+
+   [前端路由的前生今世及实现原理](https://segmentfault.com/a/1190000011967786)
+
+2. 详解：
+
+   - 后端渲染路由
+
+     1.浏览器发出请求
+
+     2.服务器监听到 80/443 端口的请求，并解析 url 路径
+
+     3.根据服务器的路由配置，返回相应信息（html、json、image）
+
+     4.浏览器根据数据包的 Content-Type 来决定如何解析数据
+
+   - 前端路由
+
+     检测 url 的变化，截获 url 地址，然后解析来匹配路由规则。
+
+     https://...#value 井号后面的 value 为 hash，hash 变化不会请求后端，只会触发 hashchange 事件，然后 js 解析新的页面内容。回退使用 history.go(-1)，前进使用 hashchange 事件，刷新使用 load 事件。
+
+     pushState 和 replaceState 方法，以及 onpopstate 事件，能够使 url 不出现井号跳转，原理和 hash 相同，如 vue 的 history 模式，但是刷新页面依然会发请求导致 404，因此需要服务器转发请求，重定向到根页面，如使用 nginx。回退使用 popstate 事件，前进使用 pushState，刷新使用服务器重定向，再 load。
+
+     ```txt
+     server {
+         listen       8083;
+         server_name  localhost;
+
+         location / {
+             root   D:\wwwroot;
+             try_files $uri $uri/ /index.html;
+             index  index.html index.htm;
+         }
+
+         location /api {
+             add_header 'Access-Control-Allow-Origin' '*';
+             proxy_pass http://localhost:7675/api;
+         }
+
+         error_page   500 502 503 504  /50x.html;
+         location = /50x.html {
+             root   html;
+         }
+     }
+     ```
+
+   - pushState 和 replaceState
+
+     history.pushState(状态对象, 标题 , URL);创建新的历史记录条目
+
+     history.replaceState(状态对象, 标题 , URL);修改历史记录条目
+
+     状态对象是能被序列化的对象(小于 640k)，用户导航到新的状态，popstate 事件就会被触发，且该事件的 state 属性包含该历史记录条目状态对象的副本。
+
+     获取当前状态：let currentState = history.state;
+
+### virtualDOM_Diff
+
+1. 参考链接：
+
+   - [虚拟 DOM](https://www.jianshu.com/p/580157c93c53)
+   - [Diff 算法](https://www.jianshu.com/p/cdb4ad82df20)
+
+2. 详解
+
+   - 产生虚拟 DOM 的原因：由原本事件驱动变为数据驱动，jquery 频繁操作 DOM 可能会造成不必要的浪费
+     ```js
+     $("li").on("click", function () {
+       $(this).show().siblings().hide();
+     });
+     var li = $("li");
+     //优化
+     li.on("click", function () {
+       li.hide();
+       $(this).show();
+     });
+     ```
+   - diff 三大策略:
+
+     1. Tree Diff:层次遍历找出不同
+     2. Component Diff:组件脏检查，看组件实例是否改变，没改变，继续步骤 1，改变，到步骤 3
+     3. Element Diff:发现与真实 DOM 不同，当节点处于同一层级时，Diff 提供三种 DOM 操作：删除、移动、插入。(removeChild/removeChildren/createElement/insertBefore/setTextContent/appendChild/replaceChild(new,old))
+
+   - diff 示例
+     1. 先标记新老 DOM 元素如下
+        ```txt
+               oldS        oldE
+        old:    a   b   c   d
+        new:    a   f   d   e   c
+               newS            newE
+        ```
+     2. 比较 oldS 和 newS 发现一样，oldS++，newS++，发现 b 和 f 不一致，在 oldS 前插入 f，oldS++，newS++
+        ```txt
+                       oldS    oldE
+        old:    a   f   b   c   d
+        new:    a   f   d   e   c
+                       newS    newE
+        ```
+     3. 此时 oldE 和 newS 相同，oldE 移动到 oldS 前，oldS++,newS++
+        ```txt
+                          oldS oldE
+        old:    a   f   d   b   c
+        new:    a   f   d   e   c
+                          newS newE
+        ```
+     4. newE 与 oldE 相同,oldE--,newE--,此时新老都不同，oldS 前插入 newE，删除 oldS，oldS++，newS++，newE--，oldE--
+        ```txt
+                          oldE oldS
+        old:    a   f   d   e   c
+        new:    a   f   d   e   c
+                          newE newS
+        ```
+     5. oldS > oldE，Diff 结束
+
+
+### 抽象语法树 AST 与 babel
+
+1. 参考链接：
+
+   - [一看就懂的 JS 抽象语法树](https://segmentfault.com/a/1190000012943992)
+   - [中高级前端大厂面试秘籍，为你保驾护航金三银四，直通大厂(上)](https://juejin.im/post/5c64d15d6fb9a049d37f9c20)
+
+2. 详解
+
+   抽象语法树：将代码逐字母解析成树状对象的形式，是语言之间的转换、代码语法检查，代码风格检查，代码格式化，代码高亮，代码错误提示，代码自动补全等等的基础
+
+   - 样例
+
+     ```js
+     var a = 1;
+     var b = a + 1;
+     {
+         "type": "Program",
+         "body": [
+             {
+                 "type": "VariableDeclaration",
+                 "declarations": [
+                     {
+                         "type": "VariableDeclarator",
+                         "id": {
+                             "type": "Identifier",
+                             "name": "a"
+                         },
+                         "init": {
+                             "type": "Literal",
+                             "value": 1,
+                             "raw": "1"
+                         }
+                     }
+                 ],
+                 "kind": "var"
+             },
+             {
+                 "type": "VariableDeclaration",
+                 "declarations": [
+                     {
+                         "type": "VariableDeclarator",
+                         "id": {
+                             "type": "Identifier",
+                             "name": "b"
+                         },
+                         "init": {
+                             "type": "BinaryExpression",
+                             "operator": "+",
+                             "left": {
+                                 "type": "Identifier",
+                                 "name": "a"
+                             },
+                             "right": {
+                                 "type": "Literal",
+                                 "value": 1,
+                                 "raw": "1"
+                             }
+                         }
+                     }
+                 ],
+                 "kind": "var"
+             }
+         ],
+         "sourceType": "script"
+     }
+     ```
+
+     - 常用引擎
+
+       - esprima
+       - acron
+       - Traceur
+       - UglifyJS2
+       - shift
+
+     - 使用示例
+
+       ```js
+       //npm i esprima estraverse escodegen --save
+       const esprima = require("esprima");
+       let code = "const a = 1";
+       const ast = esprima.parseScript(code);
+       console.log(ast);
+       //Script {
+       //type: 'Program',
+       //body:
+       //[ VariableDeclaration {
+       //    type: 'VariableDeclaration',
+       //    declarations: [Array],
+       //    kind: 'const' } ],
+       //sourceType: 'script' }
+       const estraverse = require("estraverse");
+       estraverse.traverse(ast, {
+         enter: function (node) {
+           node.kind = "var";
+         },
+       });
+       console.log(ast);
+       //Script {
+       //type: 'Program',
+       //body:
+       //[ VariableDeclaration {
+       //    type: 'VariableDeclaration',
+       //    declarations: [Array],
+       //    kind: 'var' } ],
+       //sourceType: 'script' }
+       const escodegen = require("escodegen");
+       const transformCode = escodegen.generate(ast);
+       console.log(transformCode);
+       //var a = 1;//把const a = 1编译成这个
+       ```
+
+     - babel
+
+       1. babylon 将 ES6/ES7 代码解析成 AST
+       2. babel-traverse 对 AST 进行遍历转译，得到新的 AST
+       3. 新 AST 通过 babel-generator 转换成 ES5
+
+
