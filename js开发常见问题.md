@@ -28,7 +28,8 @@
 - [数组的理解](#数组的理解)
 - [typescript](#typescript)
 - [MutationObserver](#MutationObserver)
-- [blob](blob)
+- [blob](#blob)
+- [webApi](#webApi)
 
 ---
 
@@ -5193,3 +5194,712 @@
       const url = URL.createObjectURL(new Blob(str.split('')))
       download(url, 'demo1.json')
       ```
+
+### webApi
+
+1. 参考链接：
+
+  [10个打开了我新世界大门的 WebAPI](https://juejin.im/post/5ee8c60ef265da76ed486e20#heading-10)
+
+  [Web Audio API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Audio_API)
+
+  [Fullscreen_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Fullscreen_API)
+
+  [Web Speech API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API)
+
+  [Web Bluetooth API](https://developer.mozilla.org/zh-CN/docs/Web/API/Web_Bluetooth_API)
+
+  [Channel Messaging API](https://developer.mozilla.org/zh-CN/docs/Web/API/Channel_Messaging_API)
+
+  [Vibration API](https://developer.mozilla.org/zh-CN/docs/Web/API/Vibration_API)
+
+  [Broadcast_Channel_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Broadcast_Channel_API)
+
+  [Payment_Request_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Payment_Request_API)
+
+  [Resize_Observer_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Resize_Observer_API)
+
+  [Pointer_Lock_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Pointer_Lock_API)
+
+2. 详解
+
+    web api 对 IE 完全不兼容，其它浏览器页需要较新版本
+
+    * Web Audio API
+
+    audio 元素传递到 AudioContext,创建一个媒体源 createMediaElementSource(audio),createGain 创建音量节点 volNode,使用 StereoPannerNode 设置声像效果
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - Audio </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div>
+                        <audio controls src="./lovely.mp4" id="audio"></audio>
+                    </div>
+                    <div>
+                        <button onclick="audioFromAudioFile.init()">Init</button>
+                        <button onclick="audioFromAudioFile.play()">Play</button>
+                        <button onclick="audioFromAudioFile.pause()">Pause</button>
+                        <button onclick="audioFromAudioFile.stop()">Stop</button>
+                    </div>
+                    <div>
+                        <span>Vol: <input onchange="audioFromAudioFile.changeVolume()" type="range" id="vol" min="1" max="3"
+                                step="0.01" value="1" /></span>
+                        <span>Pan: <input onchange="audioFromAudioFile.changePan()" type="range" id="panner" min="-1"
+                                max="1" step="0.01" value="0" /></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const l = console.log
+        let audioFromAudioFile = (function () {
+            var audioContext
+            var volNode
+            var pannerNode
+            var mediaSource
+
+            function init() {
+                l("Init")
+                try {
+                    audioContext = new AudioContext()
+                    mediaSource = audioContext.createMediaElementSource(audio)
+                    volNode = audioContext.createGain()
+                    volNode.gain.value = 1
+                    pannerNode = new StereoPannerNode(audioContext, { pan: 0 })
+
+                    mediaSource.connect(volNode).connect(pannerNode).connect(audioContext.destination)
+                    console.log(volNode)
+                }
+                catch (e) {
+                    error.innerHTML = "The Web Audio API is not supported in this device."
+                    error.classList.remove("close")
+                }
+            }
+            function play() {
+                audio.play()
+            }
+
+            function pause() {
+                audio.pause()
+            }
+
+            function stop() {
+                audio.stop()
+            }
+
+            function changeVolume() {
+                volNode.gain.value = document.getElementById('vol').value
+            }
+
+            function changePan() {
+                pannerNode.gain.value = tdocument.getElementById('panner').value
+            }
+
+            return {
+                init,
+                play,
+                pause,
+                stop,
+                changePan,
+                changeVolume
+            }
+        })()
+    </script>
+    ```
+
+    * Fullscreen API
+
+    全屏播放
+
+    ```html
+    <script>
+        function toggle() {
+            const videoStageEl = document.querySelector(".video-stage")
+            console.log(videoStageEl.requestFullscreen)
+            if (videoStageEl.requestFullscreen) {
+                if (!document.fullscreenElement) {
+                    videoStageEl.requestFullscreen()
+                }
+                else {
+                    document.exitFullscreen()
+                }
+            } else {
+                error.innerHTML = "Fullscreen API not supported in this device."
+                error.classList.remove("close")
+            }
+        }
+    </script>
+    ```
+
+    * Web Speech API
+
+    将语音合成和语音识别功能添加到Web应用中，能够向Web应用发出语音命令，实现文本到语音和语音到文本的转换。
+
+    实例化 SpeechSynthesisUtterance() 对象，将输入框中输入的文本转换为语音，调用语音对象 SpeechSynthesis 的 speak 函数，使输入框中的文本在我们的扬声器中放出。
+
+    实例化 SpeechRecognition，然后注册事件处理程序和回调。在语音识别开始时调用 onstart，在发生错误时调用 onerror 。每当语音识别捕获到一条线时，就会调用 onresult,提取文本并将其设置到文本区域。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div id="error" class="close"></div>
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - Text to Speech </div>
+                <div class="web-api-card-body">
+                    <div>
+                        <input placeholder="Enter text here" type="text" id="textToSpeech" />
+                    </div>
+                    <div>
+                        <button onclick="speak()">Tap to Speak</button>
+                    </div>
+                </div>
+            </div>
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - Speech to Text </div>
+                <div class="web-api-card-body">
+                    <div>
+                        <textarea placeholder="Text will appear here when you start speeaking."
+                            id="speechToText"></textarea>
+                    </div>
+                    <div>
+                        <button onclick="tapToSpeak()">Tap and Speak into Mic</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+
+        try {
+            var speech = new SpeechSynthesisUtterance()
+            var recognition = new SpeechRecognition()
+        } catch (e) {
+            error.innerHTML = "Web Speech API not supported in this device."
+            error.classList.remove("close")
+        }
+
+        function speak() {
+            speech.text = textToSpeech.value
+            speech.volume = 1
+            speech.rate = 1
+            speech.pitch = 1
+            alert(window.speechSynthesis)
+            window.speechSynthesis.speak(speech)
+        }
+
+        function tapToSpeak() {
+            recognition.onstart = function () { }
+
+            recognition.onresult = function (event) {
+                const curr = event.resultIndex
+                const transcript = event.results[curr][0].transcript
+                speechToText.value = transcript
+            }
+
+            recognition.onerror = function (ev) {
+                console.error(ev)
+            }
+
+            recognition.start()
+        }
+
+    </script>
+    ```
+
+    * Bluetooth API
+
+    访问手机上的低功耗蓝牙设备，并使用它来将网页中的数据共享到另一台设备上。
+
+    基础 API 是 navigator.bluetooth.requestDevice。调用它将使浏览器提示用户选择一个设备，使他们可以选择一个设备或取消请求。
+
+    navigator.bluetooth.requestDevice 需要一个对象。该对象定义了用于返回与过滤器匹配的蓝牙设备的过滤器。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - Bluetooth </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div>
+                        <div>Device Name: <span id="dname"></span></div>
+                        <div>Device ID: <span id="did"></span></div>
+                        <div>Device Connected: <span id="dconnected"></span></div>
+                    </div>
+                    <div>
+                        <button onclick="bluetoothAction()">Get BLE Device</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        function bluetoothAction() {
+            if (navigator.bluetooth) {
+                navigator.bluetooth.requestDevice({
+                    acceptAllDevices: true
+                }).then(device => {
+                    dname.innerHTML = device.name
+                    did.innerHTML = device.id
+                    dconnected.innerHTML = device.connected
+                }).catch(err => {
+                    error.innerHTML = "Oh my!! Something went wrong."
+                    error.classList.remove("close")
+                })
+            } else {
+                error.innerHTML = "Bluetooth is not supported."
+                error.classList.remove("close")
+            }
+        }
+    </script>
+    ```
+
+    * Channel Messaging API
+
+    允许两个不同的脚本运行在同一个文档的不同浏览器上下文（比如两个 iframe，或者文档主体和一个 iframe，或者两个 worker）来直接通讯，在每端使用一个端口（port）通过双向频道（channel）向彼此传递消息。
+
+    首先创建一个 MessageChannel 实例,返回一个 MessagePort 对象（通讯信道）,通过 MessagePort.port1 或 MessageChannel.port2 设置端口。
+
+    每个浏览器上下文都使用 Message.onmessage 监听消息，并使用事件的 data 属性获取消息内容。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - MessageChannel </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div id="displayMsg">
+                    </div>
+                    <div>
+                        <input id="input" type="text" placeholder="Send message to iframe" />
+                    </div>
+                    <div>
+                        <button onclick="sendMsg()">Send Msg</button>
+                    </div>
+                    <div>
+                        <iframe id="iframe" src="./iframe.content.html"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        try {
+            var channel = new MessageChannel()
+            var port1 = channel.port1
+        } catch (e) {
+            error.innerHTML = "MessageChannel API not supported in this device."
+            error.classList.remove("close")
+        }
+
+        iframe.addEventListener("load", onLoad)
+
+        function onLoad() {
+            port1.onmessage = onMessage
+            iframe.contentWindow.postMessage("load", '*', [channel.port2])
+        }
+
+        function onMessage(e) {
+            const newHTML = "<div>" + e.data + "</div>"
+            displayMsg.innerHTML = displayMsg.innerHTML + newHTML
+        }
+
+        function sendMsg() {
+            port1.postMessage(input.value)
+        }
+    </script>
+    ```
+    ```html
+    <body>
+        <div class="web-api-cnt">
+
+            <div class="web-api-card">
+                <div class="web-api-card-head">
+                    Running inside an <i>iframe</i>
+                </div>
+                <div class="web-api-card-body">
+                    <div id="iframeDisplayMsg">
+                    </div>
+                    <div>
+                        <input placeholder="Type message.." id="iframeInput" />
+                    </div>
+
+                    <div>
+                        <button onclick="sendMsgiframe()">Send Msg from <i>iframe</i></button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </body>
+
+    <script>
+        var port2
+        window.addEventListener("message", function(e) {
+            port2 = e.ports[0]
+            port2.onmessage = onMessage
+        })
+
+        function onMessage(e) {
+            const newHTML = "<div>"+e.data+"</div>"
+            iframeDisplayMsg.innerHTML = iframeDisplayMsg.innerHTML + newHTML
+        }
+
+        function sendMsgiframe(){
+            port2.postMessage(iframeInput.value)
+        }
+    </script>
+    ```
+
+    * Vibration API
+
+    为 Web 应用程序提供访问移动设备振动硬件
+
+    navigator.vibrate(pattern) 控制振动，pattern 是描述振动模式的单个数字或数字数组。
+
+    navigator.vibrate（[200，300，400]）使设备振动200毫秒，暂停300毫秒，振动400毫秒，然后停止。
+
+    可以通过传递0，[]，[0,0,0]（全零数组）来停止振动。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+
+            <div class="web-api-card">
+                <div class="web-api-card-head">
+                    Demo - Vibration
+                </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div>
+                        <input id="vibTime" type="number" placeholder="Vibration time" />
+                    </div>
+
+                    <div>
+                        <button onclick="vibrate()">Vibrate</button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </body>
+
+    <script>
+        if(navigator.vibrate) {
+            function vibrate() {
+                const time = vibTime.value
+                if(time != "")
+                    navigator.vibrate(time)
+            }
+        } else {
+            error.innerHTML = "Vibrate API not supported in this device."
+            error.classList.remove("close")
+        }
+    </script>
+    ```
+
+    * Broadcast Channel API
+
+    Broadcast Channel API 允许相同源下的不同浏览上下文的消息或数据进行通信。浏览上下文可以是窗口、iframe 等
+
+    BroadcastChannel 类用于创建或加入频道。const politicsChannel = new BroadcastChannel("politics")，politics 将是频道的名称。任何通过 politics 来初始化 BroadcastChannel 构造函数的上下文都将加入频道，它将接收在该频道上发送的任何消息，并且可以将消息发送到该频道。
+
+    发布到频道，使用 BroadcastChannel.postMessageAPI
+
+    订阅频道（收听消息），使用 BroadcastChannel.onmessage 事件。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - BroadcastChannel </div>
+                <div class="web-api-card-body">
+                    <div class="page-info">Open this page in another <i>tab</i>, <i>window</i> or <i>iframe</i> to chat with
+                        them.</div>
+                    <div id="error" class="close"></div>
+                    <div id="displayMsg" style="font-size:19px;text-align:left;">
+                    </div>
+                    <div class="chatArea">
+                        <input id="input" type="text" placeholder="Type your message" />
+                        <button onclick="sendMsg()">Send Msg to Channel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const l = console.log;
+        try {
+            var politicsChannel = new BroadcastChannel("politics")
+            politicsChannel.onmessage = onMessage
+            var userId = Date.now()
+        } catch (e) {
+            error.innerHTML = "BroadcastChannel API not supported in this device."
+            error.classList.remove("close")
+        }
+
+        input.addEventListener("keydown", (e) => {
+            if (e.keyCode === 13 && e.target.value.trim().length > 0) {
+                sendMsg()
+            }
+        })
+
+        function onMessage(e) {
+            const { msg, id } = e.data
+            const newHTML = "<div class='chat-msg'><span><i>" + id + "</i>: " + msg + "</span></div>"
+            displayMsg.innerHTML = displayMsg.innerHTML + newHTML
+            displayMsg.scrollTop = displayMsg.scrollHeight
+        }
+
+        function sendMsg() {
+            politicsChannel.postMessage({ msg: input.value, id: userId })
+
+            const newHTML = "<div class='chat-msg'><span><i>Me</i>: " + input.value + "</span></div>"
+            displayMsg.innerHTML = displayMsg.innerHTML + newHTML
+
+            input.value = ""
+
+            displayMsg.scrollTop = displayMsg.scrollHeight
+        }  
+    </script>
+    ```
+
+    * Payment Request API
+
+    提供了为商品和服务选择支付途径的方法。
+
+    该 API 提供了一种一致的方式来向不同的商家提供付款细节，而无需用户再次输入细节。
+
+    它向商家提供账单地址，收货地址，卡详细信息等信息。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - Credit Card Payment </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div>
+                        <button onclick="buy()">Buy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const networks = ["visa", "amex"]
+        const types = ["debit", "credit"]
+
+        const supportedInstruments = [
+            {
+                supportedMethods: "basic-card",
+                data: {
+                    supportedNetworks: networks,
+                    supportedTypes: types
+                }
+            }
+        ]
+
+        const details = {
+            total: {
+                label: "Total",
+                amount: {
+                    currency: "USD",
+                    value: "100"
+                }
+            },
+            displayItems: [
+                {
+                    label: "Item 1",
+                    amount: {
+                        currency: "USD",
+                        value: "50"
+                    }
+                },
+                {
+                    label: "Item 2",
+                    amount: {
+                        currency: "USD",
+                        value: "50"
+                    }
+                },
+            ]
+        }
+
+        try {
+            var paymentRequest = new PaymentRequest(supportedInstruments, details)
+        } catch (e) {
+            error.innerHTML = "PaymentRequest API not supported in this device."
+            error.classList.remove("close")
+        }
+
+        function buy() {
+            paymentRequest.show().then(response => {
+                console.log(response)
+            })
+        }
+    </script>
+    ```
+
+    * Resize Observer API
+
+    以任何方式调整了注册观察者的元素的大小，都通知观察者。
+
+    ```html
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+
+            <div class="web-api-card">
+                <div class="web-api-card-head">
+                    Demo - ResizeObserver
+                </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div id="stat"></div>
+
+                    <div id="resizeBoxCnt">
+                        <div id="resizeBox"></div>
+                    </div>
+
+                    <div>
+                        <span>Resize Width:<input onchange="resizeWidth(this.value)" type="range" min="0" max="100" value="0" /></span>
+                    </div>
+
+                    <div>
+                        <span>Resize Height:<input onchange="resizeHeight(this.value)" type="range" min="0" max="100" value="0" /></span>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </body>
+
+    <script>
+        try {
+            var resizeObserver = new ResizeObserver(entries => {
+                for(const entry of entries) {
+                        stat.innerHTML = "Box re-sized. Height:" + entry.target.style.height + " - Width:" + entry.target.style.width
+                }
+            })
+            resizeObserver.observe(resizeBox)
+        } catch(e) {
+            error.innerHTML = "ResizeObserver API not supported in this device."
+            error.classList.remove("close")        
+        }
+
+        function resizeWidth(e) {
+            resizeBox.style.width = `${e}px`
+        }
+
+        function resizeHeight(e) {
+            resizeBox.style.height = `${e}px`
+        }
+    </script>
+    ```
+
+    * Pointer Lock API
+
+    对于需要大量的鼠标输入来控制运动，旋转物体，以及更改项目的应用程序来说非常有用。对高度视觉化的应用程序尤其重要，例如那些使用第一人称视角的应用程序，以及 3D 视图和建模。
+
+    requestPointerLock：此方法将从浏览器中删除鼠标并发送鼠标状态事件。这将持续到调用 document.exitPointerLock 为止。
+
+    document.exitPointerLock：此 API 释放鼠标指针锁定并恢复鼠标光标。
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Document</title>
+        <style>
+            #box {
+                background-color: green;
+                width: 100%;
+                height: 400px;
+                position: relative;
+            }
+
+            #ball {
+                border-radius: 50%;
+                background-color: red;
+                width: 50px;
+                height: 50px;
+                position: absolute;
+            }
+        </style>
+    </head>
+
+    <body>
+        <header>
+            <h2>Web APIs<h2>
+        </header>
+        <div class="web-api-cnt">
+            <div class="web-api-card">
+                <div class="web-api-card-head"> Demo - PointerLock </div>
+                <div class="web-api-card-body">
+                    <div id="error" class="close"></div>
+                    <div id="box">
+                        <div id="ball"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+    <script>
+        const l = console.log
+        box.addEventListener("click", () => {
+            if (box.requestPointerLock)
+                box.requestPointerLock()
+            else {
+                error.innerHTML = "PointerLock API not supported in this device."
+                error.classList.remove("close")
+            }
+        })
+
+        document.addEventListener("pointerlockchange", (e) => {
+            document.addEventListener("mousemove", (e) => {
+                const { movementX, movementY } = e
+                ball.style.top = movementX + "px"
+                ball.style.left = movementY + "px"
+            })
+        })
+    </script>
+
+    </html>
+    ```
