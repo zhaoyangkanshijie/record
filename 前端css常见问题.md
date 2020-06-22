@@ -9,6 +9,7 @@
 - [css 幽灵空白节点](css幽灵空白节点)
 - [flex](flex)
 - [overflow:hidden 清除浮动的原理](#overflow:hidden清除浮动的原理)
+- [css样式穿透](#css样式穿透)
 
 ---
 
@@ -1343,3 +1344,68 @@
    ```
 
    在 parent 加入 overflow: hidden 前，parent 高度为 50px，加入后高度为 100px，所以父元素 overflow: hidden，可以清除包含块内子元素的浮动。
+
+
+### css样式穿透
+
+1. 参考链接：
+
+   [CSS3神奇的样式 pointer-events: none;解决JS鼠标事件穿透到子标签](https://blog.csdn.net/weixin_42703239/article/details/89217573)
+
+   [12 个实用的前端开发技巧总结](https://mp.weixin.qq.com/s/m-5D2261jTQ_TJccvObxSQ)
+
+2. 详解：
+
+  * 场景1
+
+    img css穿透input file，覆盖默认样式，同时使input可点击
+
+    ```css
+    img {
+      pointer-events: none;
+    }
+    ```
+    
+  * 场景2
+
+    获取鼠标相对标签，parent和child盒子中，event.offsetX 和 event.offsetY不一致，因此需要css样式穿透使child不可点，是坐标一直相对于parent
+
+    ```html
+    <style>
+        .parent{
+          width:400px;
+          height:400px;
+          padding: 50px;
+          margin:100px;
+          background:#f20;
+        }
+        .child{
+          width:200px;
+          height:200px;
+          padding:50px;
+          background:#ff0;
+          pointer-events: none;   /* 不接受鼠标事件 */
+        }
+        .child-child{
+          width:50px;
+          height:50px;
+          background:#00d;
+          pointer-events: none;   /* 不接受鼠标事件 */
+        }
+    </style>
+
+    <div  class="parent"  id="parent">
+          <div  class="child">
+                  <div  class="child-child">
+
+                  </div>
+          </div>
+    </div>
+
+    <script>
+        let  parent = document.getElementById("parent");
+        parent.addEventListener("click",function(event){
+            console.info( event.offsetX );
+        });
+    </script>
+    ```

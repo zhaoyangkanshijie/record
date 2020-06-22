@@ -46,6 +46,16 @@
 |   |-- App.vue                      // 页面入口文件
 |   |-- main.js                      // 程序入口文件，加载各种公共组件
 |-- static                           // 静态文件，比如一些图片，json数据等
+├── test/
+|   └── unit/                        // 单元测试
+|   |   ├── specs/                   // 测试规范
+|   |   ├── index.js                 // 测试入口文件
+|   |   └── karma.conf.js            // 测试运行配置文件
+|   └── e2e/                         // 端到端测试
+|   |   ├── specs/                   // 测试规范
+|   |   ├── custom-assertions/       // 端到端测试自定义断言
+|   |   ├── runner.js                // 运行测试的脚本
+|   |   └── nightwatch.conf.js       // 运行测试的配置文件
 |-- .babelrc                         // ES6语法编译配置
 |-- .editorconfig                    // 定义代码格式
 |-- .gitignore                       // git上传需要忽略的文件格式
