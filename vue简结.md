@@ -28,7 +28,7 @@
 * [引入外部 js](#引入外部js)
 * [从 defineProperty 到 proxy](#从defineProperty到proxy)
 * [动态组件与异步组件](#动态组件与异步组件)
-* [开启 gzip 模式](#开启gzip模式)
+* [开启gzip模式](#开启gzip模式)
 * [注意或优化的地方](#注意或优化的地方)
 * [vue3.0 新特性](#vue3.0新特性)
 * [vue-loader 原理](#vue-loader原理)
@@ -1791,7 +1791,7 @@ beforeRouteEnter(to,from,next){
 
     如果希望组件第一次被创建的时候缓存下来，可以在外面包一层 keep-alive
 
-## 开启 gzip 模式
+## 开启gzip模式
 
 vue.config.js 配置，与 outputDir 同级
 
@@ -1878,15 +1878,23 @@ configeWebpack: (config) => {
     // See https://github.com/vuejs/vue-cli/blob/dev/docs/cli-service.md#dll-mode
     //dll: false,
     chainWebpack: (config) => {
-      //生产环境中删除console.log
-      //if (process.env.NODE_ENV === 'production') {
-      //  config.optimization.minimizer[0].options.terserOptions.compress.warnings = false
-      //  config.optimization.minimizer[0].options.terserOptions.compress.drop_console = true
-      //  config.optimization.minimizer[0].options.terserOptions.compress.drop_debugger = true
-      //  config.optimization.minimizer[0].options.terserOptions.compress.pure_funcs = ['console.log']
-      //}
-      //最小化代码
+      //最小化代码,相当于webpack的optimization配置minimize: true，即向config.optimization.minimize传参，下方配置同理
       config.optimization.minimize(true);
+      //生产环境中删除console.log
+      config.optimization.minimizer(
+          [
+              new TerserPlugin({
+                  terserOptions: {
+                      warnings: false,
+                      compress: {
+                          drop_console: true, 
+                          drop_debugger: false,
+                          pure_funcs: ['console.log'] 
+                      }
+                  }
+              })
+          ]
+      );
       //分割代码
       config.optimization.splitChunks({
         chunks: "all",
