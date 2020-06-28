@@ -7,16 +7,18 @@
 * [vue 双向数据绑定原理](#vue双向数据绑定原理)
 * [请求后台资源](#请求后台资源)
 * [路由 vue-router](#路由vue-router)
-* [自定义组件(创建组件步骤)](<#自定义组件(创建组件步骤)>)
+* [自定义组件(创建组件步骤)](#自定义组件(创建组件步骤))
 * [父子组件通信](#父子组件通信)
 * [兄弟组件通信](#兄弟组件通信)
-* [vuex 状态管理(组件间通信)](<#vuex状态管理(组件间通信)>)
+* [vuex 状态管理(组件间通信)](#vuex状态管理(组件间通信))
+* [小型vuex:Vue.observable](#小型vuex:Vue.observable)
 * [vue 与 jquery 的区别](#vue与jquery的区别)
 * [vuejs 与 angularjs 以及 react 的区别](#vuejs与angularjs以及react的区别)
 * [vue 源码结构](#vue源码结构)
 * [vue2.0 和 3.0 的区别](#vue2.0和3.0的区别)
 * [style 中 scoped 的作用](#style中scoped的作用)
 * [子组件监听父组件数值变化](#子组件监听父组件数值变化)
+* [取消watch监听](#取消watch监听)
 * [页面传参与获取](#页面传参与获取)
 * [不同 url 复用页面，且只刷新部分组件](#不同url复用页面，且只刷新部分组件)
 * [method 与 computed 区别](#method与computed区别)
@@ -42,6 +44,11 @@
 * [Vue模版编译原理](#Vue模版编译原理)
 * [SSR](#SSR)
 * [SPA单页面的理解](#SPA单页面的理解)
+* [hookEvent](#hookEvent)
+* [loading](#loading)
+* [函数式组件](#函数式组件)
+
+---
 
 ## vue 自带指令
 
@@ -797,6 +804,52 @@ store.registerModule(["nested", "myModule"], {
 });
 ```
 
+## 小型vuex:Vue.observable
+
+项目规模不大，可以使用Vue2.6提供的新API Vue.observable手动打造一个Vuex
+
+```js
+import Vue from 'vue'
+
+// 通过Vue.observable创建一个可响应的对象
+export const store = Vue.observable({
+  userInfo: {},
+  roleIds: []
+})
+
+// 定义 mutations, 修改属性
+export const mutations = {
+  setUserInfo(userInfo) {
+    store.userInfo = userInfo
+  },
+  setRoleIds(roleIds) {
+    store.roleIds = roleIds
+  }
+}
+```
+```html
+<template>
+  <div>
+    {{ userInfo.name }}
+  </div>
+</template>
+<script>
+import { store, mutations } from '../store'
+export default {
+  computed: {
+    userInfo() {
+      return store.userInfo
+    }
+  },
+  created() {
+    mutations.setUserInfo({
+      name: '子君'
+    })
+  }
+}
+</script>
+```
+
 ## vue 与 jquery 的区别
 
 vue 是一个 mvvm（model+view+viewModel）框架，数据驱动，通过数据来显示视图层，而不是 jquery 的事件驱动进行节点操作。vue 适用于数据操作比较多的场景。
@@ -1006,6 +1059,38 @@ watch: {  
 　　pokerHistory(newValue, oldValue) {  
         console.log(newValue)  
 　　}
+}
+```
+
+## 取消watch监听
+
+this.$watch返回了一个值unwatch,是一个函数，在需要取消的时候，执行 unwatch()
+```js
+export default {
+  data() {
+    return {
+      formData: {
+        name: '',
+        age: 0
+      }
+    }
+  },
+  created() {
+    this.loadData()
+  },
+  methods: {
+    loadData() {
+      const unwatch = this.$watch(
+        'formData',
+        () => {
+          console.log('数据发生了变化')
+        },
+        {
+          deep: true
+        }
+      )
+    }
+  }
 }
 ```
 
@@ -2580,3 +2665,246 @@ SPA(single-page application)仅在 Web 页面初始化时加载资源。一旦�
 * 缺点
 
 初次加载耗时多，前进后退路由管理，SEO 难度较大
+
+## hookEvent
+
+1. 组件内部监听生命周期
+
+以下代码相距几百行，可读性差
+```js
+methods: {
+  handleResize() {
+    ...
+  }
+},
+mounted() {
+  window.addEventListener('resize', this.handleResize)
+  ...
+},
+...//几百行
+beforeDestroy() {
+  ...
+  window.removeEventListener('resize', this.handleResize)
+}
+```
+
+改为用$on,$once去监听所有的生命周期钩子函数
+```js
+methods: {
+  handleResize() {
+    ...
+  }
+},
+mounted() {
+  window.addEventListener('resize', this.handleResize)
+  this.$once('hook:beforeDestroy', () => {
+    window.removeEventListener('resize', this.handleResize)
+  })
+}
+```
+
+2. 外部监听生命周期函数
+
+第三方组件没提供相应的变化事件的解决方案
+```html
+<template>
+  <!--通过@hook:updated监听组件的updated生命钩子函数-->
+  <!--组件的所有生命周期钩子都可以通过@hook:钩子函数名 来监听触发-->
+  <custom-select @hook:updated="handleResize" />
+</template>
+```
+
+## loading
+
+* 全局组件loading
+
+```html
+<template>
+  <transition name="custom-loading-fade">
+    <!--loading蒙版-->
+    <div v-show="visible" class="custom-loading-mask">
+      <!--loading中间的图标-->
+      <div class="custom-loading-spinner">
+        <i class="custom-spinner-icon"></i>
+        <!--loading上面显示的文字-->
+        <p class="custom-loading-text">{{ text }}</p>
+      </div>
+    </div>
+  </transition>
+</template>
+<script>
+export default {
+  data: {
+    // 是否显示loading
+    visible: {
+      type: Boolean,
+      default: false
+    },
+    // loading上面的显示文字
+    text: {
+      type: String,
+      default: ''
+    }
+  }
+}
+</script>
+```
+```js
+// loading/index.js
+import Vue from 'vue'
+import LoadingComponent from './loading.vue'
+
+// 通过Vue.extend将组件包装成一个子类
+const LoadingConstructor = Vue.extend(LoadingComponent)
+
+let loading = undefined
+
+LoadingConstructor.prototype.close = function() {
+  // 如果loading 有引用，则去掉引用
+  if (loading) {
+    loading = undefined
+  }
+  // 先将组件隐藏
+  this.visible = false
+  // 延迟300毫秒，等待loading关闭动画执行完之后销毁组件
+  setTimeout(() => {
+    // 移除挂载的dom元素
+    if (this.$el && this.$el.parentNode) {
+      this.$el.parentNode.removeChild(this.$el)
+    }
+    // 调用组件的$destroy方法进行组件销毁
+    this.$destroy()
+  }, 300)
+}
+
+const Loading = (options = {}) => {
+  // 如果组件已渲染，则返回即可
+  if (loading) {
+    return loading
+  }
+  // 要挂载的元素
+  const parent = document.body
+  // 组件属性
+  const opts = {
+    text: '',
+    ...options
+  }
+  // 通过构造函数初始化组件 相当于 new Vue()
+  const instance = new LoadingConstructor({
+    el: document.createElement('div'),
+    data: opts
+  })
+  // 将loading元素挂在到parent上面
+  parent.appendChild(instance.$el)
+  // 显示loading
+  Vue.nextTick(() => {
+    instance.visible = true
+  })
+  // 将组件实例赋值给loading
+  loading = instance
+  return instance
+}
+
+export default Loading
+```
+
+* 指令loading
+
+```js
+import Vue from 'vue'
+import LoadingComponent from './loading'
+// 使用 Vue.extend构造组件子类
+const LoadingContructor = Vue.extend(LoadingComponent)
+
+// 定义一个名为loading的指令
+Vue.directive('loading', {
+  /**
+   * 只调用一次，在指令第一次绑定到元素时调用，可以在这里做一些初始化的设置
+   * @param {*} el 指令要绑定的元素
+   * @param {*} binding 指令传入的信息，包括 {name:'指令名称', value: '指令绑定的值',arg: '指令参数 v-bind:text 对应 text'}
+   */
+  bind(el, binding) {
+    const instance = new LoadingContructor({
+      el: document.createElement('div'),
+      data: {}
+    })
+    el.appendChild(instance.$el)
+    el.instance = instance
+    Vue.nextTick(() => {
+      el.instance.visible = binding.value
+    })
+  },
+  /**
+   * 所在组件的 VNode 更新时调用
+   * @param {*} el
+   * @param {*} binding
+   */
+  update(el, binding) {
+    // 通过对比值的变化判断loading是否显示
+    if (binding.oldValue !== binding.value) {
+      el.instance.visible = binding.value
+    }
+  },
+  /**
+   * 只调用一次，在 指令与元素解绑时调用
+   * @param {*} el
+   */
+  unbind(el) {
+    const mask = el.instance.$el
+    if (mask.parentNode) {
+      mask.parentNode.removeChild(mask)
+    }
+    el.instance.$destroy()
+    el.instance = undefined
+  }
+})
+```
+
+## 函数式组件
+
+函数式组件不需要实例化，无状态，没有生命周期，所以渲染性能要好于普通组件
+
+对于纯展示性的业务组件，如详情页面，列表界面，只需要将外部传入的数据进行展现，不需要有内部状态，不需要在生命周期钩子函数里面做处理，就可以考虑使用函数式组件
+
+函数式组件与普通组件的区别
+
+1. 函数式组件需要在声明组件是指定functional
+2. 函数式组件不需要实例化，所以没有this,this通过render函数的第二个参数来代替
+3. 函数式组件没有生命周期钩子函数，不能使用计算属性，watch等等
+4. 函数式组件不能通过$emit对外暴露事件，调用事件只能通过context.listeners.click的方式调用外部传入的事件
+5. 因为函数式组件是没有实例化的，所以在外部通过ref去引用组件时，实际引用的是HTMLElement
+6. 函数式组件的props可以不用显示声明，所以没有在props里面声明的属性都会被自动隐式解析为prop,而普通组件所有未声明的属性都被解析到$attrs里面，并自动挂载到组件根元素上面(可以通过inheritAttrs属性禁止)
+
+```js
+export default {
+  // 通过配置functional属性指定组件为函数式组件
+  functional: true,
+  // 组件接收的外部属性
+  props: {
+    avatar: {
+      type: String
+    }
+  },
+  /**
+   * 渲染函数
+   * @param {*} h
+   * @param {*} context 函数式组件没有this, props, slots等都在context上面挂着
+   */
+  render(h, context) {
+    const { props } = context
+    if (props.avatar) {
+      return <img src={props.avatar}></img>
+    }
+    return <img src="default-avatar.png"></img>
+  }
+}
+```
+
+vue2.5+
+```html
+<!--在template 上面添加 functional属性-->
+<template functional>
+  <img :src="props.avatar ? props.avatar : 'default-avatar.png'" />
+</template>
+<!--根据上一节第六条，可以省略声明props-->
+```
