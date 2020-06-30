@@ -1933,7 +1933,11 @@ configeWebpack: (config) => {
   * 常规配置
   ```js
   //npm install compression-webpack-plugin --save-dev
-  const CompressionWebpackPlugin = require("compression-webpack-plugin");
+  const CompressionWebpackPlugin = require('compression-webpack-plugin')
+  const path = require('path')
+  const webpack = require('webpack')
+  const AddAssetHtmlPlugin = require('add-asset-html-webpack-plugin')
+  const TerserPlugin = require('terser-webpack-plugin')
   //定义gzip压缩插件
   const compress = new CompressionWebpackPlugin({
     filename: (info) => {
@@ -1995,7 +1999,22 @@ configeWebpack: (config) => {
         .end();
     },
     configureWebpack: {
-      plugins: [compress],
+      plugins: [
+        // new webpack.DllReferencePlugin({
+        //   context: process.cwd(),
+        //   manifest: require('./public/vendor/vendor-manifest.json')
+        // }),
+        // // 将 dll 注入到 生成的 html 模板中
+        // new AddAssetHtmlPlugin({
+        //     // dll文件位置
+        //     filepath: path.resolve(__dirname, './public/vendor/*.js'),
+        //     // dll 引用路径
+        //     publicPath: './vendor',
+        //     // dll最终输出的目录
+        //     outputPath: './vendor'
+        // }),
+        compress
+      ],
     },
     devServer: {
       //在本地服务器开启gzip，线上服务器都支持gzip不需要设置
@@ -2009,6 +2028,11 @@ configeWebpack: (config) => {
     },
   };
   ```
+
+  * 注意：
+    * 自定义配置postcss-autoprefixer，可能会使IE白屏，提示Math.sign不存在
+    * 自定义配置dllPlugin，可能会使IE路由无法跳转，提示symbol没定义
+    * 自定义配置babel-polifill，可能会在打包时提示android没定义
 
   * dllPlugin(提前打包库文件)
 
