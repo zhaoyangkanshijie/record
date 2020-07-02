@@ -6,6 +6,13 @@
 - [获取命令行传来的参数](#获取命令行传来的参数)
 - [文件路径](#文件路径)
 - [url模块](#url模块)
+- [express中app.get、app.use、app.all的区别](#express中app.get、app.use、app.all的区别)
+- [express中response常用方法](#express中response常用方法)
+- [node利用多核CPU创建集群](#node利用多核CPU创建集群)
+- [node是支持https](#node是支持https)
+- [node和客户端解决跨域的问题](#node和客户端解决跨域的问题)
+- [node应用内存泄漏处理](#node应用内存泄漏处理)
+- [两个node程序交互](#两个node程序交互)
 
 ---
 
@@ -427,3 +434,230 @@
         href: 'http://baidu.com:8080/test/h?query=js#node'
     }
     ```
+
+### express中app.get、app.use、app.all的区别
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    ```js
+    const express = require('express');
+    const app = express();
+
+    app.use(middleware);
+
+    app.use("/user",function(req,res,next){
+        console.log(1);
+        next();
+    })
+
+    app.all("/user",function(req,res){
+        res.send('2');
+    })
+
+    ...
+    ```
+
+    * app.use
+
+        用来调用中间件的方法,通常不处理请求和响应，只处理输入数据，并将其交给队列中的下一个处理程序,上面代码只要路径以 /user 开始即可匹配。
+
+    * app.all
+
+        路由中指代所有的请求方式，用作路由处理，匹配完整路径，在app.use之后 可以理解为包含了app.get、app.post等的定义。
+
+### express中response常用方法
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    * res.end()
+
+        如果服务端没有数据回传给客户端则可以直接用res.end返回，以此来结束响应过程
+
+    * res.send(body)
+
+        如果服务端有数据可以使用res.send,body参数可以是一个Buffer对象，一个String对象或一个Array
+
+    * res.render(view,locals, callback)
+
+        用来渲染模板文件:
+
+        * view：模板的路径
+        * locals：渲染模板时传进去的本地变量
+        * callback：如果定义了回调函数，则当渲染工作完成时才被调用，返回渲染好的字符串（正确）或者错误信息
+
+        配置
+        
+        ```js
+        app.set('views', path.join(__dirname, 'views')); // views：模版文件存放的位置，默认是在项目根目录下
+        app.set('view engine', 'ejs'); // view engine：使用什么模版引擎
+        ```
+
+    * res.redirect(httpCode, url)
+
+        重定义到path所指定的URL，同时也可以重定向时定义好HTTP状态码（默认为302）
+
+### node利用多核CPU创建集群
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    cluster模块用于nodejs多核处理，同时可以通过它来搭建一个用于负载均衡的node服务集群。
+
+    ```js
+    const cluster = require('cluster');
+    const os = require('os');
+    const express = require('express');
+    const path = require('path');
+    const ejs = require('ejs');
+    const app = express();
+
+    const numCPUs = os.cpus().length;
+
+    if(cluster.isMaster){
+        console.log(`Master ${process.pid} is running`);
+        for(let i = 0;i < numCPUs;i++){
+            cluster.fork();//产生工作进程,只能主进程调用
+        }
+        cluster.on('exit',(worker,code,signal)=>{
+            console.log(`worker${worker.process.pid} exit.`)
+        });
+        cluster.on('fork',(worker)=>{
+            console.log(`fork：worker${worker.id}`)
+        });
+        cluster.on('listening',(worker,addr)=>{
+            console.log(`worker${worker.id} listening on ${addr.address}:${addr.port}`)
+        });
+        cluster.on('online',(worker)=>{
+            console.log(`worker${worker.id} is online now`)
+        });
+    }
+    else{
+        app.set('views',path.join(__dirname,'views'));
+        app.set('views engine','ejs');
+
+        app.get('/',function(req,res,next){
+            res.render('index.ejs',{title:'ejs'});
+        });
+        app.listen(3000,function(){
+            console.log(`worker ${process.pid} started`);
+        });
+    }
+    ```
+
+### node是支持https
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    ```js
+    const express = require('express');
+    const https = require('https');
+    const fs = require('fs');
+
+    const options = {
+        key: fs.readFileSync('./keys/server.key'),
+        cert: fs.readFileSync('./keys/server.crt')
+    }
+
+    const app = express();
+    const httpsServer = https.createServer(options,app);
+
+    app.get('/',function(req,res,next){
+        res.send('1');
+    });
+
+    httpServer.listen(3000);
+    ```
+
+### node和客户端解决跨域的问题
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    ```js
+    const express = require('express');
+    const app = express();
+
+    app.all('*',function(req,res,next){
+        res.header("Assess-Control-Allow-Origin","*");
+        res.header("Assess-Control-Allow-Headers","X-Requested-With");
+        res.header("Assess-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
+        res.header("Content-Type","application/json;charset=utf-8");
+        next();
+    });
+    ```
+
+###  node应用内存泄漏处理
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    * 现象
+
+        内存持续占用过高，服务器响应慢，程序奔溃
+
+    * 原因
+
+        * 全局变量没有手动销毁，因为全局变量不会被回收
+        * 闭包：闭包中的变量被全局对象引用，则闭包中的局部变量不能释放
+        * 监听事件添加后，没有移除，会导致内存泄漏
+
+    * 检测
+
+        * 通过内存快照，可以使用node-heapdump [官方文档](https://github.com/bnoordhuis/node-heapdump)获得内存快照进行对比，查找内存溢出
+        * 可视化内存泄漏检查工具 Easy-Monitor [官方文档](https://github.com/hyj1991/easy-monitor#readme)
+
+### 两个node程序交互
+
+1. 参考链接：
+
+   [面试官问你关于node的那些事（进阶篇）](https://juejin.im/post/5ef57aca6fb9a07e5f516814)
+
+2. 详解：
+
+    通过fork，原理是子程序用process.on来监听父程序的消息，用 process.send给子程序发消息，父程序里用child.on,child.send进行交互，来实现父进程和子进程互相发送消息
+
+    ```js
+    //parent.js
+    const cp = require('child_process');
+    const child = cp.fork('./children.js');
+    child.on('message',function(msg){
+        console.log(msg);
+    });
+    child.send('1');
+
+    //children.js
+    process.on('message',function(msg){
+        console.log(msg);
+        process.send('2');
+    });
+    ```
+
+    child_process模块:提供了衍生子进程的功能，包括cluster底层实现
+
+    child_process模块主要包括以下几个异步进程函数:
+
+    1. fork：实现父进程和子进程互相发送消息的方法，通过fork可以在父进程和子进程之间开放一个IPC通道，使得不同的node进程间可以进行消息通信。
+    2.exec: 衍生一个 shell 并在该 shell 中运行命令，当完成时则将stdout 和 stderr 传给回调函数
+    3. spawn
+
