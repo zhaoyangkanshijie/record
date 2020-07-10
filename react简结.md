@@ -3,6 +3,7 @@
 * [react-cli项目构建](#react-cli项目构建)
 * [react项目结构](#react项目结构)
 * [react指令](#react指令)
+* [typescript组件](#typescript组件)
 * [react生命周期](#react生命周期)
 * [react数据绑定原理](#react数据绑定原理)
 * [请求后台资源](#请求后台资源)
@@ -68,6 +69,56 @@
         /sass
         /test
         app、index等入口文件
+    ```
+
+
+## typescript组件
+
+1. 参考链接
+
+    [react+typescript给state和props定义指定类型](https://blog.csdn.net/Boale_H/article/details/106838917)
+
+    [React + TypeScript 默认 Props 的处理](https://blog.csdn.net/sinat_17775997/article/details/102514747)
+
+2. 详解
+
+    ```ts
+    import * as React from 'react';
+
+    type StateType = {
+        hello: string;
+    };
+    type propType = {
+        name: string;
+    };
+    interface Home {
+        state: StateType;
+        props: propType
+    }
+
+    class Home extends React.Component {
+        static defaultProps = {
+            name: "stranger",
+        };
+        constructor(props: propType) {
+            super(props);
+            this.state = {
+                hello: 'hi'
+            }
+        }
+
+        componentDidMount() {
+            this.setState({
+                hello: 'Hello'
+            })
+        }
+    
+        render() {
+            return <div>{this.state.hello}, {this.props.name}</div>;
+        }
+    }
+
+    export default Home;
     ```
 
 ## react指令
@@ -950,9 +1001,265 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [React Router 中文文档](http://react-guide.github.io/react-router-cn/index.html)
+
+    [最新 React Router 全面整理](https://zhuanlan.zhihu.com/p/101129994)
+
+    [React Router教程](https://www.jianshu.com/p/6583b7258e78)
 
 2. 详解
+
+    * 库
+
+        * react-router 核心组件
+        * react-router-dom 应用于浏览器端的路由库（单独使用包含了react-router的核心部分）
+        * react-router-native 应用于native端的路由
+
+    * 路由配置
+
+        可写在组件内，建议使用集中式路由(顶层组件定义路由)，若使用各子组件控制的分布式路由(子组件包含其下级路由)，需要跳转回父级以上页面且不刷新页面会比较麻烦。
+
+    * 路由组件
+
+        ```tsx
+        import { BrowserRouter as Router, Redirect, Route, Link, Switch } from 'react-router-dom';
+        <BrowserRouter> 浏览器的路由组件,不带#
+        <HashRouter> URL格式为Hash路由组件,带#
+        <MemoryRouter> 内存路由组件
+        <NativeRouter> Native的路由组件
+        <StaticRouter> 地址不改变的静态路由组件
+        ```
+
+        1. ...Router是所有路由组件共用的底层接口组件，它是路由规则制定的最外层的容器。
+
+            * BrowserRouter/HashRouter组件提供了四个属性
+
+                * basename: 字符串类型，路由器的默认根路径
+
+                    ```html
+                    <BrowserRouter basename="/admin"/>
+                        ...
+                        <Link to="/home"/> // 被渲染为 <a href="/admin/home">
+                        ...
+                    </BrowserRouter>
+                    ```
+
+                * forceRefresh: 布尔类型，在导航的过程中整个页面是否刷新
+
+                    当设置为 true 时，在导航的过程中整个页面将会刷新。 只有当浏览器不支持 HTML5 的 history API 时，才设置为 true。
+
+                * getUserConfirmation: 函数类型，当导航需要确认时执行的函数。默认是：window.confirm
+
+                    ```tsx
+                    // 使用默认的确认函数
+                    const getConfirmation = (message, callback) => {
+                        const allowTransition = window.confirm(message)
+                        callback(allowTransition)
+                    }
+
+                    <BrowserRouter getUserConfirmation={getConfirmation}/>
+                    ```
+
+                * keyLength: 数字类型location.key 的长度。默认是 6
+
+                    ```html
+                    <BrowserRouter keyLength={12}/>
+                    ```
+
+            * MemoryRouter主要用在ReactNative这种非浏览器的环境中，因此直接将URL的history保存在了内存中。
+            
+            * StaticRouter 主要用于服务端渲染。
+
+        2. Link路由跳转的组件
+
+            * to
+
+                需要跳转到的路径(pathname)或地址（location）
+
+            * replace
+
+                当设置为 true 时，点击链接后将使用新地址替换掉访问历史记录里面的原地址。
+
+                当设置为 false 时(默认)，点击链接后将在原有访问历史记录的基础上添加一个新的纪录。
+
+            * 样例
+
+                ```tsx
+                import { Link } from 'react-router-dom'
+                // 字符串参数
+                <Link to="/query">查询</Link>
+
+                // 对象参数
+                <Link to={{
+                    pathname: '/query',
+                    search: '?key=name',
+                    hash: '#hash',
+                    state: { fromDashboard: true }
+                }}>查询</Link>
+                ```
+
+        3. NavLink组件
+
+            NavLink是一个特殊版本的Link，可以使用activeClassName来设置Link被选中时被附加的class，使用activeStyle来配置被选中时应用的样式
+
+            exact属性,要求location完全匹配才会附加class和style
+
+            ```tsx
+            // 选中后被添加class selected
+            <NavLink to={'/'} exact activeClassName='selected'>Home</NavLink>
+            // 选中后被附加样式 color:red
+            <NavLink to={'/gallery'} activeStyle={{color:red}}>Gallery</NavLink>
+            //activeClassName默认值为 active
+            //strict: bool类型，当值为 true 时，在确定位置是否与当前 URL 匹配时，将考虑位置 pathname 后的斜线。
+            ```
+
+        4. Route组件
+
+            * 渲染方式
+
+                * component渲染
+
+                    ```tsx
+                    // 当location形如 http://location/时，Home就会被渲染。
+                    // 因为 "/" 会匹配所有的URL，所以这里设置一个exact来强制绝对匹配。
+                    <Route exact path="/" component={Home}/>
+                    <Route path="/about" component={About}/>
+                    ```
+
+                * render渲染
+
+                    ```tsx
+                    <Route path="/home" render={() => {
+                        console.log('额外的逻辑');
+                        return (<div>Home</div>);
+                    }/>
+                    ```
+
+                * children渲染
+
+                    ```tsx
+                    // 在匹配时，容器的class是light，<Home />会被渲染
+                    // 在不匹配时，容器的class是dark，<About />会被渲染
+                    <Route path='/home' children={({ match }) => (
+                        <div className={match ? 'light' : 'dark'}>
+                            {match ? <Home/>:<About>}
+                        </div>
+                    )}/>
+                    ```
+
+            * 路由组件props
+
+                * match
+
+                    match.params可以拿到从location中解析出来的参数
+
+                    ```html
+                    <Link to='/p/1' />
+                    <Link to='/p/2' />
+                    <Link to='/p/3' />
+                    ......
+                    <Route path='/p/:id' render={(match)=<h3>当前文章ID:{match.params.id}</h3>)} />
+                    ```
+
+                * location
+
+                    location 对象不会发生改变，可以在生命周期的钩子函数中查看当前页面的位置是否发生改变，对于获取远程数据以及使用动画时非常有用。
+                    ```js
+                    {
+                        key: 'ac3df4', // 在使用 hashHistory 时，没有 key
+                        pathname: '/somewhere'
+                        search: '?some=search-string',
+                        hash: '#howdy',
+                        state: {
+                            [userDefined]: true
+                        }
+                    }
+                    ```
+
+                    * 在 Route component 中，以 this.props.location 的方式获取，
+                    * 在 Route render 中，以 ({ location }) => () 的方式获取，
+                    * 在 Route children 中，以 ({ location }) => () 的方式获取，
+                    * 在 withRouter 中，以 this.props.location 的方式获取。
+
+                    可以设置location状态，如弹出框场景
+                    ```tsx
+                    // 通常你只需要这样使用 location
+                    <Link to="/somewhere"/>
+
+                    // 但是你同样可以这么用
+                    const location = {
+                        pathname: '/somewhere'
+                        state: { fromDashboard: true }
+                    }
+
+                    <Link to={location}/>
+                    <Redirect to={location}/>
+                    history.push(location)
+                    history.replace(location)
+                    ```
+
+                    可以把 location 传入一下组件,用于等待跳转
+
+                * history
+
+                    history 对象通常会具有以下属性和方法：
+
+                    * length -（ number 类型）指的是 history 堆栈的数量。
+                    * action -（ string 类型）指的是当前的动作（action），例如 PUSH，REPLACE 以及 POP 。
+                    * location -（ object类型）是指当前的位置（location），location 会具有如下属性：
+                        * pathname -（ string 类型）URL路径。
+                        * search -（ string 类型）URL中的查询字符串（query string）。
+                        * hash -（ string 类型）URL的 hash 分段。
+                        * state -（ string 类型）是指 location 中的状态，例如在 push(path, state) 时，state会描述什么时候 location 被放置到堆栈中等信息。这个 state 只会出现在 browser history 和 memory history 的环境里。
+                    * push(path, [state]) -（ function 类型）在 hisotry 堆栈顶加入一个新的条目。
+                    * replace(path, [state]) -（ function 类型）替换在 history 堆栈中的当前条目。
+                    * go(n) -（ function 类型）将 history 对战中的指针向前移动 n 。
+                    * goBack() -（ function 类型）等同于 go(-1) 。
+                    * goForward() -（ function 类型）等同于 go(1) 。
+                    * block(prompt) -（ function 类型）阻止跳转。
+
+            * Redirect组件
+
+                location会被重写为Redirect的to指定的新location。它的一个用途是登录重定向。
+                ```html
+                <Redirect to="/new"/>
+                ```
+
+            * Switch组件
+
+                渲染匹配地址(location)的第一个Route或者Redirect
+
+    * 样例
+
+        ```tsx
+        import * as React from 'react';
+        import { BrowserRouter as Router, Redirect, Route, Link } from 'react-router-dom';
+        import Home from '../pages/Home';
+        import Web1Layout from '../pages/web1/Layout';
+        import Web2Layout from '../pages/web2/Layout';
+        import Login from '../pages/share/Login';
+
+        const AppRouter = () => {
+            return (
+                <Router>
+                    <h3>APP</h3>
+                    <div>
+                        <Link to="/home">home</Link>
+                        <Link to="/web1">web1</Link>
+                        <Link to="/web2">web2</Link>
+                        <Link to="/login">login</Link>
+                    </div>
+                    <Route path='/home' exact={true} component={Home} />
+                    <Route path='/web1' exact={true} component={Web1Layout} />
+                    <Route path='/web2' exact={true} component={Web2Layout} />
+                    <Route path='/login' exact={true} component={Login} />
+                    <Redirect to='/home' />
+                </Router>
+            );
+        }
+
+        export default AppRouter;
+        ```
 
 ## 页面传参与获取
 
