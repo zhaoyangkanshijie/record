@@ -17,7 +17,11 @@
 * [拦截器](#拦截器)
 * [react组件实例ref](#react组件实例ref)
 * [组件测试](#组件测试)
-* [react虚拟dom与diff算法](#react虚拟dom与diff算法)
+* [fiber](#fiber)
+* [高阶组件](#高阶组件)
+* [hook](#hook)
+* [redux和vuex以及dva](#redux和vuex以及dva)
+* [react和vue的区别](#react和vue的区别)
 
 ## react-cli项目构建
 
@@ -1265,9 +1269,41 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [React 跳转页面 传递传递参数，并获取参数](https://blog.csdn.net/a772116804/article/details/106645039)
+
+    [React 页面间传参](https://www.cnblogs.com/feng3037/p/10418161.html)
 
 2. 详解
+
+    ```js
+    //传参
+    this.props.history.push("/detail", {
+        dotData: record
+    });
+    //获取
+    const messages = this.props.location.state.dotData;
+    ```
+
+    ```ts
+    //传参
+    <Link className={"btn_tableOp"} to={{
+        pathname: '/web/credit/customer/customer/informationManager/infoManagerView',
+        state: {value: 'params-test'}}}><br>查看<br></Link>
+    //获取
+    componentWillMount() {
+        console.log(this.props.location.state.value, 'value')
+    }
+    //方法弊端：页面刷新后无法获取参数报错
+    ```
+
+    ```ts
+    //传参
+    <Link className={"btn_tableOp"} to={`/web/credit/customer/customer/informationManager/view/${record.customerCode}/${record.tradeCode}`}>查看</Link>
+    //路由
+    <Route path="/web/credit/customer/customer/informationManager/view/:customerCode/:tradeCode" exact component={InfoManagerView} />
+    //获取
+    this.props.match.params.customerCode
+    ```
 
 ## redux
 
@@ -1308,3 +1344,142 @@
     [react文档](https://react.docschina.org/docs/introducing-jsx.html)
 
 2. 详解
+
+## fiber与虚拟dom
+
+1. 参考链接
+
+    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+
+    [探索 React 内核：深入 Fiber 架构和协调算法](https://mp.weixin.qq.com/s/QRTvTiapVVTppIjRfL1swA)
+
+    [React Fiber 原理介绍](https://segmentfault.com/a/1190000018250127)
+
+    [react16源码（Fiber架构）](https://www.cnblogs.com/colorful-coco/p/9579402.html)
+
+    [React的虚拟DOM与diff算法的理解](https://blog.csdn.net/qq_36407875/article/details/84965311)
+
+2. 详解
+
+    * 虚拟dom
+
+        从 render 方法返回的不可变 React 元素树，通常称为虚拟DOM。
+
+    * fiber
+
+        从V16开始，React 推出了该内部实例树的新实现，以及对其进行管理的算法，代号为 Fiber。
+
+        Fiber节点由react元素转换而成，所有 fiber 节点使用这些属性： child 、 sibling 和 return 通过链表的形式连接在一起。
+
+        第一次渲染后会产生树，处理update也会产生树，执行dom diff后会把树更新到屏幕。
+
+        每个fiber节点都包含相关效用(使用 state 和 props 来计算 UI如何呈现的函数)，建立具有 effect 的 fiber 节点的线性链表以实现快速迭代
+
+    * Fiber 节点结构
+
+        ```js
+        {
+            tag: TypeOfWork, // fiber的类型，保存对类组件实例，DOM 节点或与 fiber 节点关联的其他 React 元素类型的引用。
+            alternate: Fiber|null, // 在fiber更新时克隆出的镜像fiber，对fiber的修改会标记在这个fiber上
+            return: Fiber|null, // 指向fiber树中的父节点
+            child: Fiber|null, // 指向第一个子节点
+            sibling: Fiber|null, // 指向兄弟节点
+            effectTag: TypeOfSideEffect, // side effect类型，下文会介绍
+            nextEffect: Fiber | null, // 单链表结构，方便遍历fiber树上有副作用的节点
+            pendingWorkPriority: PriorityLevel, // 标记子树上待更新任务的优先级
+        }
+        ```
+
+    * WorkLoop
+
+        函数从最顶层的 HostRoot fiber 节点开始，一直找到工作未完成的节点，并进行处理，最后退出循环进行update
+
+    * 虚拟DOM树分层比较（tree diff）
+
+        两棵树只会对同一层次的节点进行比较，忽略DOM节点跨层级的移动操作。当发现节点已经不存在，则该节点及其子节点会被完全删除掉，不会用于进一步的比较。跨层级操作则会先销毁再创建。
+
+    * 组件间的比较（component diff）
+
+        如果是同一个类型的组件，则按照原策略进行Virtual DOM比较。有可能经过一轮Virtual DOM比较下来，并没有发生变化。允许用户通过shouldComponentUpdate()来判断该组件是否需要进行diff算法分析。
+
+        如果不是同一类型的组件，则将其判断为dirty component，从而替换整个组价下的所有子节点。
+
+    * 元素间的比较（element diff）
+
+        当节点处于同一层级的时候，react diff 提供了三种节点操作：插入、删除、移动。
+
+        新集合元素与旧集合元素对比，找是否存在相同的key，有相同，则看老游标<新游标，则进行移动，否则不动，key不存在则插入新元素，最后看是否存在新集合中没有但老集合中仍存在的节点，有则删除
+
+    * V16前(同步渲染)
+    
+        浏览器渲染引擎单线程, 计算DOM树时锁住整个线程, 所有行为同步发生, 有效率问题, 期间react会一直占用浏览器主线程，如果组件层级比较深，相应的堆栈也会很深，长时间占用浏览器主线程, 任何其他的操作（包括用户的点击，鼠标移动等操作）都无法执行。
+
+        传统的diff需要除了树编号比较之外，还需要跨级比较，会两两比较树的节点，有n^2的复杂度。然后需要编辑树，编辑的树可能发生在任何节点，需要对树进行再一次遍历操作，复杂度为n。加起来就是n^3。
+
+    * V16后(异步渲染)
+    
+        重写底层算法逻辑reconciliation 算法(比较两棵 DOM 树差异、从而判断哪一部分应当被更新), 引入fiber时间片, 异步渲染, react会在渲染一部分树后检查是否有更高优先级的任务需要处理(如用户操作或绘图), 处理完后再继续渲染, 并可以更新优先级, 以此管理渲染任务. 加入fiber的react将组件更新分为两个时期（phase 1 && phase 2），render前的生命周期为phase1，render后的生命周期为phase2, 1可以打断(放弃之前的计算成果), 2不能打断一次性更新. 三个will生命周期可能会重复执行, 尽量避免使用。
+
+        react树对比是按照层级去对比的， 他会给树编号0,1,2,3,4.... 然后相同的编号进行比较。所以复杂度是n，这个好理解。
+
+
+## 高阶组件
+
+1. 参考链接
+
+    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+
+2. 详解
+
+    高阶组件就是一个函数，且该函数(wrapper)接受一个组件作为参数，并返回一个新的组件。
+    高阶组件并不关心数据使用的方式和原因，而被包裹的组件也不关心数据来自何处.
+
+    react-dnd: 根组件, source, target等
+    export default DragSource(type, spec, collect)(MyComponent)
+
+    重构代码库使用HOC提升开发效率
+
+## hook
+
+1. 参考链接
+
+    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+
+2. 详解
+
+    在无状态组件(如函数式组件)中也能操作state以及其他react特性, 通过useState
+
+## redux和vuex以及dva
+
+1. 参考链接
+
+    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+
+2. 详解
+
+    redux: 通过store存储，通过action唯一更改，reducer描述如何更改。dispatch一个action
+
+    dva: 基于redux，结合redux-saga等中间件进行封装
+
+    vuex：类似dva，集成化。action异步，mutation非异步
+
+## react和vue的区别
+
+1. 参考链接
+
+    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+
+2. 详解
+
+    数据是否可变: react整体是函数式的思想，把组件设计成纯组件，状态和逻辑通过参数传入，所以在react中，是单向数据流，推崇结合immutable来实现数据不可变; vue的思想是响应式的，也就是基于是数据可变的，通过对每一个属性建立Watcher来监听，当属性变化的时候，响应式的更新对应的虚拟dom。总之，react的性能优化需要手动去做，而vue的性能优化是自动的，但是vue的响应式机制也有问题，就是当state特别多的时候，Watcher也会很多，会导致卡顿，所以大型应用（状态特别多的）一般用react，更加可控。
+
+    通过js来操作一切，还是用各自的处理方式: react的思路是all in js，通过js来生成html，所以设计了jsx，还有通过js来操作css，社区的styled-component、jss等; vue是把html，css，js组合到一起，用各自的处理方式，vue有单文件组件，可以把html、css、js写到一个文件中，html提供了模板引擎来处理。
+
+    类式的组件写法，还是声明式的写法: react是类式的写法，api很少; 而vue是声明式的写法，通过传入各种options，api和参数都很多。所以react结合typescript更容易一起写，vue稍微复杂。
+
+    扩展不同: react可以通过高阶组件（Higher Order Components--HOC）来扩展，而vue需要通过mixins来扩展。
+
+    什么功能内置，什么交给社区去做: react做的事情很少，很多都交给社区去做，vue很多东西都是内置的，写起来确实方便一些，
+    比如 redux的combineReducer就对应vuex的modules，
+    比如reselect就对应vuex的getter和vue组件的computed，
+    vuex的mutation是直接改变的原始数据，而redux的reducer是返回一个全新的state，所以redux结合immutable来优化性能，vue不需要。
