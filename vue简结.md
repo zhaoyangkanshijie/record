@@ -473,6 +473,19 @@ const router = new VueRouter({
 });
 ```
 
+* vue3 router
+
+参考：[Vue3中 router 带来了哪些变化？](https://mp.weixin.qq.com/s/lud0TD63gkkX25LERzf3uQ)
+```js
+import { createRouter, createWebHistory } from 'vue-next-router'
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/user/:a:catchAll(.*)', component: component },
+  ],
+})
+```
+
 ## 自定义组件(创建组件步骤)
 
 1. 在 components 目录新建组件文件（smithButton.vue），export default {...}

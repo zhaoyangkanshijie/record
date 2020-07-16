@@ -30,6 +30,7 @@
 - [MutationObserver](#MutationObserver)
 - [blob](#blob)
 - [webApi](#webApi)
+- [video深入理解](#video深入理解)
 
 ---
 
@@ -5902,4 +5903,329 @@
     </script>
 
     </html>
+    ```
+
+### video深入理解
+
+1.  参考链接：
+
+  [「1.4万字」玩转前端 Video 播放器 | 多图预警](https://juejin.im/post/5f0e52fe518825742109d9ee#heading-4)
+
+  [hls.js](https://github.com/video-dev/hls.js)
+
+  [video-hls-encrypt](https://github.com/hauk0101/video-hls-encrypt)
+
+  [flv.js](https://github.com/Bilibili/flv.js/)
+
+  [MediaSource](https://developer.mozilla.org/zh-CN/docs/Web/API/MediaSource)
+
+2.  详解
+
+  * range从服务器端请求特定的范围
+
+    * 单一范围
+
+      request添加header“Range:bytes=0-1023”，服务端返回响应码206 Partial Content，响应Content-Length表示请求范围，响应Content-Range内容在整个资源中所处的位置
+
+    * 多重范围
+
+      request添加“Range: bytes=0-50, 100-150”，会产生2部分的单一范围响应
+
+    * 条件式范围请求
+
+      当重新开始请求更多资源片段的时候，必须确保自从上一个片段被接收之后该资源没有进行过修改。
+
+      If-Range请求首部可以用来生成条件式范围请求：
+
+      请求条件满足：返回状态码为 206 Partial 的响应，以及相应的消息主体
+
+      请求条件不满足：返回状态码为 「200 OK」 的响应，同时返回整个资源
+
+      请求范围越界：返回 416 Requested Range Not Satisfiable 请求的范围无法满足
+
+      If-Range可以与 Last-Modified 或者 ETag 一起使用，但是二者不能同时使用
+
+  * 流媒体
+
+    * 流媒体协议
+
+      ```txt
+      HTTP+FLV TCP 用于直播/点播，兼容性好，低延时，保密性不强
+      HLS TCP 用于点播，apple支持度高，移动端兼容性好，延时高
+      RTMP TCP 用于直播，adobe支持度高，低延迟，有累积延迟
+      RTMFP TCP 用于直播，带宽消耗低，数据传输速率高，需flash支持
+      RTSP+RTP TCP+UDP 用于IPTV，支持组播，效率较高，存在丢包问题，浏览器不支持
+      ```
+
+      * HLS
+
+        HTTP Live Streaming，工作原理是把整个流分成一个个小的基于 HTTP 的文件来下载。
+
+        HLS 是一种自适应比特率流协议，可以动态地使视频分辨率自适应每个人的网络状况。当媒体流正在播放时，客户端可以选择从许多不同的备用源中以不同的速率下载同样的资源，允许流媒体会话适应不同的数据速率。
+
+        HLS 的传输/封装格式是 MPEG-2 TS（MPEG-2 Transport Stream），是一种传输和存储包含视频、音频与通信协议各种数据的标准格式，用于数字电视广播系统，如 DVB、ATSC、IPTV 等等。
+        
+        可以把多个 TS 文件合并为 mp4 格式的视频文件。视频版权保护，可以考虑使用对称加密算法，如 AES-128 对切片进行对称加密。当客户端进行播放时，先根据 m3u8 文件中配置的密钥服务器地址，获取对称加密的密钥，然后再下载分片，当分片下载完成后再使用匹配的对称加密算法进行解密播放。demo见参考链接3。
+
+        * 特性
+
+          * HLS 将播放使用 H.264 或 HEVC / H.265 编解码器编码的视频。
+          * HLS 将播放使用 AAC 或 MP3 编解码器编码的音频。
+          * HLS 视频流一般被切成 10 秒的片段。
+          * HLS 的传输/封装格式是 MPEG-2 TS。
+          * HLS 支持 DRM（数字版权管理）。
+          * HLS 支持各种广告标准，例如 VAST 和 VPAID。
+          
+      * DASH
+
+        Dynamic Adaptive Streaming over HTTP，基于 HTTP 的动态自适应流，一种自适应比特率流技术，使高质量流媒体可以通过传统的 HTTP 网络服务器以互联网传递。
+
+        当内容被 MPEG-DASH 客户端回放时，客户端将根据当前网络条件自动选择下载和播放哪一个备选方案。客户端将选择可及时下载的最高比特率片段进行播放，从而避免播放卡顿或重新缓冲事件。
+
+        DASH 不关心编解码器，因此它可以接受任何编码格式编码的内容，如 H.265、H.264、VP9 等。
+
+        HTML5 不直接支持 MPEG-DASH，通常用于视频播放器(字节跳动-西瓜视频)。
+
+      * FLV
+
+        FLASH Video，文件极小、加载速度极快
+
+        ![flv结构](./flv.png)
+
+        flv.js见参考链接4
+
+        * 特性
+
+          * 支持播放 H.264 + AAC / MP3 编码的 FLV 文件；
+          * 支持播放多段分段视频；支持播放 HTTP FLV 低延迟实时流；
+          * 支持播放基于 WebSocket 传输的 FLV 实时流；
+          * 兼容 Chrome，FireFox，Safari 10，IE11 和 Edge；
+          * 极低的开销，支持浏览器的硬件加速。
+
+        * 限制
+
+          * MP3 音频编解码器无法在 IE11/Edge 上运行；
+          * HTTP FLV 直播流不支持所有的浏览器。
+
+        * 使用
+
+          ```html
+          <script src="flv.min.js"></script>
+          <video id="videoElement"></video>
+          <script>
+              if (flvjs.isSupported()) {
+                  var videoElement = document.getElementById('videoElement');
+                  var flvPlayer = flvjs.createPlayer({
+                      type: 'flv',
+                      url: 'http://example.com/flv/video.flv'
+                  });
+                  flvPlayer.attachMediaElement(videoElement);
+                  flvPlayer.load();
+                  flvPlayer.play();
+              }
+          </script>
+          ```
+
+        * 工作原理
+
+          将 FLV 文件流转换为 ISO BMFF（Fragmented MP4）片段，然后通过 Media Source Extensions API 将 mp4 段给 HTML5 video
+
+      * MSE API
+
+        媒体源扩展 API（Media Source Extensions） 提供了实现无插件且基于 Web 的流媒体的功能。使用 MSE，媒体串流能够通过 JavaScript 创建，并且能通过使用 audio 和 video 元素进行播放。
+
+        MSE 使我们可以把通常的单个媒体文件的 src 值替换成引用 MediaSource 对象（一个包含即将播放的媒体文件的准备状态等信息的容器），以及引用多个 SourceBuffer 对象（代表多个组成整个串流的不同媒体块）的元素。
+
+        使用方法见参考链接1或参考链接5
+
+    * 多媒体封装格式
+
+      * 封装格式
+
+        AVI、RMVB、MKV、ASF、WMV、MP4、3GP、FLV
+
+      * 视频编码格式
+
+        H.264，HEVC，VP9 和 AV1
+
+      * 音频编码格式
+
+        MP3、AAC 和 Opus
+
+      * 多媒体容器
+
+        MP4，MOV，TS，FLV，MKV
+
+      * 视频播放基本处理流程
+
+        1. 解协议
+
+          从原始的流媒体协议数据中删除信令数据，只保留音视频数据，如采用 RTMP 协议传输的数据，经过解协议后输出 flv 格式的数据。
+
+        2. 解封装
+
+          例如 FLV 格式的数据经过解封装后输出 H.264 编码的视频码流和 AAC 编码的音频码流。
+
+        3. 解码
+
+          视频，音频压缩编码数据，还原成非压缩的视频，音频原始数据，音频的压缩编码标准包括 AAC，MP3，AC-3 等，视频压缩编码标准包含 H.264，MPEG2，VC-1 等经过解码得到非压缩的视频颜色数据如 YUV420P，RGB 和非压缩的音频数据如 PCM 等。
+          
+        4. 音视频同步
+
+          将同步解码出来的音频和视频数据分别送至系统声卡和显卡播放。
+
+  * 视频本地预览
+
+    URL.createObjectURL()
+    ```html
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>视频本地预览示例</title>
+      </head>
+      <body>
+        <h3>视频本地预览示例</h3>
+        <input type="file" accept="video/*" onchange="loadFile(event)" />
+        <video
+          id="previewContainer"
+          controls
+          width="480"
+          height="270"
+          style="display: none;"
+        ></video>
+
+        <script>
+          const loadFile = function (event) {
+            const reader = new FileReader();
+            reader.onload = function () {
+              const output = document.querySelector("#previewContainer");
+              output.style.display = "block";
+              output.src = URL.createObjectURL(new Blob([reader.result]));
+            };
+            reader.readAsArrayBuffer(event.target.files[0]);
+          };
+        </script>
+      </body>
+    </html>
+    ```
+
+  * 播放器截图
+
+    CanvasRenderingContext2D.drawImage()
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>播放器截图示例</title>
+      </head>
+      <body>
+        <h3>播放器截图示例</h3>
+        <video id="video" controls="controls" width="460" height="270" crossorigin="anonymous">
+          <!-- 请替换为实际视频地址 -->
+          <source src="https://xxx.com/vid_159411468092581" />
+        </video>
+        <button onclick="captureVideo()">截图</button>
+        <script>
+          let video = document.querySelector("#video");
+          let canvas = document.createElement("canvas");
+          let img = document.createElement("img");
+          img.crossOrigin = "";
+          let ctx = canvas.getContext("2d");
+
+          function captureVideo() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            img.src = canvas.toDataURL();
+            document.body.append(img);
+          }
+        </script>
+      </body>
+    </html>
+    ```
+
+  * Canvas 播放视频
+
+    开发者可以动态地更改每一帧图像的显示内容，如加入弹幕
+
+    ctx.drawImage(video, x, y, width, height)
+    ```html
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>使用 Canvas 播放视频</title>
+      </head>
+      <body>
+        <h3>使用 Canvas 播放视频</h3>
+        <video id="video" controls="controls" style="display: none;">
+          <!-- 请替换为实际视频地址 -->
+          <source src="https://xxx.com/vid_159411468092581" />
+        </video>
+        <canvas
+          id="myCanvas"
+          width="460"
+          height="270"
+          style="border: 1px solid blue;"
+        ></canvas>
+        <div>
+          <button id="playBtn">播放</button>
+          <button id="pauseBtn">暂停</button>
+        </div>
+        <script>
+          const video = document.querySelector("#video");
+          const canvas = document.querySelector("#myCanvas");
+          const playBtn = document.querySelector("#playBtn");
+          const pauseBtn = document.querySelector("#pauseBtn");
+          const context = canvas.getContext("2d");
+          let timerId = null;
+
+          function draw() {
+            if (video.paused || video.ended) return;
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            timerId = setTimeout(draw, 0);
+          }
+
+          playBtn.addEventListener("click", () => {
+            if (!video.paused) return;
+            video.play();
+            draw();
+          });
+
+          pauseBtn.addEventListener("click", () => {
+            if (video.paused) return;
+            video.pause();
+            clearTimeout(timerId);
+          });
+        </script>
+      </body>
+    </html>
+    ```
+
+  * 色度键控（绿屏效果）
+
+    把被拍摄的人物或物体放置于绿幕的前面，并进行去背后，将其替换成其他的背景。此技术在电影、电视剧及游戏制作中被大量使用，色键也是虚拟摄影棚（Virtual studio）与视觉效果（Visual effects）当中的一个重要环节。
+
+    ```js
+    processor.computeFrame = function computeFrame() {
+        this.ctx1.drawImage(this.video, 0, 0, this.width, this.height);
+        let frame = this.ctx1.getImageData(0, 0, this.width, this.height);
+        let l = frame.data.length / 4;
+
+        for (let i = 0; i < l; i++) {
+          let r = frame.data[i * 4 + 0];
+          let g = frame.data[i * 4 + 1];
+          let b = frame.data[i * 4 + 2];
+          if (g > 100 && r > 100 && b < 43)
+            frame.data[i * 4 + 3] = 0;
+        }
+        this.ctx2.putImageData(frame, 0, 0);
+        return;
+    }
     ```
