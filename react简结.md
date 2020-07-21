@@ -10,7 +10,8 @@
 * [父子组件通信](#父子组件通信)
 * [跨级组件通信](#跨级组件通信)
 * [非嵌套组件间通信](#非嵌套组件间通信)
-* [react路由](#路由)
+* [react路由](#react路由)
+* [react路由守卫](#react路由守卫)
 * [页面传参与获取](#页面传参与获取)
 * [redux](#redux)
 * [使用cookie](#使用cookie)
@@ -1001,7 +1002,7 @@
         }
         ```
 
-## 路由
+## react路由
 
 1. 参考链接
 
@@ -1265,6 +1266,18 @@
         export default AppRouter;
         ```
 
+
+
+
+## react路由守卫
+
+1. 参考链接
+
+    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+
+2. 详解
+
+
 ## 页面传参与获取
 
 1. 参考链接
@@ -1317,9 +1330,40 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [React-cookie](https://www.jianshu.com/p/77bca29fb784)
 
 2. 详解
+
+    ```js
+    import { Component } from 'react';
+    import cookie from 'react-cookie';
+
+    import LoginPanel from './LoginPanel';
+    import Dashboard from './Dashboard';
+
+    export default class MyApp extends Component {
+        componentWillMount() {
+            this.state =  { userId: cookie.load('userId') };
+        }
+
+        onLogin(userId) {
+            this.setState({ userId });
+            cookie.save('userId', userId, { path: '/' });
+        }
+
+        onLogout() {
+            cookie.remove('userId', { path: '/' });
+        }
+
+        render() {
+            if (!this.state.userId) {
+                return <LoginPanel onSuccess={this.onLogin.bind(this)} />;
+            }
+
+            return <Dashboard userId={this.state.userId} />;
+        }
+    }
+    ```
 
 ## 拦截器
 
