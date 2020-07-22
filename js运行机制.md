@@ -11,6 +11,7 @@
 - [前端路由原理](#前端路由原理)
 - [virtualDOM_Diff](#virtualDOM_Diff)
 - [抽象语法树 AST 与 babel](#抽象语法树AST与babel)
+- [判断js运行环境](#判断js运行环境)
 
 ---
 
@@ -1787,3 +1788,15 @@
        3. 新 AST 通过 babel-generator 转换成 ES5
 
 
+### 判断js运行环境
+
+1. 参考链接：
+
+   - [如何判断当前脚本是运行在浏览器还是node环境中](https://www.cnblogs.com/zhangyue690811/p/12041230.html)
+
+2. 详解
+
+  判断global对象是否为window
+  ```js
+  this === window ? console.log('browser') : console.log('node');
+  ```
