@@ -47,6 +47,8 @@
 * [hookEvent](#hookEvent)
 * [loading](#loading)
 * [函数式组件](#函数式组件)
+* [过滤器](#过滤器)
+* [.sync语法糖](#.sync语法糖)
 
 ---
 
@@ -2944,4 +2946,48 @@ vue2.5+
   <img :src="props.avatar ? props.avatar : 'default-avatar.png'" />
 </template>
 <!--根据上一节第六条，可以省略声明props-->
+```
+
+## 过滤器
+
+组件内
+```js
+<!-- 在双花括号中 -->
+{{ message | capitalize }}
+{{ message | filterA | filterB }}
+{{ message | filterA('arg1', arg2) }}
+
+<!-- 在 `v-bind` 中 -->
+<div v-bind:id="rawId | formatId"></div>
+
+filters: {
+  capitalize: function (value) {
+    if (!value) return ''
+    value = value.toString()
+    return value.charAt(0).toUpperCase() + value.slice(1)
+  }
+}
+```
+
+全局
+```js
+Vue.filter('capitalize', function (value) {
+  if (!value) return ''
+  value = value.toString()
+  return value.charAt(0).toUpperCase() + value.slice(1)
+})
+
+new Vue({
+  // ...
+})
+```
+
+## .sync语法糖
+
+```html
+<component :foo.sync="bar"></component>
+等同于
+<child :bar="foo" @update:bar="e => foo = e">
+更新方式
+this.$emit('update:bar',newValue);
 ```

@@ -1207,78 +1207,78 @@
 
             该属性用来设置元素的宽度，当然width也可以用来设置元素的宽度，如果设置了width和flex-basis，那么flex-basis会覆盖width值。
 
-      2. Flex布局
+    2. Flex布局
 
-          ```css
-          .box{
-              display: flex;
-          }
+        ```css
+        .box{
+            display: flex;
+        }
 
-          .box{
-              display: inline-flex;
-          }
+        .box{
+            display: inline-flex;
+        }
 
-          .box{
-              display: -webkit-flex; /* Safari */
-              display: flex;
-          }
-          ```
+        .box{
+            display: -webkit-flex; /* Safari */
+            display: flex;
+        }
+        ```
 
-      3. flex-direction:主轴的方向（即项目的排列方向）
+    3. flex-direction:主轴的方向（即项目的排列方向）
 
-          * row（默认值）：主轴为水平方向，起点在左端。
-          * row-reverse：主轴为水平方向，起点在右端。
-          * column：主轴为垂直方向，起点在上沿。
-          * column-reverse：主轴为垂直方向，起点在下沿。
+        * row（默认值）：主轴为水平方向，起点在左端。
+        * row-reverse：主轴为水平方向，起点在右端。
+        * column：主轴为垂直方向，起点在上沿。
+        * column-reverse：主轴为垂直方向，起点在下沿。
 
-      4. flex-wrap:一条轴线排不下，如何换行
+    4. flex-wrap:一条轴线排不下，如何换行
 
-          * nowrap:（默认）不换行
-          * wrap：换行，第一行在上方
-          * wrap-reverse：换行，第一行在下方
+        * nowrap:（默认）不换行
+        * wrap：换行，第一行在上方
+        * wrap-reverse：换行，第一行在下方
 
-      5. flex-flow:flex-direction属性和flex-wrap属性的简写形式，默认值为row nowrap
+    5. flex-flow:flex-direction属性和flex-wrap属性的简写形式，默认值为row nowrap
 
-          ```css
-          .box {
-              flex-flow: <flex-direction> <flex-wrap>;
-          }
-          ```
+        ```css
+        .box {
+            flex-flow: <flex-direction> <flex-wrap>;
+        }
+        ```
 
-      6. justify-content：主轴方向对齐方式，如从左到右对齐方式
+    6. justify-content：主轴方向对齐方式，如从左到右对齐方式
 
-          * flex-start（默认值）：左对齐
-          * flex-end：右对齐
-          * center：居中(类似水平居中)
-          * space-between：两端对齐，项目之间的间隔都相等
-          * space-around：每个项目两侧的间隔相等,项目之间的间隔比项目与边框的间隔大一倍
+        * flex-start（默认值）：左对齐
+        * flex-end：右对齐
+        * center：居中(类似水平居中)
+        * space-between：两端对齐，项目之间的间隔都相等
+        * space-around：每个项目两侧的间隔相等,项目之间的间隔比项目与边框的间隔大一倍
 
-      7. align-items：交叉轴(与主轴垂直的轴)上对齐方式，如从上到下对齐方式
+    7. align-items：交叉轴(与主轴垂直的轴)上对齐方式，如从上到下对齐方式
 
-          * flex-start：交叉轴的起点对齐
-          * flex-end：交叉轴的终点对齐
-          * center：交叉轴的中点对齐(类似垂直居中)
-          * baseline: 项目的第一行文字的基线对齐
-          * stretch（默认值）：如果项目未设置高度或设为auto，将占满整个容器的高度
+        * flex-start：交叉轴的起点对齐
+        * flex-end：交叉轴的终点对齐
+        * center：交叉轴的中点对齐(类似垂直居中)
+        * baseline: 项目的第一行文字的基线对齐
+        * stretch（默认值）：如果项目未设置高度或设为auto，将占满整个容器的高度
 
-      8. align-content:多根轴线的对齐方式，如果项目只有一根轴线，该属性不起作用，整体对齐方式
+    8. align-content:多根轴线的对齐方式，如果项目只有一根轴线，该属性不起作用，整体对齐方式
 
-          * flex-start：与交叉轴的起点对齐
-          * flex-end：与交叉轴的终点对齐
-          * center：与交叉轴的中点对齐(类似水平垂直居中)
-          * space-between：与交叉轴两端对齐，轴线之间的间隔平均分布
-          * space-around：每根轴线两侧的间隔都相等。所以，轴线之间的间隔比轴线与边框的间隔大一倍
-          * stretch（默认值）：轴线占满整个交叉轴
+        * flex-start：与交叉轴的起点对齐
+        * flex-end：与交叉轴的终点对齐
+        * center：与交叉轴的中点对齐(类似水平垂直居中)
+        * space-between：与交叉轴两端对齐，轴线之间的间隔平均分布
+        * space-around：每根轴线两侧的间隔都相等。所以，轴线之间的间隔比轴线与边框的间隔大一倍
+        * stretch（默认值）：轴线占满整个交叉轴
 
-      9. order：项目的排列顺序。数值越小，排列越靠前，默认为0。
+    9. order：项目的排列顺序。数值越小，排列越靠前，默认为0。
 
-          ```css
-          .item {
-              order: <integer>;
-          }
-          ```
+        ```css
+        .item {
+            order: <integer>;
+        }
+        ```
 
-      10. align-self:允许单个项目有与其他项目不一样的对齐方式，可覆盖align-items属性。默认值为auto，表示继承父元素的align-items属性，如果没有父元素，则等同于stretch。
+    10. align-self:允许单个项目有与其他项目不一样的对齐方式，可覆盖align-items属性。默认值为auto，表示继承父元素的align-items属性，如果没有父元素，则等同于stretch。
 
           ```css
           .item {
