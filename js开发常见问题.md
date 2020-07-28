@@ -31,6 +31,8 @@
 - [blob](#blob)
 - [webApi](#webApi)
 - [video深入理解](#video深入理解)
+- [获取浏览器的唯一标识](#获取浏览器的唯一标识)
+- [全部替代一个子串为另一个子串](#全部替代一个子串为另一个子串)
 
 ---
 
@@ -6228,4 +6230,65 @@
         this.ctx2.putImageData(frame, 0, 0);
         return;
     }
+    ```
+
+### 获取浏览器的唯一标识
+
+1.  参考链接：
+
+  [几个常见面试题，工作中也经常用到](https://mp.weixin.qq.com/s/IvWGkm5pn3vjbLUB-SvXkQ)
+
+2.  详解
+
+  由于不同的系统显卡绘制 canvas 时渲染参数、抗锯齿等算法不同，因此绘制成图片数据的 CRC 校验也不一样。
+
+  绘制 canvas，获取 base64 的 dataurl,对 dataurl 这个字符串进行 md5 摘要计算，得到指纹信息。
+  ```js
+  function getCanvasFp () {
+    const canvas = document.getElementById('canvas')
+    const ctx = canvas.getContext('2d')
+    ctx.font = '14px Arial'
+    ctx.fillStyle = '#ccc'
+    ctx.fillText('hello, shanyue', 2, 2)
+    return canvas.toDataURL('image/jpeg')
+  }
+  ```
+
+  可使用fingerprintjs2库,指纹依据信息:canvas/webgl/UserAgent/AudioContext/新式 API 的支持程度
+  ```js
+  requestIdleCallback(function () {
+    Fingerprint2.get((components) => {
+      const values = components.map((component) => component.value)
+      const fp = Fingerprint2.x64hash128(values.join(''), 31)
+    })
+  })
+  ```
+  browser independent component：有些 component 同一设备跨浏览器也可以得到相同的值，有些独立浏览器，得到不同的值
+  stable component: 有些 component 刷新后值就会发生变化，称为不稳定组件
+
+### 全部替代一个子串为另一个子串
+
+1.  参考链接：
+
+  [几个常见面试题，工作中也经常用到](https://mp.weixin.qq.com/s/IvWGkm5pn3vjbLUB-SvXkQ)
+
+2.  详解
+
+  * replace+正则
+
+    ```js
+    const s = 'foo foo foo'
+    s.replce(/foo/g, 'bar')
+    ```
+
+  * split+join
+
+    ```js
+    'hello. hello. hello. '.split('hello. ').join('A')
+    ```
+
+  * es2020 replaceAll
+
+    ```js
+    'aabbcc'.replaceAll('b', '.');
     ```
