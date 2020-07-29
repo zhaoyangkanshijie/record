@@ -10,6 +10,7 @@
 - [flex](flex)
 - [overflow:hidden 清除浮动的原理](#overflow:hidden清除浮动的原理)
 - [css样式穿透](#css样式穿透)
+- [grid](#grid)
 
 ---
 
@@ -1408,4 +1409,241 @@
             console.info( event.offsetX );
         });
     </script>
+    ```
+
+### grid
+
+1. 参考链接：
+
+   [最强大的 CSS 布局 —— Grid 布局](https://juejin.im/post/5f1e70315188252e937c088b)
+
+2. 详解：
+
+    IE 10 以下不支持
+
+    display：grid 或 display：inline-grid 来创建一个网格容器，inline容器为行内元素
+
+    ```css
+    .wrapper {
+      display: grid;
+      /*  声明了三列，宽度分别为 200px 100px 200px */
+      grid-template-columns: 200px 100px 200px;
+      grid-gap: 5px;
+      /*  声明了两行，行高分别为 50px 50px  */
+      grid-template-rows: 50px 50px;
+      /*  2行，而且行高都为 50px  */
+      /*  grid-template-rows: repeat(2, 50px);  */
+    }
+    ```
+
+    auto-fill 关键字：表示自动填充，让一行（或者一列）中尽可能的容纳更多的单元格。grid-template-columns: repeat(auto-fill, 200px) 表示列宽是 200 px，但列的数量是不固定的，只要浏览器能够容纳得下，就可以放置元素
+    
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 200px);/*类似固定宽度float:left*/
+      grid-gap: 5px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    fr 关键字：Grid 布局还引入了一个另外的长度单位来帮助我们创建灵活的网格轨道。fr 单位代表网格容器中可用空间的一等份。grid-template-columns: 200px 1fr 2fr 表示第一个列宽设置为 200px，后面剩余的宽度分为两部分，宽度分别为剩余宽度的 1/3 和 2/3
+    
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: 200px 1fr 2fr;/*后两列按比例自动缩放*/
+      grid-gap: 5px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    minmax() 函数：我们有时候想给网格元素一个最小和最大的尺寸，minmax() 函数产生一个长度范围，表示长度就在这个范围之中都可以应用到网格项目中。它接受两个参数，分别为最小值和最大值。grid-template-columns: 1fr 1fr minmax(300px, 2fr) 的意思是，第三个列宽最少也是要 300px，但是最大不能大于第一第二列宽的两倍。
+    
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr minmax(300px, 2fr);/*类似min-width和max-width*/
+      grid-gap: 5px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    auto 关键字：由浏览器决定长度。通过 auto 关键字，我们可以轻易实现三列或者两列布局。
+
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: 100px auto 100px;/*类似flex自动伸缩*/
+      grid-gap: 5px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    grid-row-gap 属性、grid-column-gap 属性分别设置行间距和列间距。
+
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: 200px 100px 100px;
+      grid-auto-rows: 50px;
+      /*grid-gap: 10px 20px;*/
+      grid-row-gap: 10px;
+      grid-column-gap: 20px;
+    }
+    ```
+
+    grid-template-areas 属性用于定义区域，一个区域由一个或者多个单元格组成,值得注意的是 . 符号代表空的单元格，也就是没有用到该单元格。
+
+    ```css
+    .wrapper {
+      display: grid;
+      grid-gap: 10px;
+      grid-template-columns: 120px  120px  120px;
+      grid-template-areas:
+        ". header  header"
+        "sidebar content content";
+      background-color: #fff;
+      color: #444;
+    }
+
+    .sidebar {
+      grid-area: sidebar;
+    }
+
+    .content {
+      grid-area: content;
+    }
+
+    .header {
+      grid-area: header;
+    }
+    ```
+
+    grid-auto-flow 属性控制着自动布局算法怎样运作，精确指定在网格中被自动布局的元素怎样排列。默认的放置顺序是"先行后列"，即先填满第一行，再开始放入第二行，这个顺序由 grid-auto-flow 属性决定，默认值是 row。
+
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: 100px 200px 100px;
+      /*让下面长度合适的元素填满空白，可以设置 grid-auto-flow: row dense*/
+      grid-auto-flow: row;/*列优先column*/
+      grid-gap: 5px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    justify-items 属性设置单元格内容的水平位置（左中右），align-items 属性设置单元格的垂直位置（上中下）
+
+    ```css
+    .container {
+      justify-items: start | end | center | stretch(平铺占满) | space-around (每个项目两侧的间隔相等) | space-between (项目与项目的间隔相等，项目与容器边框之间没有间隔) | space-evenly(项目与项目的间隔相等，项目与容器边框之间也是同样长度的间隔);
+      align-items: start | end | center | stretch;
+    }
+    ```
+
+    可以指定网格项目所在的四个边框，分别定位在哪根网格线，从而指定项目的位置
+    * grid-column-start 属性：左边框所在的垂直网格线
+    * grid-column-end 属性：右边框所在的垂直网格线
+    * grid-row-start 属性：上边框所在的水平网格线
+    * grid-row-end 属性：下边框所在的水平网格线
+
+    ```css
+    .wrapper {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 20px;
+      grid-auto-rows: minmax(100px, auto);
+    }
+    .one {
+      grid-column-start: 1;
+      grid-column-end: 2;
+      background: #19CAAD;
+    }
+    .two { 
+      grid-column-start: 2;
+      grid-column-end: 4;
+      grid-row-start: 1;
+      grid-row-end: 2;
+      /* 如果有重叠，就使用 z-index */
+      z-index: 1;
+      background: #8CC7B5;
+    }
+    .three {
+      grid-column-start: 3;
+      grid-column-end: 4;
+      grid-row-start: 1;
+      grid-row-end: 4;
+      background: #D1BA74;
+    }
+    .four {
+      grid-column-start: 1;
+      grid-column-end: 2;
+      grid-row-start: 2;
+      grid-row-end: 5;
+      background: #BEE7E9;
+    }
+    .five {
+      grid-column-start: 2;
+      grid-column-end: 2;
+      grid-row-start: 2;
+      grid-row-end: 5;
+      background: #E6CEAC;
+    }
+    .six {
+      grid-column: 3;
+      grid-row: 4;
+      background: #ECAD9E;
+    }
+    ```
+
+    justify-self 属性设置单元格内容的水平位置（左中右），跟 justify-items 属性的用法完全一致，但只作用于单个项目
+
+    align-self 属性设置单元格内容的垂直位置（上中下），跟align-items属性的用法完全一致，也是只作用于单个项目
+
+    ```css
+    .item {
+      justify-self: start | end | center | stretch;
+      align-self: start | end | center | stretch;
+    }
+    ```
+
+    fr 实现等分响应式
+
+    ```css
+    .wrapper {
+      margin: 50px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-gap: 10px 20px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    repeat + auto-fit——固定列宽，改变列数量
+
+    ```css
+    .wrapper {
+      margin: 50px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-gap: 10px 20px;
+      grid-auto-rows: 50px;
+    }
+    ```
+
+    repeat+auto-fit+minmax-span-dense 解决空缺问题
+
+    ```css
+    .wrapper, .wrapper-1 {
+      margin: 50px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-gap: 10px 20px;
+      grid-auto-rows: 50px;
+    }
+
+    .wrapper-1 {
+      grid-auto-flow: row dense;
+    }
     ```
