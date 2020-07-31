@@ -21,7 +21,6 @@
 * [fiber](#fiber)
 * [高阶组件](#高阶组件)
 * [hook](#hook)
-* [redux和vuex以及dva](#redux和vuex以及dva)
 * [react和vue的区别](#react和vue的区别)
 
 ## react-cli项目构建
@@ -1273,10 +1272,113 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [React Router 4.0 实现路由守卫](https://www.jianshu.com/p/677433245697)
+    [三分钟实现一个react-router-dom5.0的路由拦截（导航守卫）](https://blog.csdn.net/sinat_36728518/article/details/106254395)
 
 2. 详解
 
+    React Router 4.0 采用了声明式的组件，路由即组件，要实现路由守卫功能，就得我们自己去写了。
+
+    router.config.ts
+    ```ts
+    import { HomePage } from '../pages/home/home.page';
+    import { LoginPage } from '../pages/login/login.page';
+    import { ErrorPage } from '../pages/error/error.page';
+
+    interface routerConfigModel {
+        path:string,
+        component?:any,
+        auth?:boolean
+    }
+    export const routerConfig:routerConfigModel[] = [
+        {
+            path:'/',
+            component:HomePage,
+            auth:true,
+        },{
+            path:'/home',
+            component:HomePage,
+            auth:true,
+        },{
+            path:'/login',
+            component:LoginPage,
+        },{
+            path:'/404',
+            component:ErrorPage
+        }
+    ];
+    ```
+    router.ts
+    ```ts
+    import * as React from 'react';
+    import { HashRouter,Switch } from 'react-router-dom';
+    import { FrontendAuth } from '../components/frontend-auth/frontend-auth.component'
+    import { routerConfig } from './router.config'
+
+    export class Router extends React.Component{
+        render(){
+            return(
+                <HashRouter>
+                    <Switch>
+                        <FrontendAuth config={routerConfig} />
+                    </Switch>
+                </HashRouter>
+            );
+        }
+    }
+    ```
+    frontend-auth.component.ts
+    ```ts
+    import * as React from 'react';
+    import { Route,Redirect } from 'react-router-dom';
+    import { propsModel } from './frontend-auth.model'
+
+    export class FrontendAuth extends React.Component<any,propsModel>{
+        render(){
+            const { location,config } = this.props;
+            const { pathname } = location;
+            const isLogin = localStorage.getItem('__config_center_token')
+            
+            // 如果该路由不用进行权限校验，登录状态下登陆页除外
+            // 因为登陆后，无法跳转到登陆页
+            // 这部分代码，是为了在非登陆状态下，访问不需要权限校验的路由
+            const targetRouterConfig = config.find((v:any) => v.path === pathname);
+            if(targetRouterConfig && !targetRouterConfig.auth && !isLogin){
+                const { component } = targetRouterConfig;
+                return <Route exact path={pathname} component={component} />
+            }
+
+            if(isLogin){
+                // 如果是登陆状态，想要跳转到登陆，重定向到主页
+                if(pathname === '/login'){
+                    return <Redirect to='/' />
+                }else{
+                    // 如果路由合法，就跳转到相应的路由
+                    if(targetRouterConfig){
+                        return <Route path={pathname} component={targetRouterConfig.component} />
+                    }else{
+                        // 如果路由不合法，重定向到 404 页面
+                        return <Redirect to='/404' />
+                    }
+                }
+            }else{
+                // 非登陆状态下，当路由合法时且需要权限校验时，跳转到登陆页面，要求登陆
+                if(targetRouterConfig && targetRouterConfig.auth){
+                    return <Redirect to='/login' />
+                }else{
+                    // 非登陆状态下，路由不合法时，重定向至 404
+                    return <Redirect to='/404' />
+                }
+            }
+        }
+    }
+    ```
+    frontend-auth.model.ts
+    ```ts
+    export interface propsModel {
+        config:any[],
+    }
+    ```
 
 ## 页面传参与获取
 
@@ -1322,9 +1424,604 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [Redux 中文文档](https://www.redux.org.cn/)
+
+    [React多组件状态共享之Redux](https://blog.csdn.net/weixin_45014444/article/details/100567842)
+
+    [Redux中的connect方法](https://www.jianshu.com/p/caf0c3d2ebc4)
+    
+    [你不知道的React 和 Vue 的20个区别【面试必备】](https://juejin.im/post/6847009771355127822#heading-30)
 
 2. 详解
+
+    * 依赖：redux、react-redux、redux-devtools
+
+    * 要点
+
+        * 单一数据源
+        
+            * 应用中所有的 state 都以一个对象树的形式储存在一个单一的 store 中。
+
+                * store维持应用的 state；
+                * 提供 getState() 方法获取 state；
+                * 提供 dispatch(action) 方法更新 state；
+                * 通过 subscribe(listener) 注册监听器;
+                * 通过 subscribe(listener) 返回的函数注销监听器。
+            
+            * 注意每个 reducer 只负责管理全局 state 中它负责的一部分。
+            
+            * 每个 reducer 的 state 参数都不同，分别对应它管理的那部分 state 数据。
+
+        * State 是只读的
+        
+            唯一改变 state 的方法就是触发 action，action 是一个用于描述已发生事件的普通对象。
+
+        * 使用纯函数来执行修改
+        
+            只要传入参数相同，返回计算得到的下一个 state 就一定相同。没有特殊情况、没有副作用，没有 API 请求、没有变量修改，单纯执行计算。
+
+    * 使用场合
+
+        （1）用户的使用方式复杂
+
+        （2）不同身份的用户有不同的使用方式（比如普通用户和管理员）
+
+        （3）多个用户之间可以协作
+
+        （4）与服务器大量交互，或者使用了WebSocket
+
+        （5）View要从多个来源获取数据
+
+    * 组件场景
+
+        （1）某个组件的状态，需要共享
+
+        （2）某个状态需要在任何地方都可以拿到
+
+        （3）一个组件需要改变全局状态
+
+        （4）一个组件需要改变另一个组件的状态
+
+    * vuex与redux对比
+
+        1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
+        2. Vuex： view——>commit——>mutations——>state变化——>view变化（同步操作） 
+        3. Vuex： view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
+
+    * 简写 Redux
+
+        ```js
+        function createStore(reducer) {
+            let state;
+            let listeners=[];
+            function getState() {
+                return state;
+            }
+
+            function dispatch(action) {
+                state=reducer(state,action);
+                listeners.forEach(l=>l());
+            }
+
+            function subscribe(listener) {
+                listeners.push(listener);
+                return function () {
+                    const index=listeners.indexOf(listener);
+                    listeners.splice(inddx,1);
+                }
+            }
+            
+            dispatch({});
+            
+            return {
+                getState,
+                dispatch,
+                subscribe
+            }
+
+        }
+        ```
+
+    * react-redux实现
+
+        1. connect 将store和dispatch分别映射成props属性对象，返回组件
+        2. context 上下文 导出Provider,,和 consumer
+        3. Provider 一个接受store的组件，通过context api传递给所有子组件
+
+    * 用法
+
+        * 基础配置
+        ```js
+        import { createStore } from 'redux';
+        import {
+            INCREMENT,
+            DECREMENT
+        } from './actions'
+        /**
+        * const INCREMENT = 'increment';
+        * const DECREMENT = 'decrement';
+        *
+        * export default { INCREMENT, DECREMENT }
+        */
+
+        /**
+        * 这是一个 reducer，形式为 (state, action) => state 的纯函数。
+        * 描述了 action 如何把 state 转变成下一个 state。
+        *
+        * state 的形式取决于你，可以是基本类型、数组、对象、
+        * 甚至是 Immutable.js 生成的数据结构。惟一的要点是
+        * 当 state 变化时需要返回全新的对象，而不是修改传入的参数。
+        *
+        * 下面例子使用 `switch` 语句和字符串来做判断，但你可以写帮助类(helper)
+        * 根据不同的约定（如方法映射）来判断，只要适用你的项目即可。
+        */
+        function counter(state = 0, action) {
+            switch (action.type) {
+            case INCREMENT:
+                return state + 1;
+            case DECREMENT:
+                return state - 1;
+            default:
+                return state;
+            }
+        }
+
+        // 创建 Redux store 来存放应用的状态。
+        // API 是 { subscribe, dispatch, getState }。
+        let store = createStore(counter);
+
+        // 可以手动订阅更新，也可以事件绑定到视图层。
+        store.subscribe(() =>
+            console.log(store.getState())
+        );
+
+        // 改变内部 state 惟一方法是 dispatch 一个 action。
+        // action 可以被序列化，用日记记录和储存下来，后期还可以以回放的方式执行
+        store.dispatch({ type: INCREMENT });
+        // 1
+        store.dispatch({ type: INCREMENT });
+        // 2
+        store.dispatch({ type: DECREMENT });
+        // 1
+        ```
+
+        * 合并reducers
+        ```js
+        import { combineReducers } from 'redux'
+        import {
+            ADD_TODO,
+            TOGGLE_TODO,
+            SET_VISIBILITY_FILTER,
+            VisibilityFilters
+        } from './actions'
+        const { SHOW_ALL } = VisibilityFilters
+
+        function visibilityFilter(state = SHOW_ALL, action) {
+            switch (action.type) {
+                case SET_VISIBILITY_FILTER:
+                return action.filter
+                default:
+                return state
+            }
+        }
+
+        function todos(state = [], action) {
+            switch (action.type) {
+                case ADD_TODO:
+                return [
+                    ...state,
+                    {
+                    text: action.text,
+                    completed: false
+                    }
+                ]
+                case TOGGLE_TODO:
+                return state.map((todo, index) => {
+                    if (index === action.index) {
+                    return Object.assign({}, todo, {
+                        completed: !todo.completed
+                    })
+                    }
+                    return todo
+                })
+                default:
+                return state
+            }
+        }
+
+        const todoApp = combineReducers({
+            visibilityFilter,
+            todos
+        })
+
+        export default todoApp
+        ```
+
+        * connect
+
+            用于连接React组件与 Redux store
+        
+            不会改变它“连接”的组件，而是提供一个经过包裹的 connect 组件。 conenct 接受4个参数，分别是 mapStateToProps，mapDispatchToProps，mergeProps，options
+
+            * mapStateToProps
+
+                允许将store中的数据作为props绑定到组件中，只要store发生变化就会调用，返回的结果必须是一个纯对象，这个对象会与组件的 props 合并
+
+                ```js
+                state => ({
+                    count: state.counter.count
+                })
+
+                // or
+                const mapStateToProps = (state) => {
+                    return ({
+                        count: state.counter.count
+                    })
+                }
+                ```
+
+            * mapDispatchToProps
+
+                允许我们将 action 作为 props 绑定到组件中，如果传递的是一个对象，那么每个定义在该对象的函数都将被当作 Redux action creator，对象所定义的方法名将作为属性名；每个方法将返回一个新的函数，函数中 dispatch 方法会将 action creator 的返回值作为参数执行。这些属性会被合并到组件的 props 中。
+
+                ```js
+                dispatch => ({
+                    login: (...args) => dispatch(loginAction.login(..args)),
+                })
+
+                // or
+                const mapDispatchToProps = (dispatch, ownProps) => {
+                    return {
+                        increase: (...args) => dispatch(actions.increase(...args)),
+                        decrease: (...args) => dispatch(actions.decrease(...args))
+                    }
+                }
+                ```
+
+            * mergeProps
+
+                mapStateToProps() 与 mapDispatchToProps() 的执行结果和组件自身的 props 将传入到这个回调函数中。该回调函数返回的对象将作为 props 传递到被包装的组件中。你也许可以用这个回调函数，根据组件的 props 来筛选部分的 state 数据，或者把 props 中的某个特定变量与 action creator 绑定在一起。如果你省略这个参数，默认情况下返回 Object.assign({}, ownProps, stateProps, dispatchProps) 的结果。
+
+            * options
+
+                可以定制 connector 的行为
+
+            ```js
+            import React from 'react'
+            import PropTypes from 'prop-types'
+
+            const Link = ({ active, children, onClick }) => {
+                if (active) {
+                    return <span>{children}</span>
+                }
+
+                return (
+                    <a
+                    href=""
+                    onClick={e => {
+                        e.preventDefault()
+                        onClick()
+                    }}
+                    >
+                    {children}
+                    </a>
+                )
+            }
+
+            Link.propTypes = {
+                active: PropTypes.bool.isRequired,
+                children: PropTypes.node.isRequired,
+                onClick: PropTypes.func.isRequired
+            }
+
+            export default Link
+            ```
+            ```js
+            import { connect } from 'react-redux'
+            import { setVisibilityFilter } from '../actions'
+            import Link from '../components/Link'
+
+            const mapStateToProps = (state, ownProps) => {
+                return {
+                    active: ownProps.filter === state.visibilityFilter
+                }
+            }
+
+            const mapDispatchToProps = (dispatch, ownProps) => {
+                return {
+                    onClick: () => {
+                        dispatch(setVisibilityFilter(ownProps.filter))
+                    }
+                }
+            }
+
+            const FilterLink = connect(
+                mapStateToProps,
+                mapDispatchToProps
+            )(Link)
+
+            export default FilterLink
+            ```
+
+            * 异步与中间件
+
+                每个 API 请求都需要 dispatch 至少三种 action：请求开始、请求成功、请求失败
+
+                ```js
+                { type: 'FETCH_POSTS' }
+                { type: 'FETCH_POSTS', status: 'error', error: 'Oops' }
+                { type: 'FETCH_POSTS', status: 'success', response: { ... } }
+                //or
+                { type: 'FETCH_POSTS_REQUEST' }
+                { type: 'FETCH_POSTS_FAILURE', error: 'Oops' }
+                { type: 'FETCH_POSTS_SUCCESS', response: { ... } }
+                ```
+
+                使用 ES6 计算属性语法，使用 Object.assign() 来简洁高效地更新 state[action.subreddit]
+
+                ```js
+                return Object.assign({}, state, {
+                    [action.subreddit]: posts(state[action.subreddit], action)
+                })
+                //or
+                let nextState = {}
+                nextState[action.subreddit] = posts(state[action.subreddit], action)
+                return Object.assign({}, state, nextState)
+                ```
+
+                完整示例
+
+                ```js
+                //index.js
+                import thunkMiddleware from 'redux-thunk'
+                import { createLogger } from 'redux-logger'
+                import { createStore, applyMiddleware } from 'redux'
+                import { selectSubreddit, fetchPosts } from './actions'
+                import rootReducer from './reducers'
+
+                const loggerMiddleware = createLogger()
+
+                const store = createStore(
+                    rootReducer,
+                    applyMiddleware(
+                        thunkMiddleware, // 允许我们 dispatch() 函数
+                        loggerMiddleware // 一个很便捷的 middleware，用来打印 action 日志
+                    )
+                )
+
+                store.dispatch(selectSubreddit('reactjs'))
+                store
+                .dispatch(fetchPosts('reactjs'))
+                .then(() => console.log(store.getState()))
+                ```
+                ```js
+                //actions.js
+                import fetch from 'cross-fetch'
+
+                export const REQUEST_POSTS = 'REQUEST_POSTS'
+                function requestPosts(subreddit) {
+                    return {
+                        type: REQUEST_POSTS,
+                        subreddit
+                    }
+                }
+
+                export const RECEIVE_POSTS = 'RECEIVE_POSTS'
+                function receivePosts(subreddit, json) {
+                    return {
+                        type: RECEIVE_POSTS,
+                        subreddit,
+                        posts: json.data.children.map(child => child.data),
+                        receivedAt: Date.now()
+                    }
+                }
+
+                export const INVALIDATE_SUBREDDIT = 'INVALIDATE_SUBREDDIT'
+                export function invalidateSubreddit(subreddit) {
+                    return {
+                        type: INVALIDATE_SUBREDDIT,
+                        subreddit
+                    }
+                }
+
+                function fetchPosts(subreddit) {
+                    return dispatch => {
+                        dispatch(requestPosts(subreddit))
+                        return fetch(`http://www.reddit.com/r/${subreddit}.json`)
+                        .then(response => response.json())
+                        .then(json => dispatch(receivePosts(subreddit, json)))
+                    }
+                }
+
+                function shouldFetchPosts(state, subreddit) {
+                    const posts = state.postsBySubreddit[subreddit]
+                    if (!posts) {
+                        return true
+                    } else if (posts.isFetching) {
+                        return false
+                    } else {
+                        return posts.didInvalidate
+                    }
+                }
+
+                export function fetchPostsIfNeeded(subreddit) {
+
+                    // 注意这个函数也接收了 getState() 方法
+                    // 它让你选择接下来 dispatch 什么。
+
+                    // 当缓存的值是可用时，
+                    // 减少网络请求很有用。
+
+                    return (dispatch, getState) => {
+                        if (shouldFetchPosts(getState(), subreddit)) {
+                            // 在 thunk 里 dispatch 另一个 thunk！
+                            return dispatch(fetchPosts(subreddit))
+                        } else {
+                            // 告诉调用代码不需要再等待。
+                            return Promise.resolve()
+                        }
+                    }
+                }
+                ```
+
+                手写logger中间件
+
+                ```js
+                /**
+                * 记录所有被发起的 action 以及产生的新的 state。
+                */
+                const logger = store => next => action => {
+                    console.group(action.type)
+                    console.info('dispatching', action)
+                    let result = next(action)
+                    console.log('next state', store.getState())
+                    console.groupEnd(action.type)
+                    return result
+                }
+
+                /**
+                * 在 state 更新完成和 listener 被通知之后发送崩溃报告。
+                */
+                const crashReporter = store => next => action => {
+                    try {
+                        return next(action)
+                    } catch (err) {
+                        console.error('Caught an exception!', err)
+                        Raven.captureException(err, {
+                            extra: {
+                                action,
+                                state: store.getState()
+                            }
+                        })
+                        throw err
+                    }
+                }
+
+                /**
+                * 用 { meta: { delay: N } } 来让 action 延迟 N 毫秒。
+                * 在这个案例中，让 `dispatch` 返回一个取消 timeout 的函数。
+                */
+                const timeoutScheduler = store => next => action => {
+                    if (!action.meta || !action.meta.delay) {
+                        return next(action)
+                    }
+
+                    let timeoutId = setTimeout(
+                        () => next(action),
+                        action.meta.delay
+                    )
+
+                    return function cancel() {
+                        clearTimeout(timeoutId)
+                    }
+                }
+
+                /**
+                * 通过 { meta: { raf: true } } 让 action 在一个 rAF 循环帧中被发起。
+                * 在这个案例中，让 `dispatch` 返回一个从队列中移除该 action 的函数。
+                */
+                const rafScheduler = store => next => {
+                    let queuedActions = []
+                    let frame = null
+
+                    function loop() {
+                        frame = null
+                        try {
+                            if (queuedActions.length) {
+                                next(queuedActions.shift())
+                            }
+                        } finally {
+                            maybeRaf()
+                        }
+                    }
+
+                    function maybeRaf() {
+                        if (queuedActions.length && !frame) {
+                            frame = requestAnimationFrame(loop)
+                        }
+                    }
+
+                    return action => {
+                        if (!action.meta || !action.meta.raf) {
+                            return next(action)
+                        }
+
+                        queuedActions.push(action)
+                        maybeRaf()
+
+                        return function cancel() {
+                            queuedActions = queuedActions.filter(a => a !== action)
+                        }
+                    }
+                }
+
+                /**
+                * 使你除了 action 之外还可以发起 promise。
+                * 如果这个 promise 被 resolved，他的结果将被作为 action 发起。
+                * 这个 promise 会被 `dispatch` 返回，因此调用者可以处理 rejection。
+                */
+                const vanillaPromise = store => next => action => {
+                    if (typeof action.then !== 'function') {
+                        return next(action)
+                    }
+
+                    return Promise.resolve(action).then(store.dispatch)
+                }
+
+                /**
+                * 让你可以发起带有一个 { promise } 属性的特殊 action。
+                *
+                * 这个 middleware 会在开始时发起一个 action，并在这个 `promise` resolve 时发起另一个成功（或失败）的 action。
+                *
+                * 为了方便起见，`dispatch` 会返回这个 promise 让调用者可以等待。
+                */
+                const readyStatePromise = store => next => action => {
+                    if (!action.promise) {
+                        return next(action)
+                    }
+
+                    function makeAction(ready, data) {
+                        let newAction = Object.assign({}, action, { ready }, data)
+                        delete newAction.promise
+                        return newAction
+                    }
+
+                    next(makeAction(false))
+                    return action.promise.then(
+                        result => next(makeAction(true, { result })),
+                        error => next(makeAction(true, { error }))
+                    )
+                }
+
+                /**
+                * 让你可以发起一个函数来替代 action。
+                * 这个函数接收 `dispatch` 和 `getState` 作为参数。
+                *
+                * 对于（根据 `getState()` 的情况）提前退出，或者异步控制流（ `dispatch()` 一些其他东西）来说，这非常有用。
+                *
+                * `dispatch` 会返回被发起函数的返回值。
+                */
+                const thunk = store => next => action =>
+                    typeof action === 'function' ?
+                        action(store.dispatch, store.getState) :
+                        next(action)
+
+                    // 你可以使用以上全部的 middleware！（当然，这不意味着你必须全都使用。）
+                    let todoApp = combineReducers(reducers)
+                    let store = createStore(
+                    todoApp,
+                    applyMiddleware(
+                        rafScheduler,
+                        timeoutScheduler,
+                        thunk,
+                        vanillaPromise,
+                        readyStatePromise,
+                        logger,
+                        crashReporter
+                    )
+                )
+                ```
+
 
 ## 使用cookie
 
@@ -1403,6 +2100,8 @@
 
     [React的虚拟DOM与diff算法的理解](https://blog.csdn.net/qq_36407875/article/details/84965311)
 
+    [你不知道的React 和 Vue 的20个区别【面试必备】](https://juejin.im/post/6847009771355127822#heading-30)
+
 2. 详解
 
     * 虚拟dom
@@ -1466,6 +2165,12 @@
 
         react树对比是按照层级去对比的， 他会给树编号0,1,2,3,4.... 然后相同的编号进行比较。所以复杂度是n，这个好理解。
 
+    * diff vue vs react
+
+        * 相同点:都是同层 differ,复杂度都为 O(n);
+        * 不同点:
+            1. React 首位是除删除外是固定不动的,然后依次遍历对比;
+            2. Vue 的compile 阶段的optimize标记了static 点,可以减少 differ 次数,而且是采用双向遍历方法;
 
 ## 高阶组件
 
@@ -1492,20 +2197,6 @@
 2. 详解
 
     在无状态组件(如函数式组件)中也能操作state以及其他react特性, 通过useState
-
-## redux和vuex以及dva
-
-1. 参考链接
-
-    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
-
-2. 详解
-
-    redux: 通过store存储，通过action唯一更改，reducer描述如何更改。dispatch一个action
-
-    dva: 基于redux，结合redux-saga等中间件进行封装
-
-    vuex：类似dva，集成化。action异步，mutation非异步
 
 ## react和vue的区别
 
