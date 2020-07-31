@@ -15,9 +15,8 @@
 * [页面传参与获取](#页面传参与获取)
 * [redux](#redux)
 * [使用cookie](#使用cookie)
-* [拦截器](#拦截器)
 * [react组件实例ref](#react组件实例ref)
-* [组件测试](#组件测试)
+* [单元测试](#单元测试)
 * [fiber](#fiber)
 * [高阶组件](#高阶组件)
 * [hook](#hook)
@@ -2062,11 +2061,6 @@
     }
     ```
 
-## 拦截器
-
-1. 参考链接
-
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
 
 2. 详解
 
@@ -2074,17 +2068,93 @@
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [React 通过ref获取DOM对象或者子组件实例的用法](https://www.cnblogs.com/greatdesert/p/12697726.html)
 
 2. 详解
 
-## 组件测试
+    1. 字符串格式
+
+        ```html
+        <div id="root"></div>
+        <script type="text/babel">
+            class RefDemo extends React.Component{
+                state = {no:1}
+                componentDidMount = ()=>{ this.refs.info.textContent = "no = "+this.state.no }//组件挂载完成后设置this.ref.info这个DOM节点的textContext
+
+                test=()=>{ this.refs.info.textContent= "no = "+ ++this.state.no }//点击测试按钮后也修改this.ref.info这个DOM节点的textContext
+
+                render(){
+                    return (
+                        <div>
+                        <button onClick={this.test}>测试</button>
+                        <p ref="info"></p>
+                        </div>
+                    )
+                }
+            }
+            ReactDOM.render(<RefDemo></RefDemo>,root)
+        </script>
+        ```
+
+    2. 函数格式
+
+        ```html
+        <div id="root"></div>
+        <script type="text/babel">
+        class RefDemo extends React.Component{
+            state = {no:1}
+            componentDidMount = ()=>{ this.info.textContent = "no = "+this.state.no }
+
+            test=()=>{ this.info.textContent= "no = "+ ++this.state.no }
+
+            render(){
+                return (
+                    <div>
+                    <button onClick={this.test}>测试</button>
+                    <p ref={ele => this.info = ele}></p>//这里以函数的形式来写，在其它逻辑内只需通过this.info就可以获取这个p节点实例了
+                    </div>
+                )
+            }
+        }
+        ReactDOM.render(<RefDemo></RefDemo>,root)
+        </script>
+        ```
+
+    3. createRef方法
+
+        ```html
+        <div id="root"></div>
+        <script type="text/babel">
+        class RefDemo extends React.Component{
+            state = {no:1}
+            domp = React.createRef();//执行React.createRef()返回一个{current:null}对象
+
+            componentDidMount = ()=>{ this.domp.current.textContent = "no = "+this.state.no }
+
+            test=()=>{ this.domp.current.textContent= "no = "+ ++this.state.no }
+
+            render(){
+            return (
+                <div>
+                <button onClick={this.test}>测试</button>
+                <p ref={this.domp}></p>//设置ref属性，值直接指向React.createRef()的返回值即可，也就是当前的domp属性，之后在其它地方可以直接使用this.domp.current获取这个P实例了
+                </div>
+            )
+            }
+        }
+        ReactDOM.render(<RefDemo></RefDemo>,root)
+        </script>
+        ```
+
+## 单元测试
 
 1. 参考链接
 
-    [react文档](https://react.docschina.org/docs/introducing-jsx.html)
+    [如何使用 Jest 测试 React 组件](https://www.oschina.net/translate/test-react-components-jest)
 
 2. 详解
+
+    由于组件与复杂的计算逻辑是分开的，因此只需对逻辑进行单元测试，使用框架jest，见【前端实战案例】-【单元测试】
 
 ## fiber与虚拟dom
 
@@ -2192,11 +2262,160 @@
 
 1. 参考链接
 
-    [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
+    [Hook 简介](https://react.docschina.org/docs/hooks-intro.html)
 
 2. 详解
 
-    在无状态组件(如函数式组件)中也能操作state以及其他react特性, 通过useState
+    Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性。
+
+    Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
+
+    普通hook
+    ```js
+    import React, { useState } from 'react';
+
+    function Example() {
+        // useState 会返回一对值：当前状态和一个让你更新它的函数,但是它不会把新的 state 和旧的 state 进行合并
+        const [count, setCount] = useState(0);
+        const [age, setAge] = useState(42);
+        const [fruit, setFruit] = useState('banana');
+        const [todos, setTodos] = useState([{ text: 'Learn Hooks' }]);
+
+        return (
+            <div>
+            <p>You clicked {count} times</p>
+            <button onClick={() => setCount(count + 1)}>
+                Click me
+            </button>
+            </div>
+        );
+    }
+    ```
+    等价class
+    ```js
+    class Example extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                count: 0
+            };
+        }
+
+        render() {
+            return (
+            <div>
+                <p>You clicked {this.state.count} times</p>
+                <button onClick={() => this.setState({ count: this.state.count + 1 })}>
+                Click me
+                </button>
+            </div>
+            );
+        }
+    }
+    ```
+
+    Effect Hook
+    ```js
+    import React, { useState, useEffect } from 'react';
+
+    function Example() {
+        const [count, setCount] = useState(0);
+        // 相当于 componentDidMount 和 componentDidUpdate:
+        // 副作用函数
+        useEffect(() => {
+            document.title = `You clicked ${count} times`;
+        });
+
+        const [isOnline, setIsOnline] = useState(null);
+
+        function handleStatusChange(status) {
+            setIsOnline(status.isOnline);
+        }
+
+        //可以多次使用
+        useEffect(() => {
+            ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+            // 通过返回一个函数来指定如何“清除”副作用
+            return () => {
+                ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+            };
+        });
+
+        if (isOnline === null) {
+            return 'Loading...';
+        }
+        return isOnline ? 'Online' : 'Offline';
+    }
+    ```
+
+    注意：
+
+    1. 只能在函数最外层调用 Hook。不要在循环、条件判断或者子函数中调用
+    2. 只能在 React 的函数组件中调用 Hook。不要在其他 JavaScript 函数中调用。（除了自定义HOOK）
+
+    重用状态逻辑： Hook 的每次调用都有一个完全独立的 state
+
+    抽取逻辑useFriendStatus
+    ```js
+    import React, { useState, useEffect } from 'react';
+
+    function useFriendStatus(friendID) {
+        const [isOnline, setIsOnline] = useState(null);
+
+        function handleStatusChange(status) {
+            setIsOnline(status.isOnline);
+        }
+
+        useEffect(() => {
+            ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
+            return () => {
+            ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
+            };
+        });
+
+        return isOnline;
+    }
+    ```
+    组件1使用
+    ```js
+    function FriendStatus(props) {
+        const isOnline = useFriendStatus(props.friend.id);
+
+        if (isOnline === null) {
+            return 'Loading...';
+        }
+        return isOnline ? 'Online' : 'Offline';
+    }
+    ```
+    组件2使用
+    ```js
+    function FriendListItem(props) {
+        const isOnline = useFriendStatus(props.friend.id);
+
+        return (
+            <li style={{ color: isOnline ? 'green' : 'black' }}>
+            {props.friend.name}
+            </li>
+        );
+    }
+    ```
+
+    useContext：不使用组件嵌套就可以订阅 React 的 Context
+    ```js
+    function Example() {
+        const locale = useContext(LocaleContext);
+        const theme = useContext(ThemeContext);
+        // ...
+    }
+    ```
+
+    useReducer:通过 reducer 来管理组件本地的复杂 state
+    ```js
+    function Todos() {
+        const [todos, dispatch] = useReducer(todosReducer);
+        // ...
+    }
+    ```
 
 ## react和vue的区别
 
