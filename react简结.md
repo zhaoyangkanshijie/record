@@ -2264,11 +2264,23 @@
 
     [Hook 简介](https://react.docschina.org/docs/hooks-intro.html)
 
+    [React Hooks 使用总结](https://juejin.im/post/6850037283535880205   )
+
 2. 详解
 
     Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性。
 
     Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
+
+    React 中提供的 hooks：
+
+    * useState：setState
+    * useReducer：setState，同时 useState 也是该方法的封装
+    * useRef: refuseImperativeHandle: 给 ref 分配特定的属性
+    * useContext: context，需配合 createContext 使用
+    * useMemo: 可以对 setState 的优化
+    * useCallback: useMemo 的变形，对函数进行优化useEffect: 类似 componentDidMount/Update, componentWillUnmount，当效果为 componentDidMount/Update 时，总是在整个更新周期的最后（页面渲染完成后）才执行
+    * useLayoutEffect: 用法与 useEffect 相同，区别在于该方法的回调会在数据更新完成后，页面渲染之前进行，该方法会阻碍页面的渲染useDebugValue：用于在 React 开发者工具中显示自定义 hook 的标签
 
     普通hook
     ```js
@@ -2416,6 +2428,38 @@
         // ...
     }
     ```
+
+    自定义hook：一个函数，其名称以use开头，函数内部可以调用其他的 Hook
+    ```js
+    // myhooks.js
+    // 下面自定义了一个获取窗口长宽值的hooks
+    import React, { useState, useEffect, useCallback } from 'react'
+
+    function useWinSize() {
+        const [size, setSize] = useState({
+            width: document.documentElement.clientWidth,
+            height: document.documentElement.clientHeight
+        })
+        const onResize = useCallback(() => {
+            setSize({
+            width: document.documentElement.clientWidth,
+            height: document.documentElement.clientHeight
+            })
+        }, [])
+
+        useEffect(() => {
+            window.addEventListener('resize', onResize)
+            return () => {
+            window.removeEventListener('reisze', onResize)
+            }
+        }, [onResize])
+        return size
+    }
+
+    export const useWinSize
+
+    ```
+
 
 ## react和vue的区别
 
