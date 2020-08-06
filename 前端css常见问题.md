@@ -11,6 +11,7 @@
 - [overflow:hidden 清除浮动的原理](#overflow:hidden清除浮动的原理)
 - [css样式穿透](#css样式穿透)
 - [grid](#grid)
+- [css比较函数](#css比较函数)
 
 ---
 
@@ -1647,3 +1648,79 @@
       grid-auto-flow: row dense;
     }
     ```
+
+### css比较函数
+
+1. 参考链接：
+
+   [一文学会使用 CSS 中的 min(), max(), clamp() 以及它们的使用场景](https://juejin.im/post/6857662252816793607#heading-4)
+
+2. 详解：
+
+    * 兼容性
+    
+      不兼容IE,Edge79+,firefox75+,chrome79+,safari11.1+
+
+    * 单位
+
+      %，em，rem，vw/vh
+
+      可以用于数学表达式：10 * (1vw + 1vh) / 2
+
+    * min
+
+      能比较不同单位，并取最小值
+      ```css
+      .element {
+          width: min(50%, 500px);
+      }
+      ```
+
+    * max
+
+      能比较不同单位，并取最大值
+      ```css
+      .element {
+          width: max(50%, 500px);
+      }
+      ```
+
+    * clamp
+
+      能比较不同单位，并限定范围区间
+      ```css
+      .element {
+          width: clamp(200px, 50%, 1000px);
+      }
+      ```
+
+    * 应用场景
+
+      响应式、自适应页面宽度、字体等
+
+    * 在不兼容浏览器处理方法
+
+      1. 手动添加回退方案
+
+        ```css
+        .hero {
+            padding: 4rem 1rem;
+            padding: clamp(2rem, 10vmax, 10rem) 1rem;
+        }
+        ```
+
+      2. 使用 CSS @supports
+
+        ```css
+        .hero {
+            /* 默认值，用于不支持的浏览器 */
+            padding: 4rem 1rem;
+        }
+
+        @supports (width: min(10px, 5vw)) {
+          /* 用于支持的浏览器  */
+          .hero {
+            padding: clamp(2rem, 10vmax, 10rem) 1rem;
+          }
+        }
+        ```

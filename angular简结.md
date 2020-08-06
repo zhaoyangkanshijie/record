@@ -1026,7 +1026,7 @@ do() {
 }
 ```
 
-### 引入外部 js
+## 引入外部 js
 
 参考链接：[Angular 引入外部 js 文件的方法（引入 jQuery）](https://segmentfault.com/a/1190000020051868)
 
