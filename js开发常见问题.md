@@ -474,6 +474,8 @@
 
    [一张图看懂Function和Object的关系及简述instanceof运算符](https://www.cnblogs.com/shuiyi/p/5343399.html)
 
+   [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
+
 2. 详解：
 
    - arguments
@@ -830,97 +832,124 @@
             return target;
         }
         ```
+
+    * typeof
+
+    对于 typeof, 可以正确判断除了null之外的所有基本类型，而对于引用类型，除了函数外其他都会被判断为object。
+    ```js
+    // 输出 function
+    console.log(typeof (() => {}))
+
+    // 输出 object
+    console.log(typeof ['前端有的玩','公众号'])
+
+    // 输出 object
+    console.log(typeof null)
+
+    // 输出 undefined
+    console.log(typeof undefined)
+
+    // 输出 function 
+    console.log(typeof Function.prototype)
+    ```
     
     * instanceof
-    
-        简写:a instanceof b ,判断a是否b的实例，即a从b处new出来
-        ```js
-        a.__proto__ == b.prototype 或
-        a.constructor == b
-        ```
-    
-        详细:[]是Array实例，也是Object实例
-        ```js
-        function instanceOf(left,right) {
-            let proto = left.__proto__;
-            let prototype = right.prototype;
-            while(true) {
-                if(proto === null) return false
-                if(proto === prototype) return true
-                proto = proto.__proto__;
-            }
-        }
-        ```
+  
+      简写:a instanceof b ,判断a是否b的实例，即a从b处new出来
+      ```js
+      a.__proto__ == b.prototype 或
+      a.constructor == b
+      ```
+  
+      详细:[]是Array实例，也是Object实例
+      ```js
+      function instanceOf(left,right) {
+          let proto = left.__proto__;
+          let prototype = right.prototype;
+          while(true) {
+              if(proto === null) return false
+              if(proto === prototype) return true
+              proto = proto.__proto__;
+          }
+      }
+      ```
 
-        ```js
-        Function instanceof Object;//true
-        Object instanceof Function;//true
-        
-        //①构造器Function的构造器是它自身
-        Function.constructor=== Function;//true
+      对于instanceof,无法判断基本类型，但可以正确判断引用类型
+      ```js
+      Function instanceof Object;//true
+      Object instanceof Function;//true
+      
+      //①构造器Function的构造器是它自身
+      Function.constructor=== Function;//true
 
-        //构造器Object的构造器是Function（由此可知所有构造器的constructor都指向Function）
-        Object.constructor === Function;//true
+      //构造器Object的构造器是Function（由此可知所有构造器的constructor都指向Function）
+      Object.constructor === Function;//true
 
-        //③构造器Function的__proto__是一个特殊的匿名函数function() {}
-        console.log(Function.__proto__);//function() {}
+      //③构造器Function的__proto__是一个特殊的匿名函数function() {}
+      console.log(Function.__proto__);//function() {}
 
-        //这个特殊的匿名函数的__proto__指向Object的prototype原型。
-        Function.__proto__.__proto__ === Object.prototype//true
+      //这个特殊的匿名函数的__proto__指向Object的prototype原型。
+      Function.__proto__.__proto__ === Object.prototype//true
 
-        //Object的__proto__指向Function的prototype，也就是上面③中所述的特殊匿名函数
-        Object.__proto__ === Function.prototype;//true
-        Function.prototype === Function.__proto__;//true
+      //Object的__proto__指向Function的prototype，也就是上面③中所述的特殊匿名函数
+      Object.__proto__ === Function.prototype;//true
+      Function.prototype === Function.__proto__;//true
 
-        Function.__proto__.__proto__ === Object.prototype;//true
-        Object.__proto__ === Function.prototype;//true
+      Function.__proto__.__proto__ === Object.prototype;//true
+      Object.__proto__ === Function.prototype;//true
 
-        //1、所有的构造器的constructor都指向Function
-        //2、Function的prototype指向一个特殊匿名函数，而这个特殊匿名函数的__proto__指向Object.prototype
-        ```
+      //1、所有的构造器的constructor都指向Function
+      //2、Function的prototype指向一个特殊匿名函数，而这个特殊匿名函数的__proto__指向Object.prototype
+
+      // 输出 false
+      console.log('子君' instanceof String)
+
+      // 输出 true
+      console.log(new Date() instanceof Date)
+      ```
     
     * object.create
     
-        会将参数对象作为一个新创建的空对象的原型, 并返回这个空对象，且继承原对象
-    
-        使用方式
-        ```js
-        function Person(name, sex) {
-    		this.name = name;
-    		this.sex = sex;
-    	}
-    	Person.prototype.getInfo = function() {
-    		console.log('getInfo: [name:' + this.name + ', sex:' + this.sex + ']');
-    	}
-    	var a = new Person('jojo', 'femal');
-    	var b = Object.create(Person.prototype, {
-    		name: {
-    			value: 'coco',
-    			writable: true,
-    			configurable: true,
-    			enumerable: true,
-    		},
-    		sex: {
-    			enumerable: true,
-    			get: function(){ return 'hello sex'},
-    			set: function(val){console.log('set value:' + val)}
-    		}
-    	});
-    	console.log(a,b)
-        ```
-        手写
-        ```js
-        function _create(obj){
-            function C(){}
-            C.prototype = obj;
-            return new C();
+      会将参数对象作为一个新创建的空对象的原型, 并返回这个空对象，且继承原对象
+  
+      使用方式
+      ```js
+      function Person(name, sex) {
+        this.name = name;
+        this.sex = sex;
+      }
+      Person.prototype.getInfo = function() {
+        console.log('getInfo: [name:' + this.name + ', sex:' + this.sex + ']');
+      }
+      var a = new Person('jojo', 'femal');
+      var b = Object.create(Person.prototype, {
+        name: {
+          value: 'coco',
+          writable: true,
+          configurable: true,
+          enumerable: true,
+        },
+        sex: {
+          enumerable: true,
+          get: function(){ return 'hello sex'},
+          set: function(val){console.log('set value:' + val)}
         }
-    
-        var obj1 = {name: "Lilei"};
-        var lilei = _create(obj1);
-        lilei; // {}
-        lilei.name; // "Lilei"
-        ```
+      });
+      console.log(a,b)
+      ```
+      手写
+      ```js
+      function _create(obj){
+          function C(){}
+          C.prototype = obj;
+          return new C();
+      }
+  
+      var obj1 = {name: "Lilei"};
+      var lilei = _create(obj1);
+      lilei; // {}
+      lilei.name; // "Lilei"
+      ```
 
 
 ### 深复制的实现

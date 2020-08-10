@@ -182,6 +182,8 @@
 
    [null 与 undefined 的区别？](https://www.cnblogs.com/shengmo/p/8671803.html)
 
+   [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
+
 2. 详解：
 
    - js 数据类型
@@ -243,6 +245,13 @@
      - [] + [] = "" + "" = ""
      - [] + {} = "" + "[object Object]" = "[object Object]"
 
+     ```js
+     console.log([] + [])->console.log("" + "")->""
+     console.log({} + [])->console.log("[object Object]" + "")->"[object Object]"
+     console.log([] == ![])->console.log(0 == !true)->console.log(0 == false)->true
+     console.log(true + false)->console.log(1 + 0)->1
+     ```
+
    - 比较运算
 
      - x===y,只有类型和值相等为 true,否则为 false
@@ -277,6 +286,26 @@
      - promise:then
      - object:get/set
      - 遍历器接口:Symbol.iterator
+
+      ```js
+      const a = {}
+      const b = Symbol('1')
+      const c = Symbol('1')
+      a[b] = '子君'
+      a[c] = '君子'
+
+      // 输出子君:Symbol()函数会返回「symbol」类型的值，而Symbol函数传的参数仅仅是用于标识的，不会影响值的唯一性
+      console.log(a[b])
+
+      const d = {}
+      const e = {key: '1'}
+      const f = {key: '2'}
+      d[e] = '子君'
+      d[f] = '君子'
+
+      // 输出君子:因为e和f都是对象，而对象的key只能是数值或字符，所以会将对象转换为字符，对象的toString方法返回的是[object Object], 所有输出的是君子
+      console.log(d[e])
+      ```
 
    - 每个对象的 toString 和 valueOf 方法都可以被改写，每个对象执行完毕，如果被用以操作 JavaScript 解析器就会自动调用对象的 toString 或者 valueOf 方法
 
@@ -317,6 +346,8 @@
    [关于 setTimeout 和 setInterval 的实现原理](https://blog.csdn.net/sinat_30443713/article/details/78128088)
 
    [什么是事件循环？](https://cloud.tencent.com/developer/news/566935)
+
+   [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
 
 2. 详解：
 
@@ -523,6 +554,132 @@
    //5
    //6
    ```
+
+   如下为一段代码，请完善sum函数，使得 sum(1,2,3,4,5,6) 函数返回值为 21 ,需要在 sum 函数中调用 asyncAdd 函数，且不能修改asyncAdd函数
+
+   ```js
+    /**
+    * 请在 sum函数中调用此函数，完成数值计算
+    * @param {*} a 要相加的第一个值
+    * @param {*} b 要相加的第二个值
+    * @param {*} callback 相加之后的回调函数
+    */
+    function asyncAdd(a,b,callback) {
+      setTimeout(function(){
+        callback(null, a+b)
+      },100)
+    }
+
+    /**
+    * 请在此方法中调用asyncAdd方法，完成数值计算
+    * @param  {...any} rest 传入的参数
+    */
+    async function sum(...rest) {
+      // 请在此处完善代码
+    }
+
+    let start = window.performance.now()
+    sum(1, 2, 3, 4, 5, 6).then(res => {
+      // 请保证在调用sum方法之后，返回结果21
+      console.log(res)
+      console.log(`程序执行共耗时: ${window.performance.now() - start}`)
+    })
+   ```
+
+   普通方法
+  ```js
+  async function sum(...rest) {
+    // 取出来第一个作为初始值
+    let result = rest.shift()
+    // 通过for of 遍历 rest, 依次相加
+    for(let num of rest) {
+      // 使用promise 获取相加结果
+      result = await new Promise(resolve => {
+        asyncAdd(result, num, (_,res) => {
+          resolve(res)
+        })
+      })
+    }
+    // 返回执行结果
+    return result
+  }
+  ```
+
+  优化：两两执行
+  ```js
+  async function sum(...rest) {
+    // 如果传的值少于2个，则直接返回
+    if (rest.length <= 1) {
+      return rest[0] || 0
+    }
+    const promises = []
+    // 遍历将数组里面的值两个两个的执行
+    for (let i = 0; i < rest.length; i += 2) {
+      promises.push(
+        new Promise(resolve => {
+          // 如果 rest[i+1] 是 undefined, 说明数组长度是奇数，这个是最后一个
+          if (rest[i + 1] === undefined) {
+            resolve(rest[i])
+          } else {
+            // 调用asyncAdd 进行计算
+            asyncAdd(rest[i], rest[i + 1], (_, result) => {
+              resolve(result)
+            })
+          }
+        })
+      )
+    }
+    // 获取第一次计算结果
+    const result = await Promise.all(promises)
+    // 然后将第一次获取到的结果即 [3,7,11] 再次调用 sum执行
+    return await sum(...result)
+  }
+  ```
+  ```js
+  async function sum(...rest) {
+    let arr = rest;
+    let r = 0;
+    while(arr.length > 0){
+      let a = arr.pop();
+      let b = 0;
+      if(arr.length > 0){
+        b = arr.pop();
+      }
+      let result = await new Promise((resolve,reject)=>{
+        asyncAdd(a,b,(tmp,res)=>{
+          resolve(res);
+        });
+      });
+      r += result;
+    }
+    return r;
+  }
+  ```
+
+  再优化:隐式转换迭代+promise.all
+  ```js
+  async function sum(...rest) {
+    let result = 0
+    // 隐氏类型转换， 对象 + 数字，会先调用对象的toString 方法
+    const obj = {}
+    obj.toString = function() {
+      return result
+    }
+    const promises = []
+    for(let num of rest) {
+      promises.push(new Promise((resolve) => {
+        asyncAdd(obj, num, (_, res) => {
+          resolve(res)
+        })
+      }).then(res => {
+        // 在这里将 result的值改变之后，obj.toString 的返回值就变了，这时候下一个setTimeout调用时就使用了新值
+        result = res
+      }))
+    }
+    await Promise.all(promises)
+    return result
+  }
+  ```
 
 ### 闭包数据缓存
 
