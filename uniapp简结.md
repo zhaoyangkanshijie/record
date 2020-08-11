@@ -20,9 +20,14 @@
     * [vue页面层级覆盖解决方案](#vue页面层级覆盖解决方案)
     * [App的nvue页面层级问题](#App的nvue页面层级问题)
     * [Android系统主题字体对原生组件渲染的影响](#Android系统主题字体对原生组件渲染的影响)
+* [生命周期](#生命周期)
+    * [应用生命周期](#应用生命周期)
+    * [页面生命周期](#页面生命周期)
+    * [页面事件函数](#页面事件函数)
+* [路由跳转](#路由跳转)
 * [页面样式与布局](#页面样式与布局)
     * [尺寸单位](#尺寸单位)
-
+* [使用问题](#使用问题)
 ---
 
 ## 概述
@@ -131,6 +136,32 @@ app和小程序支持web-view组件，里面可以加载标准HTML，这种页�
 * Android 和 iOS 平台不支持通过条件编译来区分，如果需要区分 Android、iOS 平台，请通过调用 uni.getSystemInfo 来获取平台信息。支持ifios、ifAndroid代码块，可方便编写判断。
 * 有些跨端工具可以提供js的条件编译或多态，但这对于实际开发远远不够。uni-app不止是处理js，任何代码都可以多端条件编译，才能真正解决实际项目的跨端问题。另外所谓多态在实际开发中会造成大量冗余代码，很不利于复用和维护。举例，微信小程序主题色是绿色，而百度支付宝小程序是蓝色，你的应用想分平台适配颜色，只有条件编译是代码量最低、最容易维护的。
 * 有些公司的产品运营总是给不同平台提不同需求，但这不是拒绝uni-app的理由。关键在于项目里，复用的代码多还是个性的代码多，正常都是复用的代码多，所以仍然应该多端。而个性的代码放到不同平台的目录下，差异化维护。
+
+运行环境判断
+
+```js
+if(process.env.NODE_ENV === 'development'){
+    console.log('开发环境')
+}else{
+    console.log('生产环境')
+}
+```
+
+运行期判断
+
+```js
+switch(uni.getSystemInfoSync().platform){
+    case 'android':
+       console.log('运行Android上')
+       break;
+    case 'ios':
+       console.log('运行iOS上')
+       break;
+    default:
+       console.log('运行在开发者工具上')
+       break;
+}
+```
 
 ### css的变化
 
@@ -258,6 +289,88 @@ app端若在意字体不一致的问题，有2种解决建议：
 1. 直接使用nvue。nvue是纯原生渲染，不存在webview渲染和原生字体不一致的问题。
 2. app端不使用系统webview，而是使用x5浏览器内核。
 
+## 生命周期
+
+### 应用生命周期
+
+* onLaunch:当uni-app 初始化完成时触发（全局只触发一次）
+* onShow:当 uni-app 启动，或从后台进入前台显示
+* onHide:当 uni-app 从前台进入后台
+* onError:当 uni-app 报错时触发
+* onUniNViewMessage:对 nvue 页面发送的数据进行监听，可参考 nvue 向 vue 通讯
+* onUnhandledRejection:对未处理的 Promise 拒绝事件监听函数
+
+### 页面生命周期
+
+* onLoad:监听页面加载，其参数为上个页面传递的数据，参数类型为Object（用于页面传参）
+* onShow:监听页面显示。页面每次出现在屏幕上都触发，包括从下级页面点返回露出当前页面
+* onReady:监听页面初次渲染完成。注意如果渲染速度快，会在页面进入动画完成前触发
+* onHide:监听页面隐藏
+* onUnload:监听页面卸载
+* onResize:监听窗口尺寸变化,App、微信小程序
+* onPullDownRefresh:监听用户下拉动作，一般用于下拉刷新
+* onReachBottom:页面上拉触底事件的处理函数
+* onTabItemTap:点击 tab 时触发，参数为Object，具体见下方注意事项,微信小程序、百度小程序、H5、App（自定义组件模式
+* onShareAppMessage:用户点击右上角分享,微信小程序、百度小程序、字节跳动小程序、支付宝小程序
+* onPageScroll:监听页面滚动，参数为Object
+* onNavigationBarButtonTap:监听原生标题栏按钮点击事件，参数为Object,5+ App、H5
+* onBackPress:监听页面返回，返回 event = {from:backbutton、 navigateBack} ，backbutton 表示来源是左上角返回按钮或 android 返回键；navigateBack表示来源是 uni.navigateBack ,App、H5
+* onNavigationBarSearchInputChanged:监听原生标题栏搜索输入框输入内容变化事件,App、H5
+* onNavigationBarSearchInputConfirmed:监听原生标题栏搜索输入框搜索事件，用户点击软键盘上的“搜索”按钮时触发。App、H5
+* onNavigationBarSearchInputClicked:监听原生标题栏搜索输入框点击事件,App、H5
+* onShareTimeline:监听用户点击右上角转发到朋友圈,微信小程序
+* onAddToFavorites:监听用户点击右上角收藏,微信小程序
+
+### 页面事件函数
+
+* onPageScroll(scrollTop:Number(页面在垂直方向已滚动的距离（单位px）))页面滚动事件
+
+    ```js
+    onPageScroll:function(res){
+        console.log('屏幕滚动事件');
+        console.log(res.scrollTop);
+        
+        if(res.scrollTop >= 110) {...}
+    }
+    ```
+
+* onTabItemTap(index:String(被点击tabItem的序号，从0开始),pagePath:String(被点击tabItem的页面路径),text:String(被点击tabItem的按钮文字))点击底部tab事件
+
+    * onTabItemTap常用于点击当前tabitem，滚动或刷新当前页面。如果是点击不同的tabitem，一定会触发页面切换。
+    * 如果想在App端实现点击某个tabitem不跳转页面，不能使用onTabItemTap，可以使用plus.nativeObj.view放一个区块盖住原先的tabitem，并拦截点击事件。
+    * onTabItemTap在App端，从HBuilderX 1.9 的自定义组件编译模式开始支持。
+    * 避免在 onShow 里使用需要权限的 API（比如 setScreenBrightness() 等需要手机权限）, 可能会再次触发onShow造成死循环。
+
+* onNavigationBarButtonTap(index:Number(原生标题栏按钮数组的下标))原生标题栏按钮点击
+
+* onBackPress(from:String)触发返回行为的来源：'backbutton'——左上角导航栏按钮及安卓返回键；'navigateBack'——uni.navigateBack() 方法。
+
+    ```js
+    export default {
+        data() {
+            return {};
+        },
+        onBackPress(options) {
+            console.log('from:' + options.from)
+        }
+    }
+    ```
+
+## 路由跳转
+
+### 路由
+
+uni-app页面路由为框架统一管理，开发者需要在pages.json里配置每个路由页面的路径及页面样式。类似小程序在app.json中配置页面路由一样。所以 uni-app 的路由用法与 Vue Router 不同，如仍希望采用 Vue Router 方式管理路由，可在插件市场搜索 Vue-Router。
+
+### 路由跳转
+
+* 初始化:uni-app 打开的第一个页面
+* 打开新页面:调用 API   uni.navigateTo  、使用组件  \<navigator open-type="navigate"/>
+* 页面重定向:调用 API   uni.redirectTo  、使用组件  \<navigator open-type="redirectTo"/>
+* 页面返回:调用 API  uni.navigateBack   、使用组件 \<navigator open-type="navigateBack"/> 、用户按左上角返回按钮、安卓用户点击物理back按键
+* Tab 切换:调用 API  uni.switchTab  、使用组件  \<navigator open-type="switchTab"/>  、用户切换 Tab
+* 重加载:调用 API  uni.reLaunch  、使用组件  \<navigator open-type="reLaunch"/>
+
 ## 页面样式与布局
 
 ### 尺寸单位
@@ -298,3 +411,15 @@ rpx换算：
 * 设计师可以用 iPhone6 作为视觉稿的标准。
 * 如果设计稿不是750px，HBuilderX提供了自动换算的工具
 * App端，在 pages.json 里的 titleNView 或页面里写的 plus api 中涉及的单位，只支持 px，不支持 rpx。
+
+## 使用问题
+
+### uni-app启动微信开发者工具
+
+1. 参考链接
+
+    [uni-app启动微信开发者工具](https://blog.csdn.net/qq_24147051/article/details/104943611)
+
+2. 详解
+
+    第一次运行会出现打开失败的情况，需要在微信小程序开发工具中的"设置"-"安全设置"-"安全"-"开启服务端口"，在HBuilderX重新运行即可
