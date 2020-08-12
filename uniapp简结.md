@@ -27,6 +27,13 @@
 * [路由跳转](#路由跳转)
 * [页面样式与布局](#页面样式与布局)
     * [尺寸单位](#尺寸单位)
+    * [内置CSS变量](#内置CSS变量)
+    * [自定义组件](#自定义组件)
+* [配置](#配置)
+    * [pages.json](#pages.json)
+    * [manifest.json](#manifest.json)
+    * [package.json](#package.json)
+    * [vue.config.js](#vue.config.js)
 * [使用问题](#使用问题)
 ---
 
@@ -60,6 +67,24 @@ app和小程序中，为了提升体验，页面提供了原生的导航栏和�
 │  └─comp-a.vue         可复用的a组件
 ├─hybrid                存放本地网页的目录
 ├─platforms             存放各平台专用页面的目录
+├─wxcomponents          微信小程序自定义组件存放目录
+│   └──custom           微信小程序自定义组件
+│        ├─index.js
+│        ├─index.wxml
+│        ├─index.json
+│        └─index.wxss
+├─mycomponents          支付宝小程序自定义组件存放目录
+│   └──custom           支付宝小程序自定义组件
+│        ├─index.js
+│        ├─index.axml
+│        ├─index.json
+│        └─index.wxss
+├─swancomponents        百度小程序自定义组件存放目录
+│   └──custom           百度小程序自定义组件
+│        ├─index.js
+│        ├─index.swan
+│        ├─index.json
+│        └
 ├─pages                 业务页面文件存放的目录
 │  ├─index
 │  │  └─index.vue       index页面
@@ -310,7 +335,7 @@ app端若在意字体不一致的问题，有2种解决建议：
 * onResize:监听窗口尺寸变化,App、微信小程序
 * onPullDownRefresh:监听用户下拉动作，一般用于下拉刷新
 * onReachBottom:页面上拉触底事件的处理函数
-* onTabItemTap:点击 tab 时触发，参数为Object，具体见下方注意事项,微信小程序、百度小程序、H5、App（自定义组件模式
+* onTabItemTap:点击 tab 时触发，参数为Object，具体见下方注意事项,微信小程序、百度小程序、H5、App（自定义组件模式）
 * onShareAppMessage:用户点击右上角分享,微信小程序、百度小程序、字节跳动小程序、支付宝小程序
 * onPageScroll:监听页面滚动，参数为Object
 * onNavigationBarButtonTap:监听原生标题栏按钮点击事件，参数为Object,5+ App、H5
@@ -411,6 +436,655 @@ rpx换算：
 * 设计师可以用 iPhone6 作为视觉稿的标准。
 * 如果设计稿不是750px，HBuilderX提供了自动换算的工具
 * App端，在 pages.json 里的 titleNView 或页面里写的 plus api 中涉及的单位，只支持 px，不支持 rpx。
+
+### 内置CSS变量
+
+* --status-bar-height
+
+    系统状态栏高度,app为系统栏高度，nvue不支持，小程序为25px，h5为0
+
+    当设置 "navigationStyle":"custom" 取消原生导航栏后，由于窗体为沉浸式，占据了状态栏位置。此时可以使用一个高度为 var(--status-bar-height) 的 view 放在页面顶部，避免页面内容出现在状态栏。
+
+    nvue 在App端，还不支持 --status-bar-height变量，替代方案是在页面onLoad时通过uni.getSystemInfoSync().statusBarHeight获取状态栏高度，然后通过style绑定方式给占位view设定高度。
+
+    ```html
+    <template>
+        <!-- HBuilderX 2.6.3+ 新增 page-meta, 详情：https://uniapp.dcloud.io/component/page-meta -->
+        <page-meta>
+            <navigation-bar />
+        </page-meta>
+        <view>
+            <view class="status_bar">
+                <!-- 这里是状态栏 -->
+            </view>
+            <view> 状态栏下的文字 </view>
+        </view>
+    </template>
+    <style>
+        .status_bar {
+            height: var(--status-bar-height);
+            width: 100%;
+        }
+        .toTop {
+            bottom: calc(var(--window-bottom) + 10px)
+        }
+    </style>
+    <script>
+        export default {
+            data() {
+                return {
+                    iStatusBarHeight:0
+                }
+            },
+            onLoad() {
+                this.iStatusBarHeight = uni.getSystemInfoSync().statusBarHeight
+            }
+        }
+    </script>
+    ```
+
+* -window-top
+
+    内容区域距离顶部的距离，只有h5是NavigationBar 的高度(导航栏固定44px)，其余平台为0
+
+* --window-bottom
+
+    内容区域距离底部的距离，只有h5是TabBar 的高度(底部选项卡默认50px，可修改)，其余平台为0
+
+    由于在H5端，不存在原生导航栏和tabbar，也是前端div模拟。如果设置了一个固定位置的居底view，在小程序和App端是在tabbar上方，但在H5端会与tabbar重叠。此时可使用--window-bottom，不管在哪个端，都是固定在tabbar上方。
+
+### 自定义组件
+
+小程序组件的性能，不如vue组件。使用小程序组件，需要自己手动setData，很难自动管理差量数据更新。而使用vue组件会自动diff更新差量数据。所以如无明显必要，建议使用vue组件而不是小程序组件。比如某些小程序ui组件，完全可以用更高性能的uni ui替代。
+
+当需要在 vue 组件中使用小程序组件时，注意在 pages.json 的 globalStyle 中配置 usingComponents，而不是页面级配置。
+
+
+## 配置
+
+### pages.json
+
+用来对 uni-app 进行全局配置，决定页面文件的路径(路由)、窗口样式、原生的导航栏、底部的原生tabbar 
+
+全局样式包括：导航栏样式、下拉样式、上拉样式、横屏设置、窗口动画、特定平台样式
+
+样例
+
+```json
+{
+    "pages": [{
+        "path": "pages/component/index",
+        "style": {
+            "navigationBarTitleText": "组件"
+        }
+    }, {
+        "path": "pages/API/index",
+        "style": {
+            "navigationBarTitleText": "接口"
+        }
+    }, {
+        "path": "pages/component/view/index",
+        "style": {
+            "navigationBarTitleText": "view"
+        }
+    }],
+    "condition": { //模式配置，仅开发期间生效
+        "current": 0, //当前激活的模式（list 的索引项）
+        "list": [{
+            "name": "test", //模式名称
+            "path": "pages/component/view/index" //启动页面，必选
+        }]
+    },
+    "globalStyle": {
+        "navigationBarTextStyle": "black",
+        "navigationBarTitleText": "演示",
+        "navigationBarBackgroundColor": "#F8F8F8",
+        "backgroundColor": "#F8F8F8",
+        "usingComponents":{
+            "collapse-tree-item":"/components/collapse-tree-item"
+        },
+        "renderingMode": "seperated", // 仅微信小程序，webrtc 无法正常时尝试强制关闭同层渲染
+        "pageOrientation": "portrait"//横屏配置，全局屏幕旋转设置(仅 APP/微信/QQ小程序)，支持 auto / portrait / landscape
+    },
+    "tabBar": {
+        "color": "#7A7E83",
+        "selectedColor": "#3cc51f",
+        "borderStyle": "black",
+        "backgroundColor": "#ffffff",
+        "height": "50px",
+        "fontSize": "10px",
+        "iconWidth": "24px",
+        "spacing": "3px",
+        "list": [{
+            "pagePath": "pages/component/index",
+            "iconPath": "static/image/icon_component.png",
+            "selectedIconPath": "static/image/icon_component_HL.png",
+            "text": "组件"
+        }, {
+            "pagePath": "pages/API/index",
+            "iconPath": "static/image/icon_API.png",
+            "selectedIconPath": "static/image/icon_API_HL.png",
+            "text": "接口"
+        }],
+        "midButton": {
+            "width": "80px",
+            "height": "50px",
+            "text": "文字",
+            "iconPath": "static/image/midButton_iconPath.png",
+            "iconWidth": "24px",
+            "backgroundImage": "static/image/midButton_backgroundImage.png"
+        }
+    },
+  "easycom": {
+    "autoscan": true, //是否自动扫描组件
+    "custom": {//自定义扫描规则
+      "^uni-(.*)": "@/components/uni-$1.vue"
+    }
+  }
+}
+```
+
+### manifest.json
+
+用于配置应用信息(名称、appid、版本号等)、网络超时时间(request、connectSocket、uploadFile、downloadFile)、是否开启 debug 模式、是否开启 [uni 统计](https://tongji.dcloud.net.cn/)、app页面与手机权限
+
+uni统计功能包括：渠道推广质量(拉新、留存、导量)、内容统计(访问人数、访问次数、停留时长)、自定义统计事件、错误分析、小程序场景分析
+
+app相关：启动界面信息、启动封面、蓝牙、通信录、指纹、语音识别、三方支付、授权登录等
+
+自定义模板
+
+* 调整页面 head 中的 meta 配置
+* 补充 SEO 相关的一些配置（仅首页）
+* 加入百度统计等三方js
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <title>
+            <%= htmlWebpackPlugin.options.title %>
+        </title>
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.documentElement.style.fontSize = document.documentElement.clientWidth / 20 + 'px'
+            })
+        </script>
+        <link rel="stylesheet" href="<%= BASE_URL %>static/index.<%= VUE_APP_INDEX_CSS_HASH %>.css" />
+    </head>
+    <body>
+        <noscript>
+            <strong>Please enable JavaScript to continue.</strong>
+        </noscript>
+        <div id="app"></div>
+        <!-- built files will be auto injected -->
+    </body>
+</html>
+```
+
+h5可使用vue配置，也可配置路由
+
+各平台小程序延用官方配置，微信小程序有额外的编译配置(是否检查安全域名和 TLS 版本、ES6 转 ES5、上传代码时样式是否自动补全、上传代码时是否自动压缩)、优化配置(是否开启分包优化),百度小程序有优化配置、字节跳动小程序有额外的编译配置、优化配置，QQ小程序有优化配置
+
+如果需要使用微信小程序的云开发，需要在 mp-weixin 配置云开发目录
+```json
+"mp-weixin":{
+  // ...
+   "cloudfunctionRoot": "cloudfunctions/", // 配置云开发目录
+  // ...
+}
+```
+配置目录之后，需要在项目根目录新建 vue.config.js 配置对应的文件编译规则
+```js
+{
+plugins: [
+     new CopyWebpackPlugin([
+       {
+         from: path.join(__dirname, '../cloudfunctions'),
+         to: path.join(__dirname, 'unpackage', 'dist', process.env.NODE_ENV === 'production' ? 'build' : 'dev', process.env.UNI_PLATFORM, 'cloudfunctions'),
+       },
+     ]),
+   ],
+}
+```
+
+完整样例
+```json
+{
+    "appid": "__UNI__XXXXXX，创建应用时云端分配的，不要修改。",
+    "name": "应用名称，如uni-app",
+    "description": "应用描述",
+    "versionName": "1.0.0",
+    "versionCode": "100",
+  // 是否全局关闭uni统计
+  "uniStatistics": {  
+      "enable": false//全局关闭  
+  },
+    // app-plus 节点是 App 特有配置，推荐在 HBuilderX 的 manifest.json 可视化界面操作完成配置。
+    "app-plus": {
+        // HBuilderX->manifest.json->模块权限配置
+    "optimization": {
+      "subPackages": true // HBuilderX 2.7.12+ 支持
+    },
+        "modules": {
+            "Contacts": {},
+            "Fingerprint": {},
+            "Maps": {},
+            "Messaging": {},
+            "OAuth": {},
+            "Payment": {},
+            "Push": {},
+            "Share": {},
+            "Speech": {},
+            "Statistic": {},
+            "VideoPlayer": {},
+            "LivePusher": {}
+        },
+        "distribute": {
+            // Android 与 iOS 证书相关信息均在打包时完成配置
+            "android": {
+                "packagename": "Android应用包名，如io.dcloud.uniapp",
+                "keystore": "Android应用打包使用的密钥库文件",
+                "password": "Android应用打包使用密钥库中证书的密码",
+                "aliasname": "Android应用打包使用密钥库中证书的别名",
+                "schemes": [
+                    "应用支持的scheme，大小写相关，推荐使用小写"
+                ],
+                "theme": "程序使用的主题",
+                "android:name": "自定义程序入口类名",
+                "custompermissions": "Boolean类型，是否自定义android权限，true表示自定义权限，只使用permissions下指定的android权限，不根据用户使用的5+模块自动添加android权限，false表示自动根据用户使用的5+模块自动添加android权限",
+                "permissions": [
+                    "要添加的额外的android权限，如<uses-permission android:name=\"com.android.launcher.permission.INSTALL_SHORTCUT\" />",
+                    "<uses-permission android:name=\"com.android.launcher.permission.UNINSTALL_SHORTCUT\" />"
+                ],
+                "minSdkVersion": "apk支持的最低版本，默认值为14",
+                "targetSdkVersion": "apk的目标版本，默认值为21"
+            },
+            "ios": {
+                "appid": "iOS应用标识，苹果开发网站申请的appid，如io.dcloud.uniapp",
+                "mobileprovision": "iOS应用打包配置文件",
+                "password": "iOS应用打包个人证书导入密码",
+                "p12": "iOS应用打包个人证书，打包配置文件关联的个人证书",
+                "devices": "iOS应用支持的设备类型，可取值iphone/ipad/universal",
+                "urltypes": [{
+                        "urlschemes": [
+                            "hbuilder",
+                            "必选，程序所支持的自定义协议名称"
+                        ],
+                        "id": "可选，自定义协议的标识",
+                        "icon": "可选，打开程序时显示的图标"
+                    },
+                    {
+                        "urlschemes": [
+                            "http",
+                            "https",
+                            "必选，程序所支持的自定义协议名称，大小写无关，推荐使用小写"
+                        ],
+                        "id": "可选，自定义协议的标识",
+                        "icon": "可选，打开程序时显示的图标"
+                    }
+                ],
+                "frameworks": ["使用native.js调用API要引用的库文件名称，如CoreLocation.framework", "QuartzCore.framework"],
+                "idfa": "true|false，是否使用广告标识符，默认值为false",
+                "plistcmds": [
+                    "Set :权限 使用权限的原因",
+                    "Set :NSCameraUsageDescription 说明使用用户相机的原因"
+                ]
+            },
+            // HBuilderX->manifest.json->SDK配置
+            "sdkConfigs": {
+                "maps": {
+                    // 地图只能选一个，这里选的是百度。
+                    "baidu": {
+                        "appkey_ios": "",
+                        "appkey_android": ""
+                    }
+                },
+                "oauth": {
+                    // 微信登录
+                    "weixin": {
+                        "appid": "",
+                        "appsecret": ""
+                    },
+                    // QQ登录
+                    "qq": {
+                        "appid": ""
+                    },
+                    // 新浪微博登录
+                    "sina": {
+                        "appkey": "",
+                        "appsecret": "",
+                        "redirect_uri": ""
+                    },
+                    // 小米登录
+                    "xiaomi": {
+                        "appid_ios": "",
+                        "appsecret_ios": "",
+                        "redirect_uri_ios": "",
+                        "appid_android": "",
+                        "appsecret_android": "",
+                        "redirect_uri_android": ""
+                    }
+                },
+                "payment": {
+                    // Apple应用内支付
+                    "appleiap": {},
+                    // 支付宝支付
+                    "alipay": {
+                        "scheme": ""
+                    },
+                    // 微信支付
+                    "weixin": {
+                        "appid": ""
+                    }
+                },
+                "push": {
+                    // 推送只能选择一个，这里选的是个推。
+                    "igexin": {
+                        "appid": "",
+                        "appkey": "",
+                        "appsecret": ""
+                    }
+                },
+                "share": {
+                    // 微信分享
+                    "weixin": {
+                        "appid": ""
+                    },
+                    // 新浪微博分享
+                    "sina": {
+                        "appkey": "",
+                        "appsecret": "",
+                        "redirect_uri": ""
+                    },
+                    // 分享到QQ
+                    "qq": {
+                        "appid": ""
+                    }
+                },
+                "statics": {
+                    // 友盟统计
+                    "umeng": {
+                        "appkey_ios": "",
+                        "channelid_ios": "",
+                        "appkey_android": "",
+                        "channelid_android": ""
+                    }
+                }
+            },
+            // 屏幕方向 需要云打包/本地打包/自定义基座生效
+            "orientation": [
+                "portrait-primary",
+                "landscape-primary",
+                "portrait-secondary",
+                "landscape-secondary"
+            ],
+            // HBuilderX->manifest.json->图标配置
+            "icons": {
+                "ios": {
+                    "appstore": "必选, 1024x1024, 提交app sotre使用的图标",
+                    "iphone": {
+                        "app@2x": "可选，120x120，iOS7-11程序图标（iPhone4S/5/6/7/8）",
+                        "app@3x": "可选，180x180，iOS7-11程序图标（iPhone6plus/7plus/8plus/X）",
+                        "spotlight@2x": "可选，80x80，iOS7-11 Spotlight搜索图标（iPhone5/6/7/8）",
+                        "spotlight@3x": "可选，120x120，iOS7-11 Spotlight搜索图标（iPhone6plus/7plus/8plus/X）",
+                        "settings@2x": "可选，58x58，iOS5-11 Settings设置图标（iPhone5/6/7/8）",
+                        "settings@3x": "可选，87x87，iOS5-11 Settings设置图标（iPhone6plus/7plus/8plus/X）",
+                        "notification@2x": "可选，40x40，iOS7-11 通知栏图标（iPhone5/6/7/8）",
+                        "notification@3x": "可选，60x60，iOS7-11 通知栏图标（iPhone6plus/7plus/8plus/X）"
+                    },
+                    "ipad": {
+                        "app": "可选，76x76，iOS7-11程序图标",
+                        "app@2x": "可选，152x152，iOS7-11程序图标（高分屏）",
+                        "proapp@2x": "可选，167x167，iOS9-11程序图标（iPad Pro）",
+                        "spotlight": "可选，40x40，iOS7-11 Spotlight搜索图标",
+                        "spotlight@2x": "可选，80x80，iOS7-11 Spotlight搜索图标（高分屏）",
+                        "settings": "可选，29x29，iOS5-11 设置图标",
+                        "settings@2x": "可选，58x58，iOS5-11 设置图标（高分屏）",
+                        "notification": "可选，20x20，iOS7-11 通知栏图标",
+                        "notification@2x": "可选，40x40，iOS7-11 通知栏图标（高分屏）"
+                    }
+                },
+                "android": {
+                    "mdpi": "必选，48x48，普通屏程序图标",
+                    "ldpi": "必选，48x48，大屏程序图标",
+                    "hdpi": "必选，72x72，高分屏程序图标",
+                    "xhdpi": "必选，96x96，720P高分屏程序图标",
+                    "xxhdpi": "必选，144x144，1080P高分屏程序图标",
+                    "xxxhdpi": "可选，192x192"
+                }
+            },
+            // HBuilderX->manifest.json->启动图配置
+            "splashscreen": {
+                "ios": {
+                    "iphone": {
+                        "retina35": "可选，640x960，3.5英寸设备(iPhone4)启动图片",
+                        "retina40": "可选，640x1136，4.0英寸设备(iPhone5)启动图片",
+                        "retina40l": "可选，1136x640，4.0英寸设备(iPhone5)横屏启动图片",
+                        "retina47": "可选，750x1334，4.7英寸设备（iPhone6）启动图片",
+                        "retina47l": "可选，1334x750，4.7英寸设备（iPhone6）横屏启动图片",
+                        "retina55": "可选，1242x2208，5.5英寸设备（iPhone6Plus）启动图片",
+                        "retina55l": "可选，2208x1242，5.5英寸设备（iPhone6Plus）横屏启动图片",
+                        "iphonex": "可选，1125x2436，iPhoneX启动图片",
+                        "iphonexl": "可选，2436x1125，iPhoneX横屏启动图片"
+                    },
+                    "ipad": {
+                        "portrait": "可选，768x1004，需支持iPad时必选，iPad竖屏启动图片",
+                        "portrait-retina": "可选，1536x2008，需支持iPad时必选，iPad高分屏竖屏图片",
+                        "landscape": "可选，1024x748，需支持iPad时必选，iPad横屏启动图片",
+                        "landscape-retina": "可选，2048x1496，需支持iPad时必选，iPad高分屏横屏启动图片",
+                        "portrait7": "可选，768x1024，需支持iPad iOS7时必选，iPad竖屏启动图片",
+                        "portrait-retina7": "可选，1536x2048，需支持iPad iOS7时必选，iPad高分屏竖屏图片",
+                        "landscape7": "可选，1024x768，需支持iPad iOS7时必选，iPad横屏启动图片",
+                        "landscape-retina7": "可选，2048x1536，需支持iPad iOS7时必选，iPad高分屏横屏启动图片"
+                    }
+                },
+                "android": {
+                    "mdpi": "必选，240x282，普通屏启动图片",
+                    "ldpi": "必选，320x442，大屏启动图片",
+                    "hdpi": "必选，480x762，高分屏启动图片",
+                    "xhdpi": "必选，720x1242，720P高分屏启动图片",
+                    "xxhdpi": "必选，1080x1882，1080P高分屏启动图片"
+                }
+            }
+        },
+        // HBuilderX->manifest.json->启动图配置->启动界面选项
+        "splashscreen": {
+            "waiting": true,
+            "autoclose": true,
+            "delay": 0
+        },
+        "error": {
+            "url": "页面加载错误时打开的页面地址，可以是网络地址，也可以是本地地址"
+        },
+        "useragent": {
+            "value": "自定义ua字符串",
+            "concatenate": "是否为追加模式"
+        },
+        "useragent_ios": {
+            "value": "与useragent的value一致，仅在iOS平台生效，当useragent和useragent_ios同时存在时优先级useragent_ios>useragent",
+            "concatenate": "与useragent的concatenate一致，仅iOS平台生效"
+        },
+        "useragent_android": {
+            "value": "与useragent的value一致，仅在Android平台生效，当useragent和useragent_android同时存在时优先级useragent_android>useragent",
+            "concatenate": "与useragent的concatenate一致，仅Android平台生效"
+        },
+        "ssl": "accept|refuse|warning，访问https网络时对非受信证书的处理逻辑",
+        "runmode": "normal",
+        "appWhitelist": [
+            "Android平台下载apk地址白名单列表",
+            "iOS平台跳转appstore地址白名单列表"
+        ],
+        "schemeWhitelist": [
+            "URL Scheme白名单列表，如：mqq" //iOS要求预先指定要打开的App名单，不能随意调用任何App
+        ],
+        "channel": "渠道标记，可在DCloud开发者中心查看各渠道应用的统计数据",
+        "adid": "广告联盟会员id，在DCloud开发者中心申请后填写",
+        "safearea": { //安全区域配置，仅iOS平台生效  
+            "background": "#CCCCCC", //安全区域外的背景颜色，默认值为"#FFFFFF"  
+            "bottom": { // 底部安全区域配置  
+                "offset": "none|auto" // 底部安全区域偏移，"none"表示不空出安全区域，"auto"自动计算空出安全区域，默认值为"none"  
+            },
+            "left": { //左侧安全区域配置（横屏显示时有效）  
+                "offset": "none|auto"
+            },
+            "right": { //右侧安全区域配置（横屏显示时有效）  
+                "offset": "none|auto"
+            }
+        },
+        "softinput": {
+            "navBar": "auto", //是否显示iOS软键盘上的“完成”导航条
+            "mode": "adjustResize|adjustPan" //软键盘弹出模式，
+        },
+    "popGesture": "none" //iOS上是否支持屏幕左边滑动关闭当前页面。默认是可关闭。设为none则不响应左滑动画。
+    },
+    // 快应用特有配置
+    "quickapp": {},
+    // 微信小程序特有配置
+    "mp-weixin": {
+        "appid": "wx开头的微信小程序appid",
+        "uniStatistics": {
+            "enable": false//仅微信小程序关闭uni统计
+        },
+    },
+    // 百度小程序特有配置
+    "mp-baidu": {
+        "appid": "百度小程序appid"
+    },
+    // 字节跳动小程序特有配置
+    "mp-toutiao": {
+        "appid": "字节跳动小程序appid"
+    },
+    "h5": {
+        "title": "演示", //页面标题，默认使用 manifest.json 的 name
+        "template": "index.html", //index.html模板路径，相对于应用根目录，可定制生成的 html 代码
+        "router": {
+            "mode": "history", //路由跳转模式，支持 hash|history ,默认 hash
+            "base": "/hello/" //应用基础路径，例如，如果整个单页应用服务在 /app/ 下，然后 base 就应该设为 "/app/"
+        },
+        "async": { //页面js异步加载配置
+            "loading": "AsyncLoading", //页面js加载时使用的组件（需注册为全局组件）
+            "error": "AsyncError", //页面js加载失败时使用的组件（需注册为全局组件）
+            "delay": 200, //展示 loading 加载组件的延时时间（页面 js 若在 delay 时间内加载完成，则不会显示 loading 组件）
+            "timeout": 3000 //页面js加载超时时间（超时后展示 error 对应的组件）
+        }
+    }
+}
+```
+
+### package.json
+
+在package.json文件中增加uni-app扩展节点，可实现自定义条件编译平台（如钉钉小程序、微信服务号等平台）
+
+文件中不允许出现注释，否则扩展配置无效,vue-cli需更新到最新版
+```js
+{
+    /**
+     package.json其它原有配置
+     */
+    "uni-app": {// 扩展配置
+        "scripts": {
+            "custom-platform": { //自定义编译平台配置，可通过cli方式调用
+                "title":"自定义扩展名称", // 在HBuilderX中会显示在 运行/发行 菜单中
+                "BROWSER":"",  //运行到的目标浏览器，仅当UNI_PLATFORM为h5时有效(Chrome、Firefox、IE、Edge、Safari、HBuilderX)
+                "env": {//环境变量
+                    "UNI_PLATFORM": ""  //基准平台(h5、mp-weixin、mp-alipay、mp-baidu、mp-toutiao、mp-qq)
+                 },
+                "define": { //自定义条件编译
+                    "CUSTOM-CONST": true //自定义条件编译常量，建议为大写
+                }
+            }
+        }
+    }
+}
+```
+
+样例：钉钉小程序
+
+```json
+"uni-app": {
+    "scripts": {
+        "mp-dingtalk": { 
+            "title":"钉钉小程序", 
+            "env": { 
+                "UNI_PLATFORM": "mp-alipay" 
+            },
+            "define": { 
+                "MP-DINGTALK": true 
+            }
+        }
+    }
+}
+```
+条件编译
+```js
+// #ifdef MP-DINGTALK
+钉钉平台特有代码
+// #endif
+```
+运行及发布项目(vue-cli开发者可通过如下命令，启动钉钉小程序平台的编译)
+```js
+npm run dev:custom mp-dingtalk 
+npm run build:custom mp-dingtalk
+```
+HBuilderX会根据package.json的扩展配置，在运行、发行菜单下，生成自定义菜单（钉钉小程序），开发者点击对应菜单编译运行即可
+
+钉钉小程序编译目录依然是mp-alipay，需通过支付宝开发者工具，选择“钉钉小程序”，然后打开该目录进行预览及发布。
+
+### vue.config.js
+
+配置仅vue页面生效，部分配置项会被编译配置覆盖：
+
+* publicPath 不支持，如果需要配置，请在 manifest.json->h5->router->base 中配置，参考文档：h5-router
+* outputDir 不支持
+* assetsDir 固定 static
+* pages 不支持
+* runtimeCompiler 固定 false
+* productionSourceMap 固定 false
+* css.extract H5 平台固定 false，其他平台固定 true
+* parallel 固定 false
+* 使用cli项目时，默认情况下 babel-loader 会忽略所有 node_modules 中的文件。如果你想要通过 Babel 显式转译一个依赖，可以在transpileDependencies中列出来。
+
+样例
+
+```js
+const path = require('path')
+const CopyWebpackPlugin = require('copy-webpack-plugin') //最新版本copy-webpack-plugin插件暂不兼容，推荐v5.0.0
+const webpack = require('webpack')
+
+module.exports = {
+    configureWebpack: {
+        plugins: [
+            new CopyWebpackPlugin([
+                {
+                    from: path.join(__dirname, 'src/images'),
+                    to: path.join(__dirname, 'dist', process.env.NODE_ENV === 'production' ? 'build' : 'dev', process.env.UNI_PLATFORM, 'images')
+                }
+            ]),
+            new webpack.ProvidePlugin({
+                'localStorage': ['mp-storage', 'localStorage'],
+                'window.localStorage': ['mp-storage', 'localStorage']
+            })
+        ]
+    },
+    chainWebpack: (config) => {
+        // 发行或运行时启用了压缩时会生效
+        config.optimization.minimizer('terser').tap((args) => {
+            const compress = args[0].terserOptions.compress
+            // 非 App 平台移除 console 代码(包含所有 console 方法，如 log,debug,info...)
+            compress.drop_console = true
+            compress.pure_funcs = [
+                '__f__', // App 平台 vue 移除日志代码
+                // 'console.debug' // 可移除指定的 console 方法
+            ]
+            return args
+        })
+    }
+}
+```
 
 ## 使用问题
 
