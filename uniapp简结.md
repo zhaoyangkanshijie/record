@@ -23,7 +23,7 @@
 * [生命周期](#生命周期)
     * [应用生命周期](#应用生命周期)
     * [页面生命周期](#页面生命周期)
-    * [页面事件函数](#页面事件函数)
+    * [组件生命周期](#组件生命周期)
 * [路由跳转](#路由跳转)
 * [页面样式与布局](#页面样式与布局)
     * [尺寸单位](#尺寸单位)
@@ -34,6 +34,9 @@
     * [manifest.json](#manifest.json)
     * [package.json](#package.json)
     * [vue.config.js](#vue.config.js)
+    * [uni.scss](#uni.scss)
+    * [App.vue](#App.vue)
+    * [main.js](#main.js)
 * [使用问题](#使用问题)
 ---
 
@@ -151,9 +154,9 @@ app和小程序支持web-view组件，里面可以加载标准HTML，这种页�
 写法：以 #ifdef 或 #ifndef 加 %PLATFORM% 开头，以 #endif 结尾。
 
 ```C
-#ifdef APP-PLUS
+// #ifdef APP-PLUS
 需条件编译的代码
-#endif
+// #endif
 ```
 
 注意
@@ -324,6 +327,8 @@ app端若在意字体不一致的问题，有2种解决建议：
 * onError:当 uni-app 报错时触发
 * onUniNViewMessage:对 nvue 页面发送的数据进行监听，可参考 nvue 向 vue 通讯
 * onUnhandledRejection:对未处理的 Promise 拒绝事件监听函数
+* onPageNotFound:页面不存在监听函数
+* onThemeChange:监听系统主题变化
 
 ### 页面生命周期
 
@@ -335,6 +340,11 @@ app端若在意字体不一致的问题，有2种解决建议：
 * onResize:监听窗口尺寸变化,App、微信小程序
 * onPullDownRefresh:监听用户下拉动作，一般用于下拉刷新
 * onReachBottom:页面上拉触底事件的处理函数
+
+    可在pages.json里定义具体页面底部的触发距离onReachBottomDistance，比如设为50，那么滚动页面到距离底部50px时，就会触发onReachBottom事件。
+
+    如使用scroll-view导致页面没有滚动，则触底事件不会被触发。scroll-view滚动到底部的事件请参考scroll-view的文档
+
 * onTabItemTap:点击 tab 时触发，参数为Object，具体见下方注意事项,微信小程序、百度小程序、H5、App（自定义组件模式）
 * onShareAppMessage:用户点击右上角分享,微信小程序、百度小程序、字节跳动小程序、支付宝小程序
 * onPageScroll:监听页面滚动，参数为Object
@@ -345,19 +355,22 @@ app端若在意字体不一致的问题，有2种解决建议：
 * onNavigationBarSearchInputClicked:监听原生标题栏搜索输入框点击事件,App、H5
 * onShareTimeline:监听用户点击右上角转发到朋友圈,微信小程序
 * onAddToFavorites:监听用户点击右上角收藏,微信小程序
-
-### 页面事件函数
-
 * onPageScroll(scrollTop:Number(页面在垂直方向已滚动的距离（单位px）))页面滚动事件
 
     ```js
-    onPageScroll:function(res){
+    onPageScroll:function(e){
         console.log('屏幕滚动事件');
-        console.log(res.scrollTop);
+        console.log(e.scrollTop);
         
-        if(res.scrollTop >= 110) {...}
+        if(e.scrollTop >= 110) {...}
     }
     ```
+
+    * onPageScroll里不要写交互复杂的js，比如频繁修改页面。因为这个生命周期是在渲染层触发的，在非h5端，js是在逻辑层执行的，两层之间通信是有损耗的。如果在滚动过程中，频发触发两层之间的数据交换，可能会造成卡顿。
+    * 如果想实现滚动时标题栏透明渐变，在App和H5下，可在pages.json中配置titleNView下的type为transparent。
+    * 如果需要滚动吸顶固定某些元素，推荐使用css的粘性布局，参考插件市场。插件市场也有其他js实现的吸顶插件，但性能不佳，需要时可自行搜索。
+    * 在App、微信小程序、H5中，也可以使用wxs监听滚动；在app-nvue中，可以使用bindingx监听滚动。
+    * onBackPress上不可使用async，会导致无法阻止默认返回
 
 * onTabItemTap(index:String(被点击tabItem的序号，从0开始),pagePath:String(被点击tabItem的页面路径),text:String(被点击tabItem的按钮文字))点击底部tab事件
 
@@ -380,6 +393,14 @@ app端若在意字体不一致的问题，有2种解决建议：
         }
     }
     ```
+
+### 组件生命周期
+
+与vue标准组件的生命周期相同,这里没有页面级的onLoad等生命周期
+
+beforeCreate/created/beforeMount/mounted/beforeUpdate/updated/beforeDestroy/destroyed
+
+其中beforeUpdate/updated仅H5平台支持
 
 ## 路由跳转
 
@@ -1085,6 +1106,116 @@ module.exports = {
     }
 }
 ```
+
+### uni.scss
+
+在代码中无需 import 这个文件即可在scss代码中使用这里的样式变量。uni-app的编译器在webpack配置中特殊处理了这个uni.scss，使得每个scss文件都被注入这个uni.scss，达到全局可用的效果。
+
+使用scss的方法：
+
+* 在 HBuilderX 里面安装 scss 插件
+* 在 style 节点上加上 lang="scss"
+* pages.json不支持scss，原生导航栏和tabbar的动态修改只能使用js api
+
+### App.vue
+
+App.vue是uni-app的主组件，所有页面都是在App.vue下进行切换的，是页面入口文件。但App.vue本身不是页面，这里不能编写视图元素。
+
+这个文件的作用包括：调用应用生命周期函数、配置全局样式、配置全局的存储globalData
+
+1. 应用生命周期仅可在App.vue中监听，在页面监听无效。
+
+```html
+<script>  
+    export default {  
+        onLaunch: function() {  
+            console.log('App Launch，app启动')  
+        },  
+        onShow: function() {  
+            console.log('App Show，app展现在前台')  
+        },  
+        onHide: function() {  
+            console.log('App Hide，app不再展现在前台')  
+        }  
+    }  
+</script>
+```
+
+2. 全局变量
+
+* getApp/$scope/globalData
+
+小程序有globalData，这是一种简单的全局变量机制。
+
+```html
+<script>  
+    export default {  
+        globalData: {  
+            text: 'text'  
+        }
+    }  
+</script>
+```
+
+js中操作globalData的方式如下： getApp().globalData.text = 'test'
+
+在应用onLaunch时，getApp对象还未获取，暂时可以使用this.$scope.globalData获取globalData。
+
+如果需要把globalData的数据绑定到页面上，可在页面的onShow页面生命周期里进行变量重赋值。
+
+nvue的weex编译模式中使用globalData的话，由于weex生命周期不支持onShow，但熟悉5+的话，可利用监听webview的addEventListener show事件实现onShow效果，或者直接使用weex生命周期中的beforeCreate。但建议开发者使用uni-app编译模式，而不是weex编译模式。
+
+globalData是简单的全局变量，如果使用状态管理，请使用vuex（main.js中定义）
+
+v3模式加速了首页nvue的启动速度，当在首页nvue中使用getApp()不一定可以获取真正的App对象。对此v3版本提供了const app = getApp({allowDefault: true})用来获取原始的App对象，可以用来在首页对globalData等初始化
+
+* getCurrentPages
+
+用于获取当前页面栈的实例，以数组形式按栈的顺序给出，第一个元素为首页，最后一个元素为当前页面。
+
+getCurrentPages()仅用于展示页面栈的情况，请勿修改页面栈，以免造成页面状态错误。
+
+page.$getAppWebview() 获取当前app页面的webview对象实例
+
+page.route 获取当前页面的路由
+
+navigateTo, redirectTo 只能打开非 tabBar 页面。
+
+switchTab 只能打开 tabBar 页面。
+
+reLaunch 可以打开任意页面。
+
+页面底部的 tabBar 由页面决定，即只要是定义为 tabBar 的页面，底部都有 tabBar。
+
+不能在 App.vue 里面进行页面跳转。
+
+* $getAppWebview
+
+此方法仅 App 支持,可以得到当前webview的对象实例
+
+3. 全局样式
+
+在App.vue中，可以一些定义全局通用样式，例如需要加一个通用的背景色，首屏页面渲染的动画等都可以写在App.vue中。
+
+注意如果工程下同时有vue和nvue文件，全局样式的所有css会应用于所有文件，而nvue支持的css有限，编译器会在控制台报警，提示某些css无法在nvue中支持。此时需要把nvue不支持的css写在单独的条件编译里。
+
+```html
+<style>
+    /* #ifndef APP-PLUS-NVUE */
+    @import './common/uni.css';
+    /* #endif*/
+</style>
+```
+
+### main.js
+
+main.js是uni-app的入口文件，主要作用是初始化vue实例、定义全局组件、使用需要的插件如vuex。
+
+使用Vue.use引用插件，使用Vue.prototype添加全局变量，使用Vue.component注册全局组件。
+
+无法使用vue-router，路由须在pages.json中进行配置。如果开发者坚持使用vue-router，可以在插件市场找到转换插件。
+
+nvue 暂不支持在 main.js 注册全局组件
 
 ## 使用问题
 
