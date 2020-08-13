@@ -37,6 +37,8 @@
     * [uni.scss](#uni.scss)
     * [App.vue](#App.vue)
     * [main.js](#main.js)
+* [页面通讯](#页面通讯)
+* [测试](#测试)
 * [使用问题](#使用问题)
 ---
 
@@ -1216,6 +1218,55 @@ main.js是uni-app的入口文件，主要作用是初始化vue实例、定义全
 无法使用vue-router，路由须在pages.json中进行配置。如果开发者坚持使用vue-router，可以在插件市场找到转换插件。
 
 nvue 暂不支持在 main.js 注册全局组件
+
+
+## 页面通讯
+
+* uni.$emit(eventName,OBJECT)
+
+触发事件
+
+```js
+uni.$emit('update',{msg:'页面更新'})
+```
+
+* uni.$on(eventName,callback)
+
+监听事件
+
+```js
+uni.$on('update',function(data){
+    console.log('监听到事件来自 update ，携带参数 msg 为：' + data.msg);
+})
+```
+
+* uni.$once(eventName,callback)
+
+只触发一次事件
+
+```js
+uni.$once('update',function(data){
+    console.log('监听到事件来自 update ，携带参数 msg 为：' + data.msg);
+})
+```
+
+* uni.$off([eventName, callback])
+
+移除事件
+
+## 测试
+
+创建 cli 工程：vue create -p dcloudio/uni-preset-vue#alpha my-project
+
+如果之前是HBuilderX工程，则把HBuilderX工程内的文件（除 unpackage、node_modules 目录）拷贝至 vue-cli 工程的 src 目录。 在 vue-cli 工程内重新安装 npm 依赖
+
+cli创建项目时若选择hello uni-app模板，可看到其中已经自带部分测试例
+
+安装puppeteer：npm install puppeteer --save-dev 需nodejs > v10.18.1
+
+根据API编写测试的js代码，配置jest.config.js
+
+运行测试：npm run test:***
 
 ## 使用问题
 
