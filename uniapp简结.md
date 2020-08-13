@@ -6,6 +6,8 @@
 
     [白话uni-app 【也是html、vue、小程序的区别】](https://ask.dcloud.net.cn/article/35657)
 
+    [微信小程序开发文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
+
 * [概述](#概述)
     * [架构](#架构)
     * [目录结构](#目录结构)
@@ -40,6 +42,9 @@
 * [页面通讯](#页面通讯)
 * [测试](#测试)
 * [使用问题](#使用问题)
+    * [uni-app启动微信开发者工具](#uni-app启动微信开发者工具)
+    * [sass/scss插件安装失败](#sass/scss插件安装失败)
+    * [微信小程序分享](#微信小程序分享)
 ---
 
 ## 概述
@@ -682,10 +687,10 @@ plugins: [
     "description": "应用描述",
     "versionName": "1.0.0",
     "versionCode": "100",
-  // 是否全局关闭uni统计
-  "uniStatistics": {  
-      "enable": false//全局关闭  
-  },
+    // 是否全局关闭uni统计
+    "uniStatistics": {  
+        "enable": false//全局关闭  
+    },
     // app-plus 节点是 App 特有配置，推荐在 HBuilderX 的 manifest.json 可视化界面操作完成配置。
     "app-plus": {
         // HBuilderX->manifest.json->模块权限配置
@@ -1279,3 +1284,38 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
 2. 详解
 
     第一次运行会出现打开失败的情况，需要在微信小程序开发工具中的"设置"-"安全设置"-"安全"-"开启服务端口"，在HBuilderX重新运行即可
+
+### sass/scss插件安装失败
+
+1. 参考链接
+
+    [uni-app|Windows: sass/scss插件安装问题的解决方案](http://www.laiketui.com/13494.html)
+
+2. 详解
+
+    [见附件的zip压缩包](http://ask.dcloud.net.cn/file/download/file_name-Y29tcGlsZS1ub2RlLXNhc3Muemlw__url-Ly9pbWctY2RuLXFpbml1LmRjbG91ZC5uZXQuY24vdXBsb2Fkcy9hcnRpY2xlLzIwMTkwMjE0L2ZiMmUxZGI3YzgyNWVkNGY2YzFlOTgzNWY4NWFmYzRi)
+
+    将压缩包里的compile-node-sass目录解压到HBuilderX安装目录下的\plugins目录。
+
+### 微信小程序分享
+
+1. 参考链接
+
+    [uni-app 关于微信小程序分享，app微信聊天界面和朋友圈分享](https://blog.csdn.net/weixin_44143975/article/details/90721569)
+
+2. 详解
+
+    ```html
+    <!-- #ifdef MP-WEIXIN -->
+    <button class="share-btn" open-type="share">立即分享</button>
+    <!-- #endif -->
+    ```
+
+    ```js
+    onShareAppMessage(res) {
+        return {
+            title: '微信小程序测试分享',
+            path: '/pages/common/login'
+        }
+    }
+    ```
