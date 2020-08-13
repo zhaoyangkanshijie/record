@@ -45,6 +45,7 @@
     * [uni-app启动微信开发者工具](#uni-app启动微信开发者工具)
     * [sass/scss插件安装失败](#sass/scss插件安装失败)
     * [微信小程序分享](#微信小程序分享)
+    * [h5请求跨域解决方案](#h5请求跨域解决方案)
 ---
 
 ## 概述
@@ -1318,4 +1319,54 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
             path: '/pages/common/login'
         }
     }
+    ```
+
+### h5请求跨域解决方案
+
+1. 参考链接
+
+    [解决h5版的uniapp请求跨域问题](https://www.cnblogs.com/murenziwei/p/11660735.html)
+
+    [uni-app学习笔记-请求接口跨域问题（八）](https://www.jianshu.com/p/aea58ee405b8)
+
+2. 详解
+
+    修改manifest.json,在devServer下配置proxy
+    
+    ```js
+    "h5" : {
+        "template" : "template.h5.html",
+        "router" : {
+            "mode" : "history",
+            "base" : "/h5/"
+        },
+        "sdkConfigs" : {
+            "maps" : {
+                "qqmap" : {
+                    "key" : ""
+                }
+            }
+        },
+        "async" : {
+            "timeout" : 20000
+        },
+        "uniStatistics" : {
+            "enable" : true
+        },
+        "optimization" : {
+            "treeShaking" : {
+                "enable" : true
+            }
+        },
+        "devServer": {
+            "proxy": {
+                "/api": {
+                    "target":"http://www.intmote.com",
+                    "changeOrigin": true,//是否跨域
+                    "secure": false,// 设置支持https协议的代理
+                    "pathRewrite":{"^/api":"/"}
+                }
+            }
+        }
+    },
     ```
