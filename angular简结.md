@@ -23,6 +23,7 @@
 - [ngBootstrap](#ngBootstrap)
 - [路由守卫](#路由守卫)
 - [兼容IE](#兼容IE)
+- [同页面前进后退状态记录](#同页面前进后退状态记录)
 
 ## angular 项目结构
 
@@ -1266,4 +1267,69 @@ import 'babel-polyfill';
 /***************************************************************************************************
  * APPLICATION IMPORTS
  */
+```
+
+## 同页面前进后退状态记录
+
+```ts
+import { PlatformLocation } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
+
+constructor(private router: Router, public activatedRoute: ActivatedRoute,location: PlatformLocation) {
+  //前进后退触发
+  location.onPopState((e) => {
+    //console.log(this.activatedRoute.snapshot.queryParams)
+    //需要setTimeout才能正确获取this.activatedRoute.snapshot.queryParams，使其与url参数一致
+    setTimeout(()=>{
+      this.loadURL();
+      this.selectInfo();
+    },0);
+  });
+}
+
+getJobList(...): void {
+  let config = {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8'
+    }
+  };
+  axios.post('url',{
+    参数
+  },config)
+  .then(response => {
+    //console.log(response)
+    
+  })
+  .catch(response => {
+    //console.log(response)
+    ...
+  });
+}
+
+selectInfo(): void {
+  this.getJobList(
+    参数
+  );
+}
+
+loadURL(): void {
+  //获取路由参数并设置入data
+  let jobId = this.activatedRoute.snapshot.queryParams['jobId'];
+  // console.log(jobId,window.location.search)
+  if(jobId){
+    this.jobTypeActiveId = parseInt(jobId);
+  }
+  else{
+    this.jobTypeActiveId = 0;
+  }
+}
+
+saveURL(参数): void {
+  //相当于pushState
+  this.router.navigate(['/本页面url'],{
+    queryParams: {
+      key: value参数
+    }
+  });
+}
 ```
