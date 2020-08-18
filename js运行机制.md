@@ -1511,7 +1511,6 @@
 
         let,const 在同一个作用域，同一个变量只能被一次“特殊声明”,var 的声明是如果已经声明了，后者直接忽略声明
 
-
             ```js
             var x = 0;
             function a(){
@@ -1528,6 +1527,53 @@
             ```js
             var a = a;
             let a = a;//Uncaught SyntaxError: Identifier 'a' has already been declared
+            ```
+
+            ```html
+            <p>a</p>
+            <p>b</p>
+            <p>c</p>
+            <p>d</p>
+            <p>e</p>
+            <script>
+              window.onload = function() {
+                var p = document.getElementsByTagName('p');
+                for(var i = 0;i < p.length;i++){
+                  p[i].addEventListener('click',function(){
+                    console.log(this.innerHTML,i)
+                  });
+                }
+                //输出：
+                //a 5
+                //b 5
+                //c 5
+                //d 5
+                //e 5
+              }
+            </script>
+            ```
+            ```html
+            <p>a</p>
+            <p>b</p>
+            <p>c</p>
+            <p>d</p>
+            <p>e</p>
+            <script>
+              window.onload = function() {
+                var p = document.getElementsByTagName('p');
+                for(let i = 0;i < p.length;i++){
+                  p[i].addEventListener('click',function(){
+                    console.log(this.innerHTML,i)
+                  });
+                }
+                //输出：
+                //a 0
+                //b 1
+                //c 2
+                //d 3
+                //e 4
+              }
+            </script>
             ```
     
         3. 函数提升
