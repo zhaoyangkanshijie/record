@@ -16,6 +16,7 @@
     * [新增了一批手机端常用的新组件](#新增了一批手机端常用的新组件)
     * [js的变化](#js的变化)
     * [css的变化](#css的变化)
+    * [标签详解](#标签详解)
 * [原生组件说明](#原生组件说明)
     * [混合渲染模式下原生组件的使用限制](#混合渲染模式下原生组件的使用限制)
     * [其他原生界面元素](#其他原生界面元素)
@@ -206,6 +207,252 @@ switch(uni.getSystemInfoSync().platform){
 选择器有2个变化：*选择器不支持；元素选择器里没有body，改为了page。
 
 单位方面，px无法动态适应不同宽度的屏幕，rem无法用于nvue/weex。如果想使用根据屏幕宽度自适应的单位，推荐使用rpx，全端支持。详见[页面样式与布局](#页面样式与布局)中的[尺寸单位](#尺寸单位)
+
+### 标签详解
+
+* 视图容器
+
+    * view:类似div，可设置hover相关属性：hover-class，hover-stop-propagation(是否阻止本节点的祖先节点出现点击态)，hover-start-time，hover-stay-time
+    * scroll-view:可滚动视图区域。在webview渲染的页面中，区域滚动的性能不及页面滚动。可设置滚动方向、位置、上下拉等属性和事件。
+
+        ```html
+        <view>
+            <scroll-view :scroll-top="scrollTop" scroll-y="true" class="scroll-Y" @scrolltoupper="upper" @scrolltolower="lower"
+            @scroll="scroll">
+                <view id="demo1" class="scroll-view-item uni-bg-red">A</view>
+                <view id="demo2" class="scroll-view-item uni-bg-green">B</view>
+                <view id="demo3" class="scroll-view-item uni-bg-blue">C</view>
+            </scroll-view>
+        </view>
+        ```
+
+    * swiper:轮播图。可设置导航点、动画时长、交互事件
+
+        注意：
+        
+        使用竖向滚动时，需要给 scroll-view 一个固定高度，通过 css 设置 height
+
+        其中只可放置 swiper-item 组件，否则会导致未定义的行为
+
+        竖向的swiper内嵌视频可实现抖音、映客等视频垂直拖动切换效果
+
+        同时监听 change transition，开始滑动时触发transition, 放开手后，在ios平台触发顺序为 transition... change，Android/微信小程序/支付宝为 transition... change transition...
+
+        ```html
+        <swiper class="swiper" :indicator-dots="indicatorDots" :autoplay="autoplay" :interval="interval" :duration="duration">
+            <swiper-item>
+                <view class="swiper-item uni-bg-red">A</view>
+            </swiper-item>
+            <swiper-item>
+                <view class="swiper-item uni-bg-green">B</view>
+            </swiper-item>
+            <swiper-item>
+                <view class="swiper-item uni-bg-blue">C</view>
+            </swiper-item>
+        </swiper>
+        ```
+
+    * movable-area:可拖动区域组件。内嵌movable-view组件用于指示可拖动的滑块(默认宽高为10px)。scale-area属性为true时支持双指缩放。还可设置其他移动和缩放的属性和事件。
+
+        ```html
+        <movable-area>
+            <movable-view :x="x" :y="y" direction="all" @change="onChange">text</movable-view>
+        </movable-area>
+        ```
+
+    * cover-view:覆盖在原生组件上的文本视图。仅可覆盖video、map
+    * cover-image:覆盖在原生组件上的图片视图。支持click，不支持position: fixed、opacity、overflow、padding、linebreak、white-space
+
+        ```html
+        <view class="page">
+            <video class="video" id="demoVideo" :controls="false" :enable-progress-gesture="false" :show-center-play-btn="disable" src="https://img.cdn.aliyun.dcloud.net.cn/guide/uniapp/%E7%AC%AC1%E8%AE%B2%EF%BC%88uni-app%E4%BA%A7%E5%93%81%E4%BB%8B%E7%BB%8D%EF%BC%89-%20DCloud%E5%AE%98%E6%96%B9%E8%A7%86%E9%A2%91%E6%95%99%E7%A8%8B@20181126-lite.m4v">
+                <cover-view class="controls-title">简单的自定义 controls</cover-view>
+                <cover-image class="controls-play img" @click="play" src="/static/play.png"></cover-image>
+                <cover-image class="controls-pause img" @click="pause" src="/static/pause.png"></cover-image>
+            </video>
+        </view>
+        ```
+
+* 基础内容
+
+    * icon:图标。可设置类型、大小、颜色。
+
+        类型：
+
+        * App、H5、微信小程序、QQ小程序：success, success_no_circle, info, warn, waiting, cancel, download, search, clear
+        * 支付宝小程序：info, warn, waiting, cancel, download, search, clear, success, success_no_circle,loading
+        * 百度小程序：success, info, warn, waiting, success_no_circle, clear, search, personal, setting, top, close, cancel, download, checkboxSelected, radioSelected, radioUnselect
+
+    * text:文本组件。可设置是否可选、空格类型(ensp中文字符空格一半大小/emsp中文字符空格大小/nbsp根据字体设置的空格大小)、是否解码。
+    * rich-text:富文本。在富文本区域里显示的 HTML/文本 节点。
+    * progress:进度条。可设置百分比、样式、动画
+
+* 表单组件
+
+    * button:按钮。可设置样式、loading、是否触发submit、按钮事件
+
+        * size 有效值：default默认大小、mini小尺寸
+        * type 有效值：primary微信小程序、360小程序为绿色，App、H5、百度小程序、支付宝小程序、快应用为蓝色，字节跳动小程序为红色，QQ小程序为浅蓝色。如想在多端统一颜色，请改用default，然后自行写样式；default	白色；warn红色
+        * form-type 有效值：submit提交表单、reset重置表单
+
+    * checkbox-group和checkbox:多项选择器，内部由多个 checkbox 组成。
+
+        ```html
+        <checkbox-group>
+            <label>
+                <checkbox value="cb" checked="true" />选中
+            </label>
+            <label>
+                <checkbox value="cb" />未选中
+            </label>
+        </checkbox-group>
+        ```
+
+    * editor:富文本编辑器，可以对图片、文字格式进行编辑和混排。只有H5、App的vue页面和微信支持，其他端平台自身为提供editor组件，只能使用webview加载web页面，或查看插件市场。
+
+        * 不满足的标签会被忽略，div会被转行为p储存。
+        * 行内元素:span/strong/b/ins/em/i/u/a/del/s/sub/sup/img
+        * 块级元素:p/h1/h2/h3/h4/h5/h6/hr/ol/ul/li
+        * 块级样式:text-align direction margin margin-top margin-left margin-right margin-bottom padding padding-top padding-left padding-right padding-bottom line-height text-indent
+        * 行内样式:font font-size font-style font-variant font-weight font-family letter-spacing text-decoration color background-color
+
+        ```html
+        <editor id="editor" class="ql-container" :placeholder="placeholder" @ready="onEditorReady"></editor>
+        ```
+
+    * form:表单，与html相同
+    * input:输入框。多了confirm-type用于设置键盘右下角按钮的文字(send发送/search搜索/next下一个/go前往/done完成)，仅在 type="text" 时生效。APP平台兼容可查文档
+    * label:用来改进表单组件的可用性，使用for属性找到对应的id，或者将控件放在该标签下，当点击时，就会触发对应的控件。目前可以绑定的控件有：button, checkbox, radio, switch。
+    * picker:从底部弹起的滚动选择器。支持五种选择器，通过mode来区分，分别是普通选择器，多列选择器，时间选择器，日期选择器，省市区选择器，默认是普通选择器。
+    
+        mode为 selector 或 multiSelector(多列选择器) 时，range 有效
+
+        当 range 是一个 Array＜Object＞ 时，通过 range-key 来指定 Object 中 key 的值作为选择器显示内容
+
+        value 的值表示选择了 range 中的第几个（下标从 0 开始）
+
+        可监听change和cancel事件，可禁用
+
+        mode = time时间选择器，可设置起止时间
+
+        mode = region省市区选择器，不支持app和h5，需用picker-view自行填充
+
+    * picker-view:嵌入页面的滚动选择器。
+
+        ```html
+        <picker-view v-if="visible" :indicator-style="indicatorStyle" :value="value" @change="bindChange">
+            <picker-view-column>
+                <view class="item" v-for="(item,index) in years" :key="index">{{item}}年</view>
+            </picker-view-column>
+            <picker-view-column>
+                <view class="item" v-for="(item,index) in months" :key="index">{{item}}月</view>
+            </picker-view-column>
+            <picker-view-column>
+                <view class="item" v-for="(item,index) in days" :key="index">{{item}}日</view>
+            </picker-view-column>
+        </picker-view>
+        ```
+
+    * radio-group:单项选择器，内部由多个 radio 组成。通过把多个radio包裹在一个radio-group下，实现这些radio的单选。
+
+        ```html
+        <radio-group @change="radioChange">
+            <label class="uni-list-cell uni-list-cell-pd" v-for="(item, index) in items" :key="item.value">
+                <view>
+                    <radio :value="item.value" :checked="index === current" />
+                </view>
+                <view>{{item.name}}</view>
+            </label>
+        </radio-group>
+        ```
+
+    * slider:滑动选择器。可设置范围值、步长、样式、改变事件。
+
+        ```html
+        <slider value="60" @change="sliderChange" step="5" />
+        ```
+
+    * switch:开关选择器。
+    * textarea:多行输入框。
+    
+        textarea 的 blur 事件会晚于页面上的 tap 事件，如果需要在 button 的点击事件获取 textarea，可以使用 form 的 @submit。
+
+        微信小程序、百度小程序、字节跳动小程序中，textarea是原生组件，层级高于前端组件，请勿在 scroll-view、swiper、picker-view、movable-view 中使用 textarea 组件。覆盖textarea需要使用cover-view。
+
+        小程序端 css 动画对 textarea 组件无效。
+
+        如需禁止点击其他位置收起键盘的默认行为，可以监听touch事件并使用prevent修饰符
+
+* 导航navigator见[路由跳转](#路由跳转)
+
+* 媒体组件
+
+    * audio:音频。
+    * camera:页面内嵌的区域相机组件。注意这不是点击后全屏打开的相机。
+    * image:图片。比h5多了图片裁剪缩放、懒加载设置、动画。
+    * video:视频播放组件。能设置弹幕、手势、缓冲。
+    * live-player:实时音视频播放，也称直播拉流。
+    * live-pusher:实时音视频录制，也称直播推流。
+
+* 地图map
+
+* 画布canvas
+
+* webview:web-view 是一个 web 浏览器组件(类似iframe)，可以用来承载网页的容器，会自动铺满整个页面
+
+* 广告ad:应用内展示的广告组件，可用于banner或信息流。
+
+* 开放能力组件
+
+    * official-account:微信公众号关注组件。当用户扫小程序码打开小程序时，开发者可在小程序内配置公众号关注组件，方便用户快捷关注公众号，可嵌套在原生组件内。
+    * open-data:用于展示平台开放的数据。
+
+        ```html
+        <open-data type="userNickName"></open-data>
+        ```
+
+* app nvue专用组件
+
+    * Barcode:app端nvue专用的扫码组件。
+    * list:app端nvue专用组件。在app-nvue下，如果是长列表，使用list组件的性能高于使用view或scroll-view的滚动。原因在于list在不可见部分的渲染资源回收有特殊的优化处理。
+    * cell:app端nvue专用组件。它的重要价值在于告诉原生引擎，哪些部分是可重用的。Cell 支持添加任意类型的组件作为自己的子组件，但是请不要再内部添加滚动容器了。
+    * recycle-list:一个新的列表容器，具有回收和复用的能力，可以大幅优化内存占用和渲染性能。它的性能比list组件更高，但写法受限制。它除了会释放不可见区域的渲染资源，在非渲染的数据结构上也有更多优化。
+    * waterfall:瀑布流布局的核心组件。
+    * refresh:为容器提供下拉刷新功能
+
+* 拓展组件
+
+    * uni-ui:DCloud提供的一个跨端ui库，它是基于vue组件的、flex布局的、无dom的跨全端ui框架。
+    * Badge:数字角标
+    * Calendar:日历
+    * Card:卡片
+    * Collapse:折叠面板
+    * Combox:组合框
+    * CountDown:倒计时
+    * Drawer:抽屉
+    * Fab:悬浮按钮
+    * Fav:收藏按钮
+    * GoodsNav:商品导航
+    * Grid:宫格
+    * Icons:图标
+    * IndexedList:索引列表
+    * List:列表
+    * LoadMore:加载更多
+    * NavBar:自定义导航栏
+    * NoticeBar:通告栏
+    * NumberBox:数字输入框
+    * Pagination:分页器
+    * PopUp:弹出层
+    * Rate:评分
+    * SearchBar:搜索栏
+    * SegmentedControl:分段器
+    * Steps:步骤条
+    * SwipeAction:滑动操作
+    * SwiperDot:轮播图指示点
+    * Tag:标签
+
+* 导航栏navigation-bar:页面导航条配置节点，用于指定导航栏的一些属性。只能是 page-meta 组件内的第一个节点，需要配合它一同使用。
+* 页面属性配置:page-meta
 
 ## 原生组件说明
 
