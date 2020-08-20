@@ -12,148 +12,9 @@
 - [css样式穿透](#css样式穿透)
 - [grid](#grid)
 - [css比较函数](#css比较函数)
+- [before和after边框效果](#before和after边框效果)
 
 ---
-
-### 数组模拟 dictionary 与二重排序
-
-1. 参考链接：
-
-   [js 字典排序](https://blog.csdn.net/juyuyh/article/details/89948380)
-   [JS sort()排序及 JS sort()双重排序](https://blog.csdn.net/qq416761940/article/details/79632018)
-   [前 K 个高频单词](https://leetcode-cn.com/problems/top-k-frequent-words/submissions/)
-
-2. 详解：
-
-   - 关于 sort
-
-     - sort([function(a,b){return ±num}])
-
-     - 不传 function 则按照字典序升序排序，传 function 则按数字大小排序，负数为升序排序，正数为降序排序
-
-       - 注意：上面的字典序指按 unicode 编码序，若要按拼音序，需要 str.sort (function(a,b){return a.localeCompare(b)})
-
-     - sort 按照字典序降序排序方法，通过比较 if(a>b)，返回正数还是负数，控制排序顺序
-
-     - 多重排序也可通过 if 判断，返回正负数控制排序顺序，其中 if 里面的参数可以与原数组 array1 无关，如 array2[a]>array2[b]
-
-   - 样例
-
-     统计词频，按照词频降序排序，词频相同按照字典序升序排序
-
-     ```js
-     let words = [
-       "plpaboutit",
-       "jnoqzdute",
-       "sfvkdqf",
-       "mjc",
-       "nkpllqzjzp",
-       "foqqenbey",
-       "ssnanizsav",
-       "nkpllqzjzp",
-       "sfvkdqf",
-       "isnjmy",
-       "pnqsz",
-       "hhqpvvt",
-       "fvvdtpnzx",
-       "jkqonvenhx",
-       "cyxwlef",
-       "hhqpvvt",
-       "fvvdtpnzx",
-       "plpaboutit",
-       "sfvkdqf",
-       "mjc",
-       "fvvdtpnzx",
-       "bwumsj",
-       "foqqenbey",
-       "isnjmy",
-       "nkpllqzjzp",
-       "hhqpvvt",
-       "foqqenbey",
-       "fvvdtpnzx",
-       "bwumsj",
-       "hhqpvvt",
-       "fvvdtpnzx",
-       "jkqonvenhx",
-       "jnoqzdute",
-       "foqqenbey",
-       "jnoqzdute",
-       "foqqenbey",
-       "hhqpvvt",
-       "ssnanizsav",
-       "mjc",
-       "foqqenbey",
-       "bwumsj",
-       "ssnanizsav",
-       "fvvdtpnzx",
-       "nkpllqzjzp",
-       "jkqonvenhx",
-       "hhqpvvt",
-       "mjc",
-       "isnjmy",
-       "bwumsj",
-       "pnqsz",
-       "hhqpvvt",
-       "nkpllqzjzp",
-       "jnoqzdute",
-       "pnqsz",
-       "nkpllqzjzp",
-       "jnoqzdute",
-       "foqqenbey",
-       "nkpllqzjzp",
-       "hhqpvvt",
-       "fvvdtpnzx",
-       "plpaboutit",
-       "jnoqzdute",
-       "sfvkdqf",
-       "fvvdtpnzx",
-       "jkqonvenhx",
-       "jnoqzdute",
-       "nkpllqzjzp",
-       "jnoqzdute",
-       "fvvdtpnzx",
-       "jkqonvenhx",
-       "hhqpvvt",
-       "isnjmy",
-       "jkqonvenhx",
-       "ssnanizsav",
-       "jnoqzdute",
-       "jkqonvenhx",
-       "fvvdtpnzx",
-       "hhqpvvt",
-       "bwumsj",
-       "nkpllqzjzp",
-       "bwumsj",
-       "jkqonvenhx",
-       "jnoqzdute",
-       "pnqsz",
-       "foqqenbey",
-       "sfvkdqf",
-       "sfvkdqf",
-     ];
-     let dictionary = new Array();
-     for (let i = 0; i < words.length; i++) {
-       if (!dictionary[words[i]]) {
-         dictionary[words[i]] = 1;
-       } else {
-         dictionary[words[i]]++;
-       }
-     }
-     let result = Object.keys(dictionary).sort((a, b) => {
-       if (dictionary[a] == dictionary[b]) {
-         if (a > b) {
-           return 1;
-         } else {
-           return -1;
-         }
-       }
-       return dictionary[b] - dictionary[a];
-     });
-     for (let value of result) {
-       console.log(value, dictionary[value]);
-     }
-     ```
-
 
 ### 三角形
 
@@ -162,6 +23,7 @@
     - [CSS 绘制三角形和箭头](http://www.divcss5.com/rumen/r50847.shtml)
     - [CSS 实现带阴影效果的三角形](https://blog.csdn.net/foreversober/article/details/74361402)
     - [十道大厂面试题(含答案)总结](https://mp.weixin.qq.com/s/o553cr1FHLz40PpxbO8oOw)
+    - [CSS八种让人眼前一亮的HOVER效果](https://juejin.im/post/6861501624993447950#heading-4)
 
 2.  详解：
 
@@ -271,7 +133,72 @@
 
       box-shadow 相关：
 
-            box-shadow: 水平阴影的位置(必需,允许负值) 垂直阴影的位置(必需,允许负值) [模糊距离] [阴影尺寸] [阴影颜色] [阴影向内(设置inset，外部为outset)];
+        box-shadow: 水平阴影的位置(必需,允许负值) 垂直阴影的位置(必需,允许负值) [模糊距离] [阴影尺寸] [阴影颜色] [阴影向内(设置inset，外部为outset)];
+
+        ```html
+        <div id="neon-btn">
+          <button class="btn one">Hover me</button>
+          <button class="btn two">Hover me</button>
+          <button class="btn three">Hover me</button>
+        </div>
+
+        <style>
+          #neon-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            height: 100vh;
+            background: #031628;
+          }
+
+          .btn {
+            border: 1px solid;
+            background-color: transparent;
+            text-transform: uppercase;
+            font-size: 14px;
+            padding: 10px 20px;
+            font-weight: 300;
+          }
+
+          .one {
+            color: #4cc9f0;
+          }
+
+          .two {
+            color: #f038ff;
+          }
+
+          .three {
+            color: #b9e769;
+          }
+
+          .btn:hover {
+            color: white;
+            border: 0;
+          }
+
+          .one:hover {
+            background-color: #4cc9f0;
+            -webkit-box-shadow: 10px 10px 99px 6px rgba(76, 201, 240, 1);
+            -moz-box-shadow: 10px 10px 99px 6px rgba(76, 201, 240, 1);
+            box-shadow: 10px 10px 99px 6px rgba(76, 201, 240, 1);
+          }
+
+          .two:hover {
+            background-color: #f038ff;
+            -webkit-box-shadow: 10px 10px 99px 6px rgba(240, 56, 255, 1);
+            -moz-box-shadow: 10px 10px 99px 6px rgba(240, 56, 255, 1);
+            box-shadow: 10px 10px 99px 6px rgba(240, 56, 255, 1);
+          }
+
+          .three:hover {
+            background-color: #b9e769;
+            -webkit-box-shadow: 10px 10px 99px 6px rgba(185, 231, 105, 1);
+            -moz-box-shadow: 10px 10px 99px 6px rgba(185, 231, 105, 1);
+            box-shadow: 10px 10px 99px 6px rgba(185, 231, 105, 1);
+          }
+        </style>
+        ```
 
       - 扇形
 
@@ -1030,6 +957,8 @@
 
    [HTML5 CSS3 专题 : 拖放 （Drag and Drop）](https://www.cnblogs.com/wzjhoutai/p/6858022.html)
 
+   [CSS八种让人眼前一亮的HOVER效果](https://juejin.im/post/6861501624993447950#heading-0)
+
 2. 详解：
 
    关键词：transform,translate,scale,rotate,transition,animation,@keyframes,drag 系列事件,cursor
@@ -1039,7 +968,108 @@
    1. transition 是 css 过渡效果，需要和 hover 等事件配合，由事件触发。动画过程中所有样式属性都要一起变化
    2. animation 基于帧动画，配合 keyframes 使用，可以设定每一帧的单一样式变化和时间以及循环次数。
 
+  普通平移
+  ```html
+  <div id="send-btn">
+    <button>
+      // 这里是一个svg的占位
+      Send
+    </button>
+  </div>
+  ```
+  ```css
+  #send-btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+  }
 
+  button {
+    background: #5f55af;
+    border: 0;
+    border-radius: 5px;
+    padding: 10px 30px 10px 20px;
+    color: white;
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+
+  button svg {
+    display: inline-block;
+    vertical-align: middle;
+    padding-right: 5px;
+  }
+
+  button:hover svg {
+    animation: fly 2s ease 1;
+  }
+
+  @keyframes fly {
+    0% {
+      transform: translateX(0%);
+    }
+
+    50% {
+      transform: translateX(300%);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+  ```
+
+  带旋转平移制造闪亮效果
+  ```html
+  <div id="shiny-shadow">
+    <button><span>Hover me</span></button>
+  </div>
+
+  <style>
+    #shiny-shadow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #1c2541;
+    }
+
+    button {
+      border: 2px solid white;
+      background: transparent;
+      text-transform: uppercase;
+      color: white;
+      padding: 15px 50px;
+      outline: none;
+      overflow: hidden;
+      position: relative;
+    }
+
+    span {
+      z-index: 20;  
+    }
+
+    button:after {
+      content: '';
+        display: block;
+        position: absolute;
+        top: -36px;
+        left: -100px;
+        background: white;
+        width: 50px;
+        height: 125px;
+        opacity: 20%;
+        transform: rotate(-45deg);
+    }
+
+    button:hover:after {
+      left: 120%;
+      transition: all 600ms cubic-bezier(0.3, 1, 0.2, 1);
+      -webkit-transition: all 600ms cubic-bezier(0.3, 1, 0.2, 1);
+    }
+  </style>
+  ```
 
 ### css 伪类和伪元素
 
@@ -1724,3 +1754,83 @@
           }
         }
         ```
+
+### before和after边框效果
+
+1. 参考链接：
+
+   [CSS八种让人眼前一亮的HOVER效果](https://juejin.im/post/6861501624993447950#heading-8)
+
+2. 详解：
+
+  ```html
+  <div id="draw-border">
+    <button>Hover me</button>
+  </div>
+
+  <style>
+    #draw-border {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    button {
+      border: 0;
+      background: none;
+      text-transform: uppercase;
+      color: #4361ee;
+      font-weight: bold;
+      position: relative;
+      outline: none;
+      padding: 10px 20px;
+      box-sizing: border-box;
+    }
+
+    button::before, button::after {
+      box-sizing: inherit;
+      position: absolute;
+      content: '';
+      border: 2px solid transparent;
+      width: 0;
+      height: 0;
+    }
+
+    button::after {
+      bottom: 0;
+      right: 0;
+    }
+
+    button::before {
+      top: 0;
+      left: 0;
+    }
+
+    button:hover::before, button:hover::after {
+      width: 100%;
+      height: 100%;
+    }
+
+    button:hover::before {
+      border-top-color: #4361ee;
+      border-right-color: #4361ee;
+      transition: width 0.3s ease-out, height 0.3s ease-out 0.3s;
+    }
+
+    button:hover::after {
+      border-bottom-color: #4361ee;
+      border-left-color: #4361ee;
+      transition: border-color 0s ease-out 0.6s, width 0.3s ease-out 0.6s, height 0.3s ease-out 1s;
+    }
+  </style>
+  ```
+
+
+
+
+
+
+
+
+

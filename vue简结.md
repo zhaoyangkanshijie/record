@@ -49,6 +49,7 @@
 * [函数式组件](#函数式组件)
 * [过滤器](#过滤器)
 * [.sync语法糖](#.sync语法糖)
+* [深层选择器](#深层选择器)
 
 ---
 
@@ -1157,6 +1158,36 @@ export default {
     $route: "getParams",
   },
 };
+```
+
+3. 路由器参数解耦
+
+```js
+const router = new VueRouter({
+  routes: [{
+    path: '/:id',
+    component: Component,
+    props: true
+  }]
+})
+//或
+const router = new VueRouter({
+  routes: [{
+    path: '/:id',
+    component: Component,
+    props: router => ({ id: route.query.id })
+  }]
+})
+```
+```js
+export default {
+  props: ['id'],
+  methods: {
+    getParamsId() {
+      return this.id
+    }
+  }
+}
 ```
 
 ## 不同 url 复用页面，且只刷新部分组件
@@ -2938,6 +2969,36 @@ export default {
   }
 }
 ```
+```html
+<template functional>
+  <div class="book">
+    {{props.book.name}} {{props.book.price}}
+  </div>
+</template>
+
+<script>
+Vue.component('book', {
+  functional: true,
+  props: {
+    book: {
+      type: () => ({}),
+      required: true
+    }
+  },
+  render: function (createElement, context) {
+    return createElement(
+      'div',
+      {
+        attrs: {
+          class: 'book'
+        }
+      },
+      [context.props.book]
+    )
+  }
+})
+</script>
+```
 
 vue2.5+
 ```html
@@ -2990,4 +3051,30 @@ new Vue({
 <child :bar="foo" @update:bar="e => foo = e">
 更新方式
 this.$emit('update:bar',newValue);
+```
+
+## 深层选择器
+
+有时，你需要修改第三方组件的CSS，这些都是 scoped 样式，移除 scope 或打开一个新的样式是不可能的。
+
+深层选择器 >>> /deep/ ::v-deep 可以帮助你。
+
+```html
+<style scoped>
+>>> .scoped-third-party-class {
+  color: gray;
+}
+</style>
+
+<style scoped>
+/deep/ .scoped-third-party-class {
+  color: gray;
+}
+</style>
+
+<style scoped>
+::v-deep .scoped-third-party-class {
+  color: gray;
+}
+</style>
 ```
