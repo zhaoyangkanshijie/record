@@ -17,6 +17,7 @@
     * [js的变化](#js的变化)
     * [css的变化](#css的变化)
     * [标签详解](#标签详解)
+    * [API](#API)
 * [原生组件说明](#原生组件说明)
     * [混合渲染模式下原生组件的使用限制](#混合渲染模式下原生组件的使用限制)
     * [其他原生界面元素](#其他原生界面元素)
@@ -454,6 +455,355 @@ switch(uni.getSystemInfoSync().platform){
 * 导航栏navigation-bar:页面导航条配置节点，用于指定导航栏的一些属性。只能是 page-meta 组件内的第一个节点，需要配合它一同使用。
 * 页面属性配置:page-meta
 
+### API
+
+* 基础
+
+    * console日志打印:与h5相同
+    * 定时器:与h5相同
+    * base64与arrayBuffer互转:uni.arrayBufferToBase64(arrayBuffer)/uni.base64ToArrayBuffer(base64) 仅支持app和微信小程序
+    * 应用级事件:
+
+        * uni.onPageNotFound(funciton callback):监听应用要打开的页面不存在事件。该事件与 App.onPageNotFound 的回调时机一致
+        * uni.onError(funciton callback):监听小程序错误事件
+        * uni.onAppShow(function callback):监听应用切前台事件
+        * uni.onAppHide(function callback):监听应用切后台事件
+        * uni.offPageNotFound(function callback):取消监听应用要打开的页面不存在事件
+        * uni.offError(funciton callback):取消监听应用错误事件
+        * uni.offAppShow(function callback):取消监听小程序切前台事件
+        * uni.offAppHide(function callback):取消监听小程序切后台事件
+
+* 网络
+
+    * uni.request(OBJECT):发起网络请求。
+
+        ```js
+        uni.request({
+            url: 'https://www.example.com/request', //仅为示例，并非真实接口地址。
+            data: {
+                text: 'uni.request'
+            },
+            header: {
+                'custom-header': 'hello' //自定义请求头信息
+            },
+            success: (res) => {
+                console.log(res.data);
+                this.text = 'request success';
+            }
+        });
+        ```
+
+    * uni.uploadFile(OBJECT):上传
+
+        ```js
+        uni.chooseImage({
+            success: (chooseImageRes) => {
+                const tempFilePaths = chooseImageRes.tempFilePaths;
+                uni.uploadFile({
+                    url: 'https://www.example.com/upload', //仅为示例，非真实的接口地址
+                    filePath: tempFilePaths[0],
+                    name: 'file',
+                    formData: {
+                        'user': 'test'
+                    },
+                    success: (uploadFileRes) => {
+                        console.log(uploadFileRes.data);
+                    }
+                });
+            }
+        });
+        ```
+        上传进度
+        ```js
+        uni.chooseImage({
+            success: (chooseImageRes) => {
+                const tempFilePaths = chooseImageRes.tempFilePaths;
+                const uploadTask = uni.uploadFile({
+                    url: 'https://www.example.com/upload', //仅为示例，非真实的接口地址
+                    filePath: tempFilePaths[0],
+                    name: 'file',
+                    formData: {
+                        'user': 'test'
+                    },
+                    success: (uploadFileRes) => {
+                        console.log(uploadFileRes.data);
+                    }
+                });
+
+                uploadTask.onProgressUpdate((res) => {
+                    console.log('上传进度' + res.progress);
+                    console.log('已经上传的数据长度' + res.totalBytesSent);
+                    console.log('预期需要上传的数据总长度' + res.totalBytesExpectedToSend);
+
+                    // 测试条件，取消上传任务。
+                    if (res.progress > 50) {
+                        uploadTask.abort();
+                    }
+                });
+            }
+        });
+        ```
+
+    * uni.downloadFile(OBJECT):下载文件资源到本地，客户端直接发起一个 HTTP GET 请求，返回文件的本地临时路径。
+
+        ```js
+        uni.downloadFile({
+            url: 'https://www.example.com/file/test', //仅为示例，并非真实的资源
+            success: (res) => {
+                if (res.statusCode === 200) {
+                    console.log('下载成功');
+                }
+            }
+        });
+        ```
+        下载进度
+        ```js
+        const downloadTask = uni.downloadFile({
+            url: 'http://www.example.com/file/test', //仅为示例，并非真实的资源
+            success: (res) => {
+                if (res.statusCode === 200) {
+                    console.log('下载成功');
+                }
+            }
+        });
+
+        downloadTask.onProgressUpdate((res) => {
+            console.log('下载进度' + res.progress);
+            console.log('已经下载的数据长度' + res.totalBytesWritten);
+            console.log('预期需要下载的数据总长度' + res.totalBytesExpectedToWrite);
+
+            // 测试条件，取消下载任务。
+            if (res.progress > 50) {
+                downloadTask.abort();
+            }
+        });
+        ```
+
+    * websocket
+
+        * uni.connectSocket(OBJECT):创建一个 WebSocket 连接。
+
+            ```js
+            uni.connectSocket({
+                url: 'wss://www.example.com/socket',
+                data() {
+                    return {
+                        x: '',
+                        y: ''
+                    };
+                },
+                header: {
+                    'content-type': 'application/json'
+                },
+                protocols: ['protocol1'],
+                method: 'GET',
+                success: ()=> {}
+            });
+            ```
+
+        * uni.onSocketOpen(CALLBACK):监听WebSocket连接打开事件。
+
+        * uni.onSocketError(CALLBACK):监听WebSocket错误。
+
+        * uni.sendSocketMessage(OBJECT):通过 WebSocket 连接发送数据
+
+            需要先 uni.connectSocket，并在 uni.onSocketOpen 回调之后才能发送。
+            ```js
+            var socketOpen = false;
+            var socketMsgQueue = [];
+
+            uni.connectSocket({
+                url: 'wss://www.example.com/socket'
+            });
+
+            uni.onSocketOpen(function (res) {
+                socketOpen = true;
+                for (var i = 0; i < socketMsgQueue.length; i++) {
+                    sendSocketMessage(socketMsgQueue[i]);
+                }
+                socketMsgQueue = [];
+            });
+
+            function sendSocketMessage(msg) {
+                if (socketOpen) {
+                    uni.sendSocketMessage({
+                    data: msg
+                    });
+                } else {
+                    socketMsgQueue.push(msg);
+                }
+            }
+            ```
+
+        * uni.onSocketMessage(CALLBACK):监听WebSocket接受到服务器的消息事件。
+
+        * uni.closeSocket(OBJECT):监听WebSocket关闭。
+
+        * SocketTask.onMessage(CALLBACK):监听 WebSocket 接受到服务器的消息事件
+
+        * SocketTask.send(OBJECT):通过 WebSocket 连接发送数据
+
+        * SocketTask.close(OBJECT):关闭 WebSocket 连接
+
+        * SocketTask.onOpen(CALLBACK):监听 WebSocket 连接打开事件
+
+        * SocketTask.onClose(CALLBACK):监听 WebSocket 连接关闭事件
+
+        * SocketTask.onError(CALLBACK):监听 WebSocket 错误事件
+
+* 数据缓存
+
+    * uni.setStorage(OBJECT):将数据存储在本地缓存中指定的 key 中，会覆盖掉原来该 key 对应的内容，这是一个异步接口。
+
+        ```js
+        uni.setStorage({
+            key: 'storage_key',
+            data: 'hello',
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.setStorageSync(KEY,DATA):将 data 存储在本地缓存中指定的 key 中，会覆盖掉原来该 key 对应的内容，这是一个同步接口。
+
+        ```js
+        try {
+            uni.setStorageSync('storage_key', 'hello');
+        } catch (e) {
+            // error
+        }
+        ```
+
+    * uni.getStorage(OBJECT):从本地缓存中异步获取指定 key 对应的内容。
+
+        ```js
+        uni.getStorage({
+            key: 'storage_key',
+            success: function (res) {
+                console.log(res.data);
+            }
+        });
+        ```
+
+    * uni.getStorageSync(KEY):从本地缓存中同步获取指定 key 对应的内容。
+
+        ```js
+        try {
+            const value = uni.getStorageSync('storage_key');
+            if (value) {
+                console.log(value);
+            }
+        } catch (e) {
+            // error
+        }
+        ```
+
+    * uni.getStorageInfo(OBJECT):异步获取当前 storage 的相关信息。
+
+        ```js
+        uni.getStorageInfo({
+            success: function (res) {
+                console.log(res.keys);
+                console.log(res.currentSize);
+                console.log(res.limitSize);
+            }
+        });
+        ```
+
+    * uni.getStorageInfoSync():同步获取当前 storage 的相关信息。
+
+        ```js
+        try {
+            const res = uni.getStorageInfoSync();
+            console.log(res.keys);
+            console.log(res.currentSize);
+            console.log(res.limitSize);
+        } catch (e) {
+            // error
+        }
+        ```
+
+    * uni.removeStorage(OBJECT):从本地缓存中异步移除指定 key。
+
+        ```js
+        uni.removeStorage({
+            key: 'storage_key',
+            success: function (res) {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.removeStorageSync(KEY):从本地缓存中同步移除指定 key。
+
+        ```js
+        try {
+            uni.removeStorageSync('storage_key');
+        } catch (e) {
+            // error
+        }
+        ```
+
+    * uni.clearStorage():清理本地数据缓存。
+
+    * uni.clearStorageSync():同步清理本地数据缓存。
+
+    * 注意：
+
+        * H5端为localStorage，浏览器限制5M大小，是缓存概念，可能会被清理
+
+        * 微信小程序单个 key 允许存储的最大数据长度为 1MB，所有数据存储上限为 10MB。
+
+* 位置
+
+    * uni.getLocation(OBJECT):获取当前的地理位置、速度。
+
+        ```js
+        uni.getLocation({
+            type: 'wgs84',
+            success: function (res) {
+                console.log('当前位置的经度：' + res.longitude);
+                console.log('当前位置的纬度：' + res.latitude);
+            }
+        });
+        ```
+
+    * uni.chooseLocation(OBJECT):打开地图选择位置。
+
+        ```js
+        uni.chooseLocation({
+            success: function (res) {
+                console.log('位置名称：' + res.name);
+                console.log('详细地址：' + res.address);
+                console.log('纬度：' + res.latitude);
+                console.log('经度：' + res.longitude);
+            }
+        });
+        ```
+
+    * uni.openLocation(OBJECT):使用应用内置地图查看位置。
+
+        ```js
+        uni.getLocation({
+            type: 'gcj02', //返回可以用于uni.openLocation的经纬度
+            success: function (res) {
+                const latitude = res.latitude;
+                const longitude = res.longitude;
+                uni.openLocation({
+                    latitude: latitude,
+                    longitude: longitude,
+                    success: function () {
+                        console.log('success');
+                    }
+                });
+            }
+        });
+        ```
+
+    * uni.createMapContext(mapId,this):创建并返回 map 上下文 mapContext 对象。在自定义组件下，第二个参数传入组件实例this，以操作组件内 \<map> 组件。
+
+
 ## 原生组件说明
 
 小程序和App的vue页面，主体是webview渲染的。为了提升性能，小程序和App的vue页面下部分ui元素，比如导航栏、tabbar、video、map使用了原生控件。这种方式被称为混合渲染。
@@ -671,6 +1021,21 @@ uni-app页面路由为框架统一管理，开发者需要在pages.json里配置
 * 页面返回:调用 API  uni.navigateBack   、使用组件 \<navigator open-type="navigateBack"/> 、用户按左上角返回按钮、安卓用户点击物理back按键
 * Tab 切换:调用 API  uni.switchTab  、使用组件  \<navigator open-type="switchTab"/>  、用户切换 Tab
 * 重加载:调用 API  uni.reLaunch  、使用组件  \<navigator open-type="reLaunch"/>
+* 预加载页面:uni.preloadPage(OBJECT)仅app和h5支持uni.preloadPage({url: "/pages/test/test"});
+* 窗口动画:仅app支持
+
+    ```js
+    uni.navigateTo({
+        url: '../test/test',
+        animationType: 'pop-in',
+        animationDuration: 200
+    });
+    uni.navigateBack({
+        delta: 1,
+        animationType: 'pop-out',
+        animationDuration: 200
+    });
+    ```
 
 ## 页面样式与布局
 
