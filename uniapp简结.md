@@ -803,6 +803,436 @@ switch(uni.getSystemInfoSync().platform){
 
     * uni.createMapContext(mapId,this):创建并返回 map 上下文 mapContext 对象。在自定义组件下，第二个参数传入组件实例this，以操作组件内 \<map> 组件。
 
+* 媒体
+
+    * 图片
+
+        * uni.chooseImage(OBJECT):从本地相册选择图片或使用相机拍照。
+
+            ```js
+            uni.chooseImage({
+                count: 6, //默认9
+                sizeType: ['original', 'compressed'], //可以指定是原图还是压缩图，默认二者都有
+                sourceType: ['album'], //从相册选择
+                success: function (res) {
+                    console.log(JSON.stringify(res.tempFilePaths));
+                }
+            });
+            ```
+
+        * uni.previewImage(OBJECT):预览图片。
+
+            ```js
+            uni.chooseImage({
+                count: 6,
+                sizeType: ['original', 'compressed'],
+                sourceType: ['album'],
+                success: function(res) {
+                    // 预览图片
+                    uni.previewImage({
+                        urls: res.tempFilePaths,
+                        longPressActions: {
+                            itemList: ['发送给朋友', '保存图片', '收藏'],
+                            success: function(data) {
+                                console.log('选中了第' + (data.tapIndex + 1) + '个按钮,第' + (data.index + 1) + '张图片');
+                            },
+                            fail: function(err) {
+                                console.log(err.errMsg);
+                            }
+                        }
+                    });
+                }
+            });
+            ```
+
+        * uni.getImageInfo(OBJECT):获取图片信息。
+
+            ```js
+            uni.chooseImage({
+                count: 1,
+                sourceType: ['album'],
+                success: function (res) {
+                    uni.getImageInfo({
+                        src: res.tempFilePaths[0],
+                        success: function (image) {
+                            console.log(image.width);
+                            console.log(image.height);
+                        }
+                    });
+                }
+            });
+            ```
+
+        * uni.saveImageToPhotosAlbum(OBJECT):保存图片到系统相册。
+
+            ```js
+            uni.chooseImage({
+                count: 1,
+                sourceType: ['camera'],
+                success: function (res) {
+                    uni.saveImageToPhotosAlbum({
+                        filePath: res.tempFilePaths[0],
+                        success: function () {
+                            console.log('save success');
+                        }
+                    });
+                }
+            });
+            ```
+
+        * uni.compressImage(OBJECT):压缩图片接口，可选压缩质量
+
+            ```js
+            uni.compressImage({
+                src: '/static/logo.jpg',
+                quality: 80,
+                success: res => {
+                    console.log(res.tempFilePath)
+                }
+            })
+            ```
+
+        * wx.chooseMessageFile(OBJECT):从微信聊天会话中选择文件。
+
+    * 录音
+
+        * uni.getRecorderManager():获取全局唯一的录音管理器 recorderManager
+
+            ```js
+            const recorderManager = uni.getRecorderManager();
+            const innerAudioContext = uni.createInnerAudioContext();
+
+            innerAudioContext.autoplay = true;
+
+            export default {
+                data: {
+                    text: 'uni-app',
+                    voicePath: ''
+                },
+                onLoad() {
+                    let self = this;
+                    recorderManager.onStop(function (res) {
+                        console.log('recorder stop' + JSON.stringify(res));
+                        self.voicePath = res.tempFilePath;
+                    });
+                },
+                methods: {
+                    startRecord() {
+                        console.log('开始录音');
+
+                        recorderManager.start();
+                    },
+                    endRecord() {
+                        console.log('录音结束');
+                        recorderManager.stop();
+                    },
+                    playVoice() {
+                        console.log('播放录音');
+
+                        if (this.voicePath) {
+                            innerAudioContext.src = this.voicePath;
+                            innerAudioContext.play();
+                        }
+                    }
+                }
+            }
+            ```
+
+    * 音频
+
+        * uni.getBackgroundAudioManager():获取全局唯一的背景音频管理器 backgroundAudioManager
+
+            ```js
+            const bgAudioMannager = uni.getBackgroundAudioManager();
+            bgAudioMannager.title = '致爱丽丝';
+            bgAudioMannager.singer = '暂无';
+            bgAudioMannager.coverImgUrl = 'https://img-cdn-qiniu.dcloud.net.cn/uniapp/audio/music.jpg';
+            bgAudioMannager.src = 'https://img-cdn-qiniu.dcloud.net.cn/uniapp/audio/music.mp3';
+            ```
+
+        * uni.createInnerAudioContext():创建并返回内部 audio 上下文 innerAudioContext 对象
+
+            ```js
+            const innerAudioContext = uni.createInnerAudioContext();
+            innerAudioContext.autoplay = true;
+            innerAudioContext.src = 'https://img-cdn-qiniu.dcloud.net.cn/uniapp/audio/music.mp3';
+            innerAudioContext.onPlay(() => {
+                console.log('开始播放');
+            });
+            innerAudioContext.onError((res) => {
+                console.log(res.errMsg);
+                console.log(res.errCode);
+            });
+            ```
+
+    * 视频
+
+        * uni.chooseVideo(OBJECT):拍摄视频或从手机相册中选视频，返回视频的临时文件路径。
+
+            ```js
+            uni.chooseVideo({
+                count: 1,
+                sourceType: ['camera', 'album'],
+                success: function (res) {
+                    self.src = res.tempFilePath;
+                }
+            });
+            ```
+
+        * uni.chooseMedia(OBJECT):拍摄或从手机相册中选择图片或视频。
+
+            ```js
+            uni.chooseMedia({
+                count: 9,
+                mediaType: ['image','video'],
+                sourceType: ['album', 'camera'],
+                maxDuration: 30,
+                camera: 'back',
+                success(res) {
+                    console.log(res.tempFilest)
+                }
+            })
+            ```
+
+        * uni.saveVideoToPhotosAlbum(OBJECT):保存视频到系统相册
+
+            ```js
+            uni.chooseVideo({
+                count: 1,
+                sourceType: ['camera'],
+                success: function (res) {
+                    self.src = res.tempFilePath;
+
+                    uni.saveVideoToPhotosAlbum({
+                        filePath: res.tempFilePath,
+                        success: function () {
+                            console.log('save success');
+                        }
+                    });
+                }
+            });
+            ```
+
+        * uni.getVideoInfo(OBJECT):获取视频详细信息
+
+        * uni.compressVideo(OBJECT):压缩视频接口。
+
+        * uni.openVideoEditor(OBJECT):打开视频编辑器
+
+        * uni.createVideoContext(videoId, this):创建并返回 video 上下文 videoContext 对象。在自定义组件下，第二个参数传入组件实例this，以操作组件内 \<video> 组件。
+
+    * 相机
+
+        * uni.createCameraContext():创建并返回 camera 组件的上下文 cameraContext 对象
+
+    * 直播
+
+        * uni.createLivePlayerContext(livePlayerId, this):创建 live-player 上下文 livePlayerContext 对象。注意是直播的播放而不是推流。
+
+        * uni.createLivePusherContext(livePusherId, this):创建 live-pusher 上下文 livePusherContext 对象
+
+    * 富文本
+
+        * editorContext:editor 组件对应的 editorContext 实例，可通过 uni.createSelectorQuery 获取。
+
+        * editorContext.format(name, value):修改样式
+
+        * editorContext.insertDivider(OBJECT):插入分割线
+
+        * editorContext.insertImage(OBJECT):插入图片
+
+        * editorContext.insertText(OBJECT):覆盖当前选区，设置一段文本
+
+        * editorContext.setContents(OBJECT):初始化编辑器内容
+
+        * editorContext.getContents(OBJECT):获取编辑器内容
+
+        * editorContext.clear(OBJECT):清空编辑器内容
+
+        * editorContext.removeFormat(OBJECT):清除当前选区的样式
+
+        * editorContext.undo(OBJECT):撤销
+
+        * editorContext.redo(OBJECT):恢复
+
+    * 音视频合成
+
+        * uni.createMediaContainer():创建音视频处理容器，最终可将容器中的轨道合成一个视频 ，返回 MediaContainer 对象
+
+        * MediaContainer.addTrack(track):将音频或视频轨道添加到容器
+
+        * MediaContainer.destroy():将容器销毁，释放资源
+
+        * MediaContainer.export():将容器内的轨道合并并导出视频文件
+
+        * MediaContainer.extractDataSource(object):将容器内的轨道合并并导出视频文件 ,返回 MediaTrack 对象
+
+        * MediaContainer.removeTrack(track):将音频或视频轨道添加到容器
+
+        * MediaTrack:音频或视频轨道，可以对轨道进行一些操作，可通过 MediaContainer.extractDataSource 返回
+
+* 设备信息
+
+    * uni.getSystemInfo(OBJECT):获取系统信息(手机品牌、屏幕宽高、导航、电量、wifi、蓝牙等)
+
+        ```js
+        uni.getSystemInfo({
+            success: function (res) {
+                console.log(res.model);
+                console.log(res.pixelRatio);
+                console.log(res.windowWidth);
+                console.log(res.windowHeight);
+                console.log(res.language);
+                console.log(res.version);
+                console.log(res.platform);
+            }
+        });
+        ```
+
+    * uni.getSystemInfoSync():获取系统信息同步接口
+
+        ```js
+        try {
+            const res = uni.getSystemInfoSync();
+            console.log(res.model);
+            console.log(res.pixelRatio);
+            console.log(res.windowWidth);
+            console.log(res.windowHeight);
+            console.log(res.language);
+            console.log(res.version);
+            console.log(res.platform);
+        } catch (e) {
+            // error
+        }
+        ```
+
+    * uni.canIUse(String):判断应用的 API，回调，参数，组件等是否在当前版本可用
+
+        ```js
+        uni.canIUse('getSystemInfoSync.return.screenWidth');
+        uni.canIUse('getSystemInfo.success.screenWidth');
+        uni.canIUse('showToast.object.image');
+        uni.canIUse('request.object.method.GET');
+        uni.canIUse('live-player');
+        uni.canIUse('text.selectable');
+        uni.canIUse('button.open-type.contact');
+        ```
+
+    * uni.onMemoryWarning(CALLBACK):监听内存不足告警事件
+
+    * uni.getNetworkType(OBJECT):获取网络类型
+
+        ```js
+        uni.getNetworkType({
+            success: function (res) {
+                console.log(res.networkType);
+            }
+        });
+        ```
+
+    * uni.onNetworkStatusChange(CALLBACK):监听网络状态变化。
+
+        ```js
+        uni.onNetworkStatusChange(function (res) {
+            console.log(res.isConnected);
+            console.log(res.networkType);
+        });
+        ```
+
+    * uni.onUIStyleChange(CALLBACK):监听系统主题状态变化。
+
+        ```js
+        uni.onUIStyleChange(function (res) {
+            console.log(res.style);
+        });
+        ```
+
+    * uni.onAccelerometerChange(CALLBACK):监听加速度数据，频率：5次/秒，接口调用后会自动开始监听，可使用 uni.stopAccelerometer 停止监听。
+
+        ```js
+        uni.onAccelerometerChange(function (res) {
+            console.log(res.x);
+            console.log(res.y);
+            console.log(res.z);
+        });
+        ```
+
+    * uni.startAccelerometer(OBJECT):开始监听加速度数据,包含回调函数
+
+    * uni.stopAccelerometer(OBJECT):停止监听加速度数据,包含回调函数
+
+    * uni.onCompassChange(CALLBACK):监听罗盘数据，频率：5次/秒，接口调用后会自动开始监听，可使用 uni.stopCompass 停止监听。
+
+    * uni.startCompass(OBJECT):开始监听罗盘数据,包含回调函数
+
+    * uni.stopCompass(OBJECT):停止监听罗盘数据,包含回调函数
+
+    * uni.onGyroscopeChange(CALLBACK):监听陀螺仪数据变化事件。
+
+    * uni.startGyroscope(OBJECT):开始监听陀螺仪数据,包含回调函数
+
+    * uni.stopGyroscope(OBJECT):停止监听陀螺仪数据,包含回调函数
+
+    * uni.makePhoneCall(OBJECT):拨打电话
+
+        ```js
+        uni.makePhoneCall({
+            phoneNumber: '114' //仅为示例
+        });
+        ```
+
+    * uni.scanCode(OBJECT):调起客户端扫码界面，扫码成功后返回对应的结果。
+
+        ```js
+        // 允许从相机和相册扫码
+        uni.scanCode({
+            success: function (res) {
+                console.log('条码类型：' + res.scanType);
+                console.log('条码内容：' + res.result);
+            }
+        });
+
+        // 只允许通过相机扫码
+        uni.scanCode({
+            onlyFromCamera: true,
+            success: function (res) {
+                console.log('条码类型：' + res.scanType);
+                console.log('条码内容：' + res.result);
+            }
+        });
+
+        // 调起条码扫描
+        uni.scanCode({
+            scanType: ['barCode'],
+            success: function (res) {
+                console.log('条码类型：' + res.scanType);
+                console.log('条码内容：' + res.result);
+            }
+        });
+        ```
+
+    * uni.setClipboardData(OBJECT):设置系统剪贴板的内容。
+
+        ```js
+        uni.setClipboardData({
+            data: 'hello',
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.getClipboardData(OBJECT):获取系统剪贴板内容
+
+        ```js
+        uni.getClipboardData({
+            success: function (res) {
+                console.log(res.data);
+            }
+        });
+        ```
+
+    
 
 ## 原生组件说明
 
