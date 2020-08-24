@@ -1232,7 +1232,278 @@ switch(uni.getSystemInfoSync().platform){
         });
         ```
 
+    * uni.setScreenBrightness(OBJECT):设置屏幕亮度
+
+        ```js
+        uni.setScreenBrightness({
+            value: 0.5,
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.getScreenBrightness(OBJECT):获取屏幕亮度
+
+        ```js
+        uni.getScreenBrightness({
+            success: function (res) {
+                console.log('屏幕亮度值：' + res.value);
+            }
+        });
+        ```
+
+    * uni.setKeepScreenOn(OBJECT):设置是否保持常亮状态。仅在当前应用生效，离开应用后设置失效。
+
+        ```js
+        uni.setKeepScreenOn({
+            keepScreenOn: true
+        });
+        ```
+
+    * uni.onUserCaptureScreen(CALLBACK):监听用户主动截屏事件，用户使用系统截屏按键截屏时触发此事件。
+
+    * uni.vibrate(OBJECT):使手机发生振动。
+
+        ```js
+        uni.vibrate({
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.vibrateLong(OBJECT):使手机发生较长时间的振动（400ms）。
+
+        ```js
+        uni.vibrateLong({
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.vibrateShort(OBJECT):使手机发生较短时间的振动（15ms）。
+
+        ```js
+        uni.vibrateShort({
+            success: function () {
+                console.log('success');
+            }
+        });
+        ```
+
+    * uni.addPhoneContact(OBJECT):调用后，用户可以选择将该表单以“新增联系人”或“添加到已有联系人”的方式（APP端目前没有选择步骤，将直接写入），写入手机系统通讯录，完成手机通讯录联系人和联系方式的增加。
+
+        ```js
+        uni.addPhoneContact({
+            nickName: '昵称',
+            lastName: '姓',
+            firstName: '名',
+            remark: '备注',
+            mobilePhoneNumber: '114',
+            weChatNumber: 'wx123',
+            success: function () {
+                console.log('success');
+            },
+            fail: function () {
+                console.log('fail');
+            }
+        });
+        ```
+
+    * uni.openBluetoothAdapter(OBJECT):初始化蓝牙模块
+
+        其他蓝牙相关 API 必须在 uni.openBluetoothAdapter 调用之后使用。否则 API 会返回错误（errCode=10000）。
+
+        在用户蓝牙开关未开启或者手机不支持蓝牙功能的情况下，调用 uni.openBluetoothAdapter 会返回错误（errCode=10001），表示手机蓝牙功能不可用。此时APP蓝牙模块已经初始化完成，可通过 uni.onBluetoothAdapterStateChange 监听手机蓝牙状态的改变，也可以调用蓝牙模块的所有API。
+
+        ```js
+        uni.openBluetoothAdapter({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.startBluetoothDevicesDiscovery(OBJECT):开始搜寻附近的蓝牙外围设备。此操作比较耗费系统资源，请在搜索并连接到设备后调用 uni.stopBluetoothDevicesDiscovery 方法停止搜索。
+
+        ```js
+        uni.startBluetoothDevicesDiscovery({
+            services: ['FEE7'],
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.onBluetoothDeviceFound(CALLBACK):监听寻找到新设备的事件
+
+    * uni.stopBluetoothDevicesDiscovery(OBJECT):停止搜寻附近的蓝牙外围设备。若已经找到需要的蓝牙设备并不需要继续搜索时，建议调用该接口停止蓝牙搜索。
+
+        ```js
+        uni.stopBluetoothDevicesDiscovery({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.onBluetoothAdapterStateChange(CALLBACK):监听蓝牙适配器状态变化事件
+
+    * uni.getConnectedBluetoothDevices(OBJECT):根据 uuid 获取处于已连接状态的设备。
+
+        ```js
+        uni.getConnectedBluetoothDevices({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.getBluetoothDevices(OBJECT):获取在蓝牙模块生效期间所有已发现的蓝牙设备。包括已经和本机处于连接状态的设备。
+
+        ```js
+        uni.getBluetoothDevices({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.getBluetoothAdapterState(OBJECT):获取本机蓝牙适配器状态。
+
+        ```js
+        uni.getBluetoothAdapterState({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
     
+    * uni.closeBluetoothAdapter(OBJECT):关闭蓝牙模块。调用该方法将断开所有已建立的连接并释放系统资源。建议在使用蓝牙流程后，与 uni.openBluetoothAdapter 成对调用。
+
+        ```js
+        uni.closeBluetoothAdapter({
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.setBLEMTU(OBJECT):设置蓝牙最大传输单元。需在 uni.createBLEConnection调用成功后调用，mtu 设置范围 (22,512)。安卓5.1以上有效。
+
+    * uni.writeBLECharacteristicValue(OBJECT):向低功耗蓝牙设备特征值中写入二进制数据。注意：必须设备的特征值支持 write 才可以成功调用。
+
+        ```js
+        // 向蓝牙设备发送一个0x00的16进制数据
+        const buffer = new ArrayBuffer(1)
+        const dataView = new DataView(buffer)
+        dataView.setUint8(0, 0)
+        uni.writeBLECharacteristicValue({
+            // 这里的 deviceId 需要在 getBluetoothDevices 或 onBluetoothDeviceFound 接口中获取
+            deviceId,
+            // 这里的 serviceId 需要在 getBLEDeviceServices 接口中获取
+            serviceId,
+            // 这里的 characteristicId 需要在 getBLEDeviceCharacteristics 接口中获取
+            characteristicId,
+            // 这里的value是ArrayBuffer类型
+            value: buffer,
+            success(res) {
+                console.log('writeBLECharacteristicValue success', res.errMsg)
+            }
+        })
+        ```
+
+    * uni.readBLECharacteristicValue(OBJECT):读取低功耗蓝牙设备的特征值的二进制数据值。注意：必须设备的特征值支持 read 才可以成功调用。
+
+        ```js
+        // 必须在这里的回调才能获取
+        uni.onBLECharacteristicValueChange(function (characteristic) {
+        console.log('characteristic value comed:', characteristic)
+        })
+        uni.readBLECharacteristicValue({
+            // 这里的 deviceId 需要已经通过 createBLEConnection 与对应设备建立链接
+            deviceId,
+            // 这里的 serviceId 需要在 getBLEDeviceServices 接口中获取
+            serviceId,
+            // 这里的 characteristicId 需要在 getBLEDeviceCharacteristics 接口中获取
+            characteristicId,
+            success(res) {
+                console.log('readBLECharacteristicValue:', res.errCode)
+            }
+        })
+        ```
+
+    * uni.onBLEConnectionStateChange(CALLBACK):监听低功耗蓝牙连接状态的改变事件。包括开发者主动连接或断开连接，设备丢失，连接异常断开等等
+
+    * uni.onBLECharacteristicValueChange(CALLBACK):监听低功耗蓝牙设备的特征值变化事件。必须先启用 notifyBLECharacteristicValueChange 接口才能接收到设备推送的 notification。
+
+    * uni.notifyBLECharacteristicValueChange(OBJECT):启用低功耗蓝牙设备特征值变化时的 notify 功能，订阅特征值。注意：必须设备的特征值支持 notify 或者 indicate 才可以成功调用。 另外，必须先启用 notifyBLECharacteristicValueChange 才能监听到设备 characteristicValueChange 事件
+
+        ```js
+        uni.notifyBLECharacteristicValueChange({
+            state: true, // 启用 notify 功能
+            // 这里的 deviceId 需要已经通过 createBLEConnection 与对应设备建立链接
+            deviceId,
+            // 这里的 serviceId 需要在 getBLEDeviceServices 接口中获取
+            serviceId,
+            // 这里的 characteristicId 需要在 getBLEDeviceCharacteristics 接口中获取
+            characteristicId,
+            success(res) {
+                console.log('notifyBLECharacteristicValueChange success', res.errMsg)
+            }
+        })
+        ```
+
+    * uni.getBLEDeviceServices(OBJECT):获取蓝牙设备所有服务(service)。
+
+        ```js
+        uni.getBLEDeviceServices({
+            // 这里的 deviceId 需要已经通过 createBLEConnection 与对应设备建立链接
+            deviceId,
+            success(res) {
+                console.log('device services:', res.services)
+            }
+        })
+        ```
+
+    * uni.getBLEDeviceRSSI(OBJECT):获取蓝牙设备的信号强度。
+
+    * uni.getBLEDeviceCharacteristics(OBJECT):获取蓝牙设备某个服务中所有特征值(characteristic)。
+
+    * uni.createBLEConnection(OBJECT):连接低功耗蓝牙设备。
+
+        若APP在之前已有搜索过某个蓝牙设备，并成功建立连接，可直接传入之前搜索获取的 deviceId 直接尝试连接该设备，无需进行搜索操作。
+
+        ```js
+        uni.createBLEConnection({
+            // 这里的 deviceId 需要已经通过 createBLEConnection 与对应设备建立链接
+            deviceId,
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * uni.closeBLEConnection(OBJECT):断开与低功耗蓝牙设备的连接。
+
+        ```js
+        uni.closeBLEConnection({
+            deviceId,
+            success(res) {
+                console.log(res)
+            }
+        })
+        ```
+
+    * 还可以获取iBeacon、wifi、电量、NFC、设备方向、生物认证(人脸、指纹)等信息
+
+* 键盘
+
+    * uni.hideKeyboard():隐藏已经显示的软键盘
+
+    * uni.onKeyboardHeightChange(CALLBACK):监听键盘高度变化
 
 ## 原生组件说明
 
