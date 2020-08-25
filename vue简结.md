@@ -50,6 +50,7 @@
 * [过滤器](#过滤器)
 * [.sync语法糖](#.sync语法糖)
 * [深层选择器](#深层选择器)
+* [递归菜单](#递归菜单)
 
 ---
 
@@ -3078,3 +3079,145 @@ this.$emit('update:bar',newValue);
 }
 </style>
 ```
+
+## 递归菜单
+
+参考链接：
+
+[Vue3实现递归菜单组件-腾讯高级前端25k面试题](https://juejin.im/post/6864383032233721864#heading-3)
+
+[vue-nested-menu](https://github.com/sl1673495/vue-nested-menu)
+
+* 效果要求：
+
+1. 每一层的菜单元素如果有 _child 属性，这一项菜单被选中以后就要继续展示这一项的所有子菜单
+2. 点击其中的任意一个层级，都需要把菜单的 完整的 id 链路 传递到最外层，给父组件请求数据用。形如：[1, 7, 8]
+3. 每一层的样式还可以自己定制
+
+* 数据样例：
+
+```js
+[
+  {
+    id: 1,
+    father_id: 0,
+    status: 1,
+    name: "生命科学竞赛",
+    _child: [
+      {
+        id: 2,
+        father_id: 1,
+        status: 1,
+        name: "野外实习类",
+        _child: [
+          { id: 3, father_id: 2, status: 1, name: "植物学" },
+          { id: 4, father_id: 2, status: 1, name: "动物学" },
+          { id: 5, father_id: 2, status: 1, name: "微生物学" },
+          { id: 6, father_id: 2, status: 1, name: "生态学" },
+        ],
+      },
+      {
+        id: 7,
+        father_id: 1,
+        status: 1,
+        name: "科学研究类",
+        _child: [
+          { id: 8, father_id: 7, status: 1, name: "植物学与植物生理学" },
+          { id: 9, father_id: 7, status: 1, name: "动物学与动物生理学" },
+          { id: 10, father_id: 7, status: 1, name: "微生物学" },
+          { id: 11, father_id: 7, status: 1, name: "生态学" },
+          {
+            id: 21,
+            father_id: 7,
+            status: 1,
+            name: "农学",
+            _child: [
+              { id: 22, father_id: 21, status: 1, name: "植物生产类" },
+              { id: 23, father_id: 21, status: 1, name: "动物生产类" },
+              { id: 24, father_id: 21, status: 1, name: "动物医学类" },
+            ],
+          },
+          {
+            id: 41,
+            father_id: 7,
+            status: 1,
+            name: "药学",
+          },
+          { id: 55, father_id: 7, status: 1, name: "其他" },
+        ],
+      },
+      { id: 71, father_id: 1, status: 1, name: "添加" },
+    ],
+  },
+  {
+    id: 56,
+    father_id: 0,
+    status: 1,
+    name: "考研相关",
+    _child: [
+      { id: 57, father_id: 56, status: 1, name: "政治" },
+      { id: 58, father_id: 56, status: 1, name: "外国语" },
+    ],
+  },
+  {
+    id: 65,
+    father_id: 0,
+    status: 1,
+    name: "找工作",
+    _child: [
+      { id: 66, father_id: 65, status: 1, name: "招聘会" },
+      { id: 67, father_id: 65, status: 1, name: "简历" },
+    ],
+  },
+  {
+    id: 70,
+    father_id: 0,
+    status: 1,
+    name: "其他",
+    _child: [
+      {
+        id: 72,
+        father_id: 70,
+        status: 1,
+        name: "新增的根级12311111",
+      },
+    ],
+  },
+];
+```
+
+* 组件template结构
+
+根组件
+```html
+<template>
+  <nest-menu :data="data" :activeIds="ids" @change="activeIdsChange" />
+</template>
+```
+递归组件
+```html
+<template>
+  <div class="wrap">
+    <div class="menu-wrap">
+      <div
+        class="menu-item"
+        v-for="menuItem in data"
+      >{{menuItem.name}}</div>
+    </div>
+    <nest-menu
+      :key="activeId"
+      :data="subMenu"
+      :depth="depth + 1"
+    ></nest-menu>
+  </div>
+</template>
+```
+
+* 原理
+
+* 需要记录深度，有child则传depth+1
+* 先把每层菜单的选中项默认设置为第一个子菜单，由于它很可能是异步获取的，所以我们最好是 watch 这个数据来做这个操作
+* compute拿到下一层的数据向下传
+* 点击菜单项，emit到上一层，每一层向数组push当前选中的id
+* 样式区分可把depth拼接到class即可
+* 注意数据源变动引发的 bug：组件渲染完成后过了一秒，菜单的最外层只剩下一项了，这时候在一秒之内点击了最外层的第二项，这个组件在数据源改变之后，会报错undefined，因为数据源已经改变了，但是组件内部的 activeId 状态依然停留在了一个已经不存在了的 id 上，所以如果activeId不存在了，需要设置为第一项，watch设为同步事件

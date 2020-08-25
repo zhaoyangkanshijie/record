@@ -1505,6 +1505,59 @@ switch(uni.getSystemInfoSync().platform){
 
     * uni.onKeyboardHeightChange(CALLBACK):监听键盘高度变化
 
+* 交互框
+
+    * uni.showToast(OBJECT):显示消息提示框。
+
+        ```js
+        uni.showToast({
+            title: '标题',
+            duration: 2000
+        });
+        ```
+
+    * uni.hideToast():隐藏消息提示框。
+
+    * uni.showLoading(OBJECT):显示 loading 提示框, 需主动调用 uni.hideLoading 才能关闭提示框。
+
+        ```js
+        uni.showLoading({
+            title: '加载中'
+        });
+        ```
+
+    * uni.hideLoading():隐藏 loading 提示框。
+
+    * uni.showModal(OBJECT):显示模态弹窗，类似于标准 html 的消息框：alert、confirm。
+
+        ```js
+        uni.showModal({
+            title: '提示',
+            content: '这是一个模态弹窗',
+            success: function (res) {
+                if (res.confirm) {
+                    console.log('用户点击确定');
+                } else if (res.cancel) {
+                    console.log('用户点击取消');
+                }
+            }
+        });
+        ```
+
+    * uni.showActionSheet(OBJECT):​显示操作菜单
+
+        ```js
+        uni.showActionSheet({
+            itemList: ['A', 'B', 'C'],
+            success: function (res) {
+                console.log('选中了第' + (res.tapIndex + 1) + '个按钮');
+            },
+            fail: function (res) {
+                console.log(res.errMsg);
+            }
+        });
+        ```
+
 ## 原生组件说明
 
 小程序和App的vue页面，主体是webview渲染的。为了提升性能，小程序和App的vue页面下部分ui元素，比如导航栏、tabbar、video、map使用了原生控件。这种方式被称为混合渲染。
