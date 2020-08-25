@@ -1558,6 +1558,734 @@ switch(uni.getSystemInfoSync().platform){
         });
         ```
 
+* 导航条
+
+    * uni.setNavigationBarTitle(OBJECT):动态设置当前页面的标题
+
+        ```js
+        uni.setNavigationBarTitle({
+            title: '新的标题'
+        });
+        ```
+
+    * uni.setNavigationBarColor(OBJECT):设置页面导航条颜色。如果需要进入页面就设置颜色，请延迟执行，防止被框架内设置颜色逻辑覆盖
+
+        ```js
+        uni.setNavigationBarColor({
+            frontColor: '#ffffff',
+            backgroundColor: '#ff0000',
+            animation: {
+                duration: 400,
+                timingFunc: 'easeIn'
+            }
+        })
+        ```
+
+    * uni.showNavigationBarLoading(OBJECT):在当前页面显示导航条加载动画
+
+    * uni.hideNavigationBarLoading(OBJECT):在当前页面隐藏导航条加载动画
+
+    * uni.hideHomeButton(OBJECT):隐藏返回首页按钮
+
+* tabbar
+
+    * uni.setTabBarItem(OBJECT):动态设置 tabBar 某一项的内容
+
+        ```js
+        uni.setTabBarItem({
+            index: 0,
+            text: 'text',
+            iconPath: '/path/to/iconPath',
+            selectedIconPath: '/path/to/selectedIconPath'
+        })
+        ```
+
+    * uni.setTabBarStyle(OBJECT):动态设置 tabBar 的整体样式
+
+        ```js
+        uni.setTabBarStyle({
+            color: '#FF0000',
+            selectedColor: '#00FF00',
+            backgroundColor: '#0000FF',
+            borderStyle: 'white'
+        })
+        ```
+
+    * uni.hideTabBar(OBJECT)/uni.showTabBar(OBJECT):隐藏和显示tabbar
+
+    * uni.setTabBarBadge(OBJECT):为 tabBar 某一项的右上角添加文本
+
+        ```js
+        uni.setTabBarBadge({
+            index: 0,
+            text: '1'
+        })
+        ```
+
+    * uni.removeTabBarBadge(OBJECT):移除 tabBar 某一项右上角的文本
+
+    * uni.showTabBarRedDot(OBJECT)/uni.hideTabBarRedDot(OBJECT):显示/隐藏 tabBar 某一项的右上角的红点
+
+    * uni.onTabBarMidButtonTap(CALLBACK):监听中间按钮的点击事件
+
+* 窗口背景
+
+    * uni.setBackgroundColor(OBJECT):动态设置窗口的背景色
+
+        ```js
+        uni.setBackgroundColor({
+            backgroundColor: '#ffffff',
+            backgroundColorTop: '#222222',
+            backgroundColorBottom: '#333333'
+        });
+        ```
+
+    * uni.setBackgroundTextStyle(OBJECT):动态设置下拉背景字体、loading 图的样式
+
+        ```js
+        uni.setBackgroundTextStyle({
+            textStyle: 'dark' // 下拉背景字体、loading 图的样式为dark
+        })
+        ```
+
+* 动画:uni.createAnimation(OBJECT)
+
+    ```html
+    <view :animation="animationData" style="background:red;height:100rpx;width:100rpx"></view>
+    <script>
+    export default{
+        data: {
+            animationData: {}
+        },
+        onShow: function(){
+            var animation = uni.createAnimation({
+            duration: 1000,
+                timingFunction: 'ease',
+            })
+
+            this.animation = animation
+
+            animation.scale(2,2).rotate(45).step()
+
+            this.animationData = animation.export()
+
+            setTimeout(function() {
+            animation.translate(30).step()
+            this.animationData = animation.export()
+            }.bind(this), 1000)
+        },
+        methods:{
+            rotateAndScale: function () {
+            // 旋转同时放大
+            this.animation.rotate(45).scale(2, 2).step()
+            this.animationData = this.animation.export()
+            },
+            rotateThenScale: function () {
+            // 先旋转后放大
+            this.animation.rotate(45).step()
+            this.animation.scale(2, 2).step()
+            this.animationData = this.animation.export()
+            },
+            rotateAndScaleThenTranslate: function () {
+            // 先旋转同时放大，然后平移
+            this.animation.rotate(45).scale(2, 2).step()
+            this.animation.translate(100, 100).step({ duration: 1000 })
+            this.animationData = this.animation.export()
+            }
+        }
+    }
+    </script>
+    ```
+
+* 滚动:uni.pageScrollTo(OBJECT)
+
+    ```js
+    uni.pageScrollTo({
+        scrollTop: 0,
+        duration: 300
+    });
+    ```
+
+* 窗口
+
+    * uni.onWindowResize(CALLBACK):监听窗口尺寸变化事件
+
+    * uni.offWindowResize(CALLBACK):取消监听窗口尺寸变化事件
+
+* 字体:uni.loadFontFace(Object object):动态加载网络字体，文件地址需为下载类型
+
+    ```js
+    uni.loadFontFace({
+        family: 'Bitstream Vera Serif Bold',
+        source: 'url("https://sungd.github.io/Pacifico.ttf")',
+        success() {
+            console.log('success')
+        }
+    })
+    ```
+
+* 下拉刷新
+
+    * uni.startPullDownRefresh(OBJECT):开始下拉刷新，调用后触发下拉刷新动画，效果与用户手动下拉刷新一致。
+
+    * uni.stopPullDownRefresh():停止当前页面下拉刷新
+
+* 节点信息
+
+    * uni.createSelectorQuery():返回一个 SelectorQuery 对象实例。可以在这个实例上使用 select 等方法选择节点，并使用 boundingClientRect 等方法选择需要查询的信息。
+
+    * selectorQuery.in(component):将选择器的选取范围更改为自定义组件 component 内，返回一个 SelectorQuery 对象实例。
+
+    * selectorQuery.select(selector):在当前页面下选择第一个匹配选择器 selector 的节点，返回一个 NodesRef 对象实例，可以用于获取节点信息。
+
+        ```js
+        const query = uni.createSelectorQuery().in(this);
+        query.select('#id').boundingClientRect(data => {
+            console.log("得到布局位置信息" + JSON.stringify(data));
+            console.log("节点离页面顶部的距离为" + data.top);
+        }).exec();
+        ```
+
+    * selectorQuery.selectAll(selector):在当前页面下选择匹配选择器 selector 的所有节点，返回一个 NodesRef 对象实例，可以用于获取节点信息
+
+    * selectorQuery.selectViewport():选择显示区域，可用于获取显示区域的尺寸、滚动位置等信息，返回一个 NodesRef 对象实例
+
+    * selectorQuery.exec(callback):执行所有的请求。请求结果按请求次序构成数组，在callback的第一个参数中返回。
+
+    * nodesRef.fields(object,callback):获取节点的相关信息。第一个参数是节点相关信息配置（必选）；第二参数是方法的回调函数，参数是指定的相关节点信息。
+
+    * nodesRef.boundingClientRect(callback):添加节点的布局位置的查询请求。相对于显示区域，以像素为单位。其功能类似于 DOM 的 getBoundingClientRect。返回 NodesRef 对应的 SelectorQuery。
+
+    * nodesRef.scrollOffset(callback):添加节点的滚动位置查询请求。以像素为单位。节点必须是 scroll-view 或者 viewport。返回 NodesRef 对应的 SelectorQuery。
+
+    * nodesRef.context(callback):添加节点的 Context 对象查询请求。支持 VideoContext、CanvasContext、和 MapContext 等的获取。
+
+    * nodesRef.node(callback):获取 Node 节点实例。目前支持 Canvas 的获取。
+
+        ```js
+        uni.createSelectorQuery().selectViewport().scrollOffset(res => {
+            console.log("竖直滚动位置" + res.scrollTop);
+        }).exec();
+
+        let view = uni.createSelectorQuery().in(this).select(".test");
+
+        view.fields({
+            size: true,
+            scrollOffset: true
+        }, data => {
+            console.log("得到节点信息" + JSON.stringify(data));
+            console.log("节点的宽为" + data.width);
+        }).exec();
+
+        view.boundingClientRect(data => {
+            console.log("得到布局位置信息" + JSON.stringify(data));
+            console.log("节点离页面顶部的距离为" + data.top);
+        }).exec();
+        ```
+
+    * uni.createIntersectionObserver([this], [options]):创建并返回一个 IntersectionObserver 对象实例
+
+* 延时执行:nextTick(function callback)
+
+* 菜单:getMenuButtonBoundingClientRect():在小程序平台，如果原生导航栏被隐藏，仍然在右上角会有一个悬浮按钮，微信下也被称为胶囊按钮。本API用于获取小程序下该菜单按钮的布局位置信息，方便开发者布局顶部内容时避开该按钮。
+
+* 页面
+
+    * getCurrentPages():获取当前页面栈的实例，以数组形式按栈的顺序给出，第一个元素为首页，最后一个元素为当前页面
+
+    * $getAppWebview():获取webview实例，仅app可用
+
+    * 页面通信见[页面通讯](#页面通讯)
+
+* 文件
+
+    * uni.saveFile(OBJECT):保存文件到本地
+
+        ```js
+        uni.chooseImage({
+            success: function (res) {
+                var tempFilePaths = res.tempFilePaths;
+                uni.saveFile({
+                tempFilePath: tempFilePaths[0],
+                    success: function (res) {
+                        var savedFilePath = res.savedFilePath;
+                    }
+                });
+            }
+        });
+        ```
+
+    * uni.getSavedFileList(OBJECT):获取本地已保存的文件列表
+
+        ```js
+        uni.getSavedFileList({
+            success: function (res) {
+                console.log(res.fileList);
+            }
+        });
+        ```
+
+    * uni.getSavedFileInfo(OBJECT):获取本地文件的文件信息。此接口只能用于获取已保存到本地的文件。
+
+        ```js
+        uni.getSavedFileInfo({
+            filePath: 'unifile://somefile', //仅做示例用，非真正的文件路径
+            success: function (res) {
+                console.log(res.size);
+                console.log(res.createTime);
+            }
+        });
+        ```
+
+    * uni.removeSavedFile(OBJECT):删除本地存储的文件
+
+        ```js
+        uni.getSavedFileList({
+            success: function (res) {
+                if (res.fileList.length > 0) {
+                    uni.removeSavedFile({
+                        filePath: res.fileList[0].filePath,
+                        complete: function (res) {
+                            console.log(res);
+                        }
+                    });
+                }
+            }
+        });
+        ```
+
+    * uni.getFileInfo(OBJECT):获取文件信息
+
+    * uni.openDocument(OBJECT):新开页面打开文档，支持格式：doc, xls, ppt, pdf, docx, xlsx, pptx。
+
+        ```js
+        uni.downloadFile({
+            url: 'https://example.com/somefile.pdf',
+            success: function (res) {
+                var filePath = res.tempFilePath;
+                uni.openDocument({
+                    filePath: filePath,
+                    success: function (res) {
+                        console.log('打开文档成功');
+                    }
+                });
+            }
+        });
+        ```
+
+* 绘画
+
+    * uni.createOffscreenCanvas():创建离屏 canvas 实例
+
+    * uni.createCanvasContext(canvasId, this):创建 canvas 绘图上下文（指定 canvasId）。在自定义组件下，第二个参数传入组件实例this，以操作组件内 \<canvas/> 组件
+
+    * uni.canvasToTempFilePath(object, component):把当前画布指定区域的内容导出生成指定大小的图片，并返回文件路径。在自定义组件下，第二个参数传入自定义组件实例，以操作组件内 \<canvas> 组件。
+
+        ```js
+        uni.canvasToTempFilePath({
+            x: 100,
+            y: 200,
+            width: 50,
+            height: 50,
+            destWidth: 100,
+            destHeight: 100,
+            canvasId: 'myCanvas',
+            success: function(res) {
+                // 在H5平台下，tempFilePath 为 base64
+                console.log(res.tempFilePath)
+            } 
+        })
+        ```
+
+    * uni.canvasPutImageData(OBJECT,this):将像素数据绘制到画布的方法
+
+        ```js
+        const data = new Uint8ClampedArray([255, 0, 0, 255])
+        uni.canvasPutImageData({
+            canvasId: 'myCanvas',
+            x: 0,
+            y: 0,
+            width: 1,
+            data: data,
+            success(res) {}
+        })
+        ```
+
+    * uni.canvasGetImageData(OBJECT,this):返回一个数组，用来描述 canvas 区域隐含的像素数据
+
+        ```js
+        uni.canvasGetImageData({
+            canvasId: 'myCanvas',
+            x: 0,
+            y: 0,
+            width: 100,
+            height: 100,
+            success(res) {
+                console.log(res.width) // 100
+                console.log(res.height) // 100
+                console.log(res.data instanceof Uint8ClampedArray) // true
+                console.log(res.data.length) // 100 * 100 * 4
+            }
+        })
+        ```
+
+    * CanvasGradient.addColorStop(stop,color):创建一个颜色的渐变点
+
+    * CanvasContext等canvas api与html类似，可[参考文档](https://uniapp.dcloud.io/api/canvas/CanvasContext)
+
+* 获取供应商:uni.getProvider(OBJECT)
+
+    ```js
+    uni.getProvider({
+        service: 'oauth',
+        success: function (res) {
+            console.log(res.provider)
+            if (~res.provider.indexOf('qq')) {
+                uni.login({
+                    provider: 'qq',
+                    success: function (loginRes) {
+                        console.log(JSON.stringify(loginRes));
+                    }
+                });
+            }
+        }
+    });
+    ```
+
+* 登录
+
+    * uni.login(OBJECT):登录
+
+    * uni.checkSession(OBJECT):检查登录状态是否过期
+
+    * uni.getUserInfo(OBJECT):获取用户信息
+
+        ```js
+        uni.login({
+            provider: 'weixin',
+            success: function (loginRes) {
+                console.log(loginRes.authResult);
+                // 获取用户信息
+                uni.getUserInfo({
+                    provider: 'weixin',
+                    success: function (infoRes) {
+                        console.log('用户昵称为：' + infoRes.userInfo.nickName);
+                    }
+                });
+            }
+        });
+        ```
+
+* 分享
+
+    * uni.share(OBJECT):分享
+
+        分享到微信聊天界面
+
+        分享文字
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSceneSession",
+            type: 1,
+            summary: "我正在使用HBuilderX开发uni-app，赶紧跟我一起来体验！",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+        分享图片
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSceneSession",
+            type: 2,
+            imageUrl: "https://img-cdn-qiniu.dcloud.net.cn/uniapp/images/uni@2x.png",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+        分享图文
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSceneSession",
+            type: 0,
+            href: "http://uniapp.dcloud.io/",
+            title: "uni-app分享",
+            summary: "我正在使用HBuilderX开发uni-app，赶紧跟我一起来体验！",
+            imageUrl: "https://img-cdn-qiniu.dcloud.net.cn/uniapp/images/uni@2x.png",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+
+        分享到微信朋友圈
+
+        分享文字
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSenceTimeline",
+            type: 1,
+            summary: "我正在使用HBuilderX开发uni-app，赶紧跟我一起来体验！",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+        分享图片
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSenceTimeline",
+            type: 2,
+            imageUrl: "https://img-cdn-qiniu.dcloud.net.cn/uniapp/images/uni@2x.png",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+        分享图文
+        ```js
+        uni.share({
+            provider: "weixin",
+            scene: "WXSenceTimeline",
+            type: 0,
+            href: "http://uniapp.dcloud.io/",
+            title: "uni-app分享",
+            summary: "我正在使用HBuilderX开发uni-app，赶紧跟我一起来体验！",
+            imageUrl: "https://img-cdn-qiniu.dcloud.net.cn/uniapp/images/uni@2x.png",
+            success: function (res) {
+                console.log("success:" + JSON.stringify(res));
+            },
+            fail: function (err) {
+                console.log("fail:" + JSON.stringify(err));
+            }
+        });
+        ```
+
+        App分享为微信小程序
+        ```js
+        uni.share({
+            provider: 'weixin',
+            scene: "WXSceneSession",
+            type: 5,
+            imageUrl: 'https://img-cdn-qiniu.dcloud.net.cn/uniapp/app/share-logo@3.png',
+            title: '欢迎体验uniapp',
+            miniProgram: {
+                id: 'gh_abcdefg',
+                path: 'pages/index/index',
+                type: 0,
+                webUrl: 'http://uniapp.dcloud.io'
+            },
+            success: ret => {
+                console.log(JSON.stringify(ret));
+            }
+        });
+        ```
+
+    * plus.share.sendWithSystem(msg, successCB, errorCB):App端可调用手机的系统分享，实现所有注册分享的应用的呼起，比如短信、邮件、蓝牙(仅Android)、隔空投送(仅iOS)，或其他注册系统分享的应用，比如钉钉。仅app可用
+
+        ```js
+        plus.share.sendWithSystem({content:'分享内容',href:'https://www.dcloud.io/'}, function(){
+            console.log('分享成功');
+        }, function(e){
+            console.log('分享失败：'+JSON.stringify(e));
+        });
+        ```
+
+    * onShareAppMessage(OBJECT):小程序中用户点击分享后，在 js 中定义 onShareAppMessage 处理函数（和 onLoad 等生命周期函数同级），设置该页面的分享信息。
+
+        ```js
+        onShareAppMessage(res) {
+            if (res.from === 'button') {// 来自页面内分享按钮
+                console.log(res.target)
+            }
+            return {
+                title: '自定义分享标题',
+                path: '/pages/test/test?id=123'
+            }
+        }
+        ```
+
+    * uni.showShareMenu(OBJECT)/hideShareMenu(OBJECT):小程序的原生菜单中显示/隐藏分享按钮
+
+* 支付:uni.requestPayment(OBJECT)
+
+    统一各平台的客户端支付API，不管是在某家小程序还是在App中，客户端均使用本API调用支付
+
+    App 支付
+    ```js
+    uni.requestPayment({
+        provider: 'alipay',
+        orderInfo: 'orderInfo', //微信、支付宝订单数据
+        success: function (res) {
+            console.log('success:' + JSON.stringify(res));
+        },
+        fail: function (err) {
+            console.log('fail:' + JSON.stringify(err));
+        }
+    });
+    ```
+    微信小程序支付
+    ```js
+    uni.requestPayment({
+        provider: 'wxpay',
+        timeStamp: String(Date.now()),
+        nonceStr: 'A1B2C3D4E5',
+        package: 'prepay_id=wx20180101abcdefg',
+        signType: 'MD5',
+        paySign: '',
+        success: function (res) {
+            console.log('success:' + JSON.stringify(res));
+        },
+        fail: function (err) {
+            console.log('fail:' + JSON.stringify(err));
+        }
+    });
+    ```
+    苹果应用内支付
+    ```js
+    uni.requestPayment({
+        provider: 'appleiap',
+        orderInfo: {
+            productid: productId
+        },
+        success: (e) => {
+            uni.showModal({
+                content: "感谢您的赞助",
+                showCancel: false
+            })
+        },
+        fail: (e) => {
+            uni.showModal({
+                content: "支付失败,原因为: " + e.errMsg,
+                showCancel: false
+            })
+        },
+        complete: () => {
+            console.log("payment结束")
+            this.loading = false;
+        }
+    })
+    ```
+
+* 授权:uni.authorize(OBJECT)
+
+    提前向用户发起授权请求。调用后会立刻弹窗询问用户是否同意授权小程序使用某项功能或获取用户的某些数据，但不会实际调用对应接口。如果用户之前已经同意授权，则不会出现弹窗，直接返回成功。如果用户之前拒绝了授权，此接口会直接进入失败回调，一般搭配uni.getSetting和uni.openSetting使用
+
+    请求授权:用户信息、地理位置、通信录、录音等
+
+    * uni.openSetting(OBJECT):调起客户端小程序设置界面，返回用户设置的操作结果。
+
+        ```js
+        uni.openSetting({
+            success(res) {
+                console.log(res.authSetting)
+            }
+        });
+        ```
+
+    * uni.getSetting(OBJECT):获取用户的当前设置
+
+        ```js
+        uni.getSetting({
+            success(res) {
+                console.log(res.authSetting)
+            }
+        })
+        ```
+
+* 收货地址:uni.chooseAddress(OBJECT):获取用户收货地址。调起用户编辑收货地址原生界面，并在编辑完成后返回用户选择的地址，需要用户授权 scope.address。
+
+    ```js
+    uni.chooseAddress({
+        success(res) {
+            console.log(res.userName)
+            console.log(res.postalCode)
+            console.log(res.provinceName)
+            console.log(res.cityName)
+            console.log(res.countyName)
+            console.log(res.detailInfo)
+            console.log(res.nationalCode)
+            console.log(res.telNumber)
+        }
+    })
+    ```
+
+* 发票抬头:uni.chooseInvoiceTitle(OBJECT):选择用户的发票抬头，需要用户授权 scope.invoiceTitle。
+
+    ```js
+    uni.chooseInvoiceTitle({
+        success(res) {
+            console.log(res.type);
+            console.log(res.title);
+            console.log(res.taxNumber);
+            console.log(res.companyAddress);
+            console.log(res.telephone);
+            console.log(res.bankName);
+            console.log(res.bankAccount);
+        }
+    })
+    ```
+
+* 小程序跳转
+
+    * uni.navigateToMiniProgram(OBJECT):打开另一个小程序
+
+        ```js
+        uni.navigateToMiniProgram({
+            appId: '',
+            path: 'pages/index/index?id=123',
+            extraData: {
+                'data1': 'test'
+            },
+            success(res) {
+                // 打开成功
+            }
+        })
+        ```
+
+    * uni.navigateBackMiniProgram(OBJECT):跳转回上一个小程序，只有当另一个小程序跳转到当前小程序时才会能调用成功。
+
+        ```js
+        uni.navigateBackMiniProgram({
+            extraData: {
+                'data1': 'test'
+            },
+            success(res) {
+                // 返回成功
+            }
+        })
+        ```
+
+* 账号信息:uni.getAccountInfoSync()
+
+    ```js
+    const accountInfo = uni.getAccountInfoSync();
+    console.log(accountInfo.miniProgram.appId); // 小程序 appId
+    console.log(accountInfo.plugin.appId); // 插件 appId
+    console.log(accountInfo.plugin.version); // 插件版本号， 'a.b.c' 这样的形式
+    ```
+
 ## 原生组件说明
 
 小程序和App的vue页面，主体是webview渲染的。为了提升性能，小程序和App的vue页面下部分ui元素，比如导航栏、tabbar、video、map使用了原生控件。这种方式被称为混合渲染。
