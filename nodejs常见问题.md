@@ -13,6 +13,9 @@
 - [node和客户端解决跨域的问题](#node和客户端解决跨域的问题)
 - [node应用内存泄漏处理](#node应用内存泄漏处理)
 - [两个node程序交互](#两个node程序交互)
+- [process](#process)
+- [获取本地IP](#获取本地IP)
+- [公钥加密私钥解密](#公钥加密私钥解密)
 
 ---
 
@@ -604,7 +607,7 @@
     });
     ```
 
-###  node应用内存泄漏处理
+### node应用内存泄漏处理
 
 1. 参考链接：
 
@@ -661,3 +664,108 @@
     2.exec: 衍生一个 shell 并在该 shell 中运行命令，当完成时则将stdout 和 stderr 传给回调函数
     3. spawn
 
+### process
+
+1. 参考链接：
+
+   [一篇文章构建你的 NodeJS 知识体系](https://juejin.im/post/6844903767926636558#heading-13)
+
+2. 详解：
+
+    ```js
+    //查看 PATH
+    console.log(process.env.PATH.split(':').join('\n'));
+    //设置 PATH
+    process.env.PATH += ':/a_new_path_to_executables';
+    //获取信息
+    // 获取平台信息
+    process.arch // x64
+    process.platform // darwin
+    // 获取内存使用情况
+    process.memoryUsage();
+    // 获取命令行参数
+    process.argv
+    //process.nextTick 方法把一个回调放在下一次时间轮询队列的头上，结果比 setTimeout 更有效率
+    const EventEmitter = require('events').EventEmitter;
+
+    function complexOperations() {
+        const events = new EventEmitter();
+
+        process.nextTick(function () {
+            events.emit('success');
+        });
+
+        return events;
+    }
+
+    complexOperations().on('success', function () {
+        console.log('success!');
+    });
+    ```
+
+### 获取本地IP
+
+1. 参考链接：
+
+   [一篇文章构建你的 NodeJS 知识体系](https://juejin.im/post/6844903767926636558#heading-13)
+
+2. 详解：
+
+    ```js
+    function get_local_ip() {
+        const interfaces = require('os').networkInterfaces();
+        let IPAdress = '';
+        for (const devName in interfaces) {
+            const iface = interfaces[devName];
+            for (let i = 0; i < iface.length; i++) {
+                const alias = iface[i];
+                if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+                    IPAdress = alias.address;
+                }
+            }
+        }
+        return IPAdress;
+    }
+    ```
+
+### 公钥加密私钥解密
+
+1. 参考链接：
+
+   [一篇文章构建你的 NodeJS 知识体系](https://juejin.im/post/6844903767926636558#heading-13)
+
+2. 详解：
+    
+    生成公钥私钥
+    ```txt
+    利用 openssl 生成公钥私钥 
+    生成公钥：openssl genrsa -out rsa_private_key.pem 1024 
+    生成私钥：openssl rsa -in rsa_private_key.pem -pubout -out rsa_public_key.pem
+    ```
+
+    crypto 使用
+    ```js
+    const crypto = require('crypto');
+    const fs = require('fs');
+
+    const publicKey = fs.readFileSync(`${__dirname}/rsa_public_key.pem`).toString('ascii');
+    const privateKey = fs.readFileSync(`${__dirname}/rsa_private_key.pem`).toString('ascii');
+    console.log(publicKey);
+    console.log(privateKey);
+    const data = 'Chenng';
+    console.log('content: ', data);
+
+    //公钥加密
+    const encodeData = crypto.publicEncrypt(
+        publicKey,
+        Buffer.from(data),
+    ).toString('base64');
+    console.log('encode: ', encodeData);
+
+    //私钥解密
+    const decodeData = crypto.privateDecrypt(
+        privateKey,
+        Buffer.from(encodeData, 'base64'),
+    );
+    console.log('decode: ', decodeData.toString());
+    ```

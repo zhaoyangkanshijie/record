@@ -132,6 +132,8 @@
 
     [react文档](https://react.docschina.org/docs/introducing-jsx.html)
 
+    [React动态绑定className](https://www.jianshu.com/p/8b573482dd12)
+
 2. 详解
 
     * 条件判断
@@ -192,6 +194,13 @@
                 </div>
             )
         }
+        ```
+
+    * 动态class
+
+        ```html
+        <p className={['title',this.state.addColor?'color':null].join(' ')}>标题</p>
+        <p className={`title ${this.state.addColor?'color':null}`}>标题</p>
         ```
 
     * 显示与隐藏
