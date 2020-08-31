@@ -16,6 +16,7 @@
 - [process](#process)
 - [获取本地IP](#获取本地IP)
 - [公钥加密私钥解密](#公钥加密私钥解密)
+- [koa1和koa2区别](koa1和koa2区别)
 
 ---
 
@@ -768,4 +769,112 @@
         Buffer.from(encodeData, 'base64'),
     );
     console.log('decode: ', decodeData.toString());
+    ```
+
+### koa1和koa2区别
+
+1. 参考链接：
+
+   [koa](https://www.liaoxuefeng.com/wiki/1022910821149312/1023025933764960)
+
+   [koa2、koa1、express比较](https://www.jianshu.com/p/a518c3d9c56d)
+
+2. 详解：
+
+    koa2与koa1的最大区别是koa2实现异步是通过async/awaite，koa1实现异步是通过generator/yield，而express实现异步是通过回调函数的方式
+
+    在koa中，一切的流程都是中间件，数据流向遵循洋葱模型，先入后出，是按照类似堆栈的方式组织和执行的
+
+    express
+    ```js
+    var express = require('express');
+    var app = express();
+
+    app.get('/', function (req, res) {
+        res.send('Hello World!');
+    });
+
+    app.listen(3000, function () {
+        console.log('Example app listening on port 3000!');
+    });
+
+    app.get('/test', function (req, res) {
+        fs.readFile('/file1', function (err, data) {
+            if (err) {
+                res.status(500).send('read file1 error');
+            }
+            fs.readFile('/file2', function (err, data) {
+                if (err) {
+                    res.status(500).send('read file2 error');
+                }
+                res.type('text/plain');
+                res.send(data);
+            });
+        });
+    });
+    ```
+
+    koa1
+    ```js
+    var koa = require('koa');
+    var app = koa();
+
+    app.use('/test', function *() {
+        yield doReadFile1();
+        var data = yield doReadFile2();
+        this.body = data;
+    });
+
+    app.listen(3000);
+    ```
+
+    koa2
+    ```js
+    app.use(async (ctx, next) => {
+        await next();
+        var data = await doReadFile();
+        ctx.response.type = 'text/plain';
+        ctx.response.body = data;
+    });
+    ```
+
+### koa2项目结构
+
+1. 参考链接：
+
+   [nodeJs 进阶Koa项目结构详解](https://www.cnblogs.com/wangjiahui/p/12660093.html)
+
+   [koa生成器一键生成koa项目](https://www.jianshu.com/p/8611da03101e)
+
+   [koa2目录结构分享及制作](https://www.jianshu.com/p/8cf2dd99f222)
+
+2. 详解：
+
+    npm 生成
+    ```txt
+    npm install koa-generator -g
+    koa2 projectName
+    ```
+
+    项目结构
+    ```txt
+    bin
+        www             --入口文件
+    node_modules
+    app
+        controller      --接收请求处理逻辑
+        model           --数据库表结构
+        service         --数据库CRUD操作
+    config              --配置文件，如数据库连接密码
+    middleware          --中间件
+    public
+        images
+        javascripts
+        stylesheets
+    routes              --路由
+        ***.js
+    views               --视图
+        ***.pug
+    app.js              --主程序配置
+    package.json
     ```
