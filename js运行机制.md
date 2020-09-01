@@ -974,6 +974,7 @@
    - [触及盲区，这道题前端群里发疯了](https://mp.weixin.qq.com/s/YQEBZo1pdy-5B1Jz8cvWmw)
    - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
    - [11 个 JavaScript 小技巧](https://mp.weixin.qq.com/s/qBuTTXzt7ZNFttXwu5ryMw)
+   - [当裸辞遇到了面试难，你需要了解一下这些面试题](https://juejin.im/post/6866920515420815374)
 
 2. 详解
 
@@ -993,13 +994,52 @@
 
    - 数组长度属性
 
-     ```js
-     const clothes = ["jacket", "t-shirt"];
-     clothes.length = 0; //改变数组长度相当于删除项
-     clothes[0]; // undefined
-     clothes.length = 2; //改回来，数据也丢失了
-     clothes[0]; // undefined
-     ```
+      ```js
+      const clothes = ["jacket", "t-shirt"];
+      clothes.length = 0; //改变数组长度相当于删除项
+      clothes[0]; // undefined
+      clothes.length = 2; //改回来，数据也丢失了
+      clothes[0]; // undefined
+      ```
+
+      push方法会将数组的length + 1, 然后将值放在索引为length - 1的位置，该方法和 call() 或 apply() 一起使用时，可应用在类似数组的对象上。
+      ```js
+      const arr = new Array(2)
+      // 输出  2 [empty * 2]
+      console.log(arr.length, arr)
+      arr.push(1)
+      // 输出  3 [empty * 2, 1]
+      console.log(arr.length, arr)
+      ```
+      nodejs输出
+      ```js
+      var obj = {
+          '2': 3,
+          '3': 4,
+          'length': 2,
+          'splice': Array.prototype.splice,
+          'push': Array.prototype.push
+      }
+      obj.push(1)
+      obj.push(2)
+      console.log(obj)
+
+      { '2': 1,
+        '3': 2,
+        length: 4,
+        splice: [Function: splice],
+        push: [Function: push] }
+      ```
+
+      chrome控制台是如何判断打印的内容是数组还是其他对象呢？chrome就是通过判断对象上面是否有splice和length这两个属性来判断的
+      ```js
+      [empty × 2, 1, 2, splice: ƒ, push: ƒ]
+      ```
+
+      将splice去掉之后，就会输出以下内容
+      ```js
+      {2: 1, 3: 2, length: 4, push: ƒ}
+      ```
 
    - 自动插入分号
 
@@ -1196,6 +1236,44 @@
      xGetter(); // 10,函数里的this指向window
      let getFooX = foo.getX.bind(foo); //使用call和apply同理
      getFooX(); // 90
+     ```
+
+     ```js
+      var num = 1;
+      let obj = {
+          num: 2,
+          add: function() {
+              this.num = 3;
+              // 这里的立即指向函数，因为我们没有手动去指定它的this指向，所以都会指向window
+              (function() {
+                  // 所有这个 this.num 就等于 window.num
+                  console.log(this.num);
+                  this.num = 4;
+              })();
+              console.log(this.num);
+          },
+          sub: function() {
+              console.log(this.num)
+          }
+      }
+      // 下面逐行说明打印的内容
+
+      /**
+      * 在通过obj.add 调用add 函数时，函数的this指向的是obj,这时候第一个this.num=3
+      * 相当于 obj.num = 3 但是里面的立即指向函数this依然是window,
+      * 所以 立即执行函数里面console.log(this.num)输出1，同时 window.num = 4
+      *立即执行函数之后，再输出`this.num`,这时候`this`是`obj`,所以输出3
+      */
+      obj.add() // 输出 1 3
+
+      // 通过上面`obj.add`的执行，obj.name 已经变成了3
+      console.log(obj.num) // 输出3
+      // 这个num是 window.num
+      console.log(num) // 输出4
+      // 如果将obj.sub 赋值给一个新的变量，那么这个函数的作用域将会变成新变量的作用域
+      const sub = obj.sub
+      // 作用域变成了window window.num 是 4
+      sub() // 输出4
      ```
 
    - 执行上下文
