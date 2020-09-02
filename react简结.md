@@ -21,6 +21,11 @@
 * [高阶组件](#高阶组件)
 * [hook](#hook)
 * [react和vue的区别](#react和vue的区别)
+* [Fragments](#Fragments)
+* [插槽](#插槽)
+* [分析器](#分析器)
+
+---
 
 ## react-cli项目构建
 
@@ -134,7 +139,17 @@
 
     [React动态绑定className](https://www.jianshu.com/p/8b573482dd12)
 
+    [React的合成事件](https://www.cnblogs.com/mengff/p/12901674.html)
+
+    [React事件处理和原生JS事件处理](https://www.cnblogs.com/lyraLee/p/11577511.html)
+
 2. 详解
+
+    * 数据绑定
+
+        需要显示的变量要写在state中，并且通过setState修改，这样值变视图变
+
+        不需要显示的变量，可写在constructor中this.??=??，也可以写在render中，这样值变视图不变
 
     * 条件判断
 
@@ -311,6 +326,49 @@
         }
         ```
 
+        ReactJS中的事件对象是React将原生事件对象(event)进行了跨浏览器包装过的合成事件(SyntheticEvent)
+
+        合成事件对象的特点：
+
+        1. 在事件处理函数中，可以正常访问事件属性。
+
+        2. 为了性能考虑，执行完后，合成事件的事件属性将不能再访问。
+
+            * 异步处理函数中，访问不到合成事件的属性。
+
+            * 因为执行异步函数的时候，事件处理函数的上下文消失。
+
+        执行完后，合成事件的属性会被重置为null。所以异步访问合适事件的属性，是无效的。
+
+        解决方法：
+
+        1. 用变量记录事件属性值
+
+        ```js
+        function onClick(event) {
+            console.log(event); // => nullified object.
+            console.log(event.type); // => "click"
+            const eventType = event.type; // => "click"
+
+            setTimeout(function() {
+                console.log(event.type); // => null
+                console.log(eventType); // => "click"
+            }, 0);
+        }
+        ```
+
+        2. e.persist()会将当前的合成事件对象，从对象池中移除，就不会回收该对象了。对象可以被异步程序访问到。
+
+        合成事件阻止冒泡:
+
+        1. e.stopPropagation
+
+            只能阻止合成事件间冒泡，即下层的合成事件，不会冒泡到上层的合成事件。事件本身还都是在document上执行。最多只能阻止document事件不能再冒泡到window上。
+
+        2. e.nativeEvent.stopImmediatePropagation
+
+            能阻止合成事件不会冒泡到document上。
+
     * 函数调用
 
         ```js
@@ -340,6 +398,28 @@
             element,
             document.getElementById('root')
         );
+        ```
+
+    * input双向绑定
+
+        事件对象event中target在控制台查看为null，但是event.target却能获取到目标元素?
+
+        因为React里面的事件并不是真实的DOM事件，而是自己在原生DOM事件上封装的合成事件。
+
+        合成事件是由事件池来管理的，合成事件对象可能会被重用，合成事件的所有属性也会随之被清空。所以当在异步处理程序（如setTimeout等等）中或者浏览器控制台中去访问合成事件的属性，有可能就是空的。
+
+        给出的方案：event.persist()，其实就是将当前的合成事件从事件池中移除了，所以能够继续保有对该事件的引用以及仍然能访问该事件的属性。
+        ```js
+        setTPLinkId(e) {
+            this.setState({
+                id: e.target.value
+            })
+        }
+        render(){
+            return (
+                <input onChange={(e)=>this.setId(e)} value={this.state.id} />
+            )
+        }
         ```
 
 ## react生命周期
@@ -2273,7 +2353,11 @@
 
     [Hook 简介](https://react.docschina.org/docs/hooks-intro.html)
 
-    [React Hooks 使用总结](https://juejin.im/post/6850037283535880205   )
+    [React Hooks 使用总结](https://juejin.im/post/6850037283535880205)
+
+    [写React Hooks前必读](https://mp.weixin.qq.com/s/bUcsqBYdK0DHhvbJ_yTyqQ)
+
+    [React Hook 的底层实现原理](https://mp.weixin.qq.com/s/a2nfI9fnQEh2gm2kGDRQlg)
 
 2. 详解
 
@@ -2281,194 +2365,332 @@
 
     Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
 
-    React 中提供的 hooks：
+    * React 中提供的 hooks：
 
-    * useState：setState
-    * useReducer：setState，同时 useState 也是该方法的封装
-    * useRef: refuseImperativeHandle: 给 ref 分配特定的属性
-    * useContext: context，需配合 createContext 使用
-    * useMemo: 可以对 setState 的优化
-    * useCallback: useMemo 的变形，对函数进行优化useEffect: 类似 componentDidMount/Update, componentWillUnmount，当效果为 componentDidMount/Update 时，总是在整个更新周期的最后（页面渲染完成后）才执行
-    * useLayoutEffect: 用法与 useEffect 相同，区别在于该方法的回调会在数据更新完成后，页面渲染之前进行，该方法会阻碍页面的渲染useDebugValue：用于在 React 开发者工具中显示自定义 hook 的标签
+        * useState：setState
+        * useReducer：setState，同时 useState 也是该方法的封装
+        * useRef: refuseImperativeHandle: 给 ref 分配特定的属性
+        * useContext: context，需配合 createContext 使用
+        * useMemo: 可以对 setState 的优化
+        * useCallback: useMemo 的变形，对函数进行优化useEffect: 类似 componentDidMount/Update, componentWillUnmount，当效果为 componentDidMount/Update 时，总是在整个更新周期的最后（页面渲染完成后）才执行
+        * useLayoutEffect: 用法与 useEffect 相同，区别在于该方法的回调会在数据更新完成后，页面渲染之前进行，该方法会阻碍页面的渲染useDebugValue：用于在 React 开发者工具中显示自定义 hook 的标签
 
-    普通hook
-    ```js
-    import React, { useState } from 'react';
+    * hook底层实现原理
 
-    function Example() {
-        // useState 会返回一对值：当前状态和一个让你更新它的函数,但是它不会把新的 state 和旧的 state 进行合并
-        const [count, setCount] = useState(0);
-        const [age, setAge] = useState(42);
-        const [fruit, setFruit] = useState('banana');
-        const [todos, setTodos] = useState([{ text: 'Learn Hooks' }]);
+        * dispatcher
 
-        return (
-            <div>
-            <p>You clicked {count} times</p>
-            <button onClick={() => setCount(count + 1)}>
-                Click me
-            </button>
-            </div>
-        );
-    }
-    ```
-    等价class
-    ```js
-    class Example extends React.Component {
-        constructor(props) {
-            super(props);
-            this.state = {
-                count: 0
-            };
-        }
+            包含了hooks函数的共享对象。它将根据ReactDom的渲染阶段来动态分配或者清除，并且确保用户无法在 React 组件外访问hooks。
 
-        render() {
-            return (
-            <div>
-                <p>You clicked {this.state.count} times</p>
-                <button onClick={() => this.setState({ count: this.state.count + 1 })}>
-                Click me
-                </button>
-            </div>
-            );
-        }
-    }
-    ```
+        * The hooks queue
 
-    Effect Hook
-    ```js
-    import React, { useState, useEffect } from 'react';
+            属性：
 
-    function Example() {
-        const [count, setCount] = useState(0);
-        // 相当于 componentDidMount 和 componentDidUpdate:
-        // 副作用函数
-        useEffect(() => {
-            document.title = `You clicked ${count} times`;
-        });
+            1. 它的初始状态在首次渲染时被创建。
+            2. 它的状态可以即时更新。
+            3. React会在之后的渲染中记住hook的状态
+            4. React会根据调用顺序为您提供正确的状态
+            5. React会知道这个hook属于哪个Fiber。
 
-        const [isOnline, setIsOnline] = useState(null);
+            组件状态像是一个普通的对象，在处理hook时，它应该被视为一个队列，其中每个节点代表一个状态的单个模型
 
-        function handleStatusChange(status) {
-            setIsOnline(status.isOnline);
-        }
+            当前fiber及其hooks队列中的第一个hook节点将被存储在全局变量中，只要我们调用一个hook函数（useXXX()），就会知道要在哪个上下文中运行
 
-        //可以多次使用
-        useEffect(() => {
-            ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
-            // 通过返回一个函数来指定如何“清除”副作用
-            return () => {
-                ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
-            };
-        });
+             一旦更新完成，一个叫做finishHooks()的函数将被调用，其中hooks队列中第一个节点的引用将存储在渲染完成的fiber对象的memoizedState属性中。这意味着hooks队列及其状态可以在外部被定位到
 
-        if (isOnline === null) {
-            return 'Loading...';
-        }
-        return isOnline ? 'Online' : 'Offline';
-    }
-    ```
+        * State hooks
 
-    注意：
+            useState返回的结果是一个reducer状态和一个action dispatcher
 
-    1. 只能在函数最外层调用 Hook。不要在循环、条件判断或者子函数中调用
-    2. 只能在 React 的函数组件中调用 Hook。不要在其他 JavaScript 函数中调用。（除了自定义HOOK）
+        * Effect hooks
 
-    重用状态逻辑： Hook 的每次调用都有一个完全独立的 state
+            属性：
 
-    抽取逻辑useFriendStatus
-    ```js
-    import React, { useState, useEffect } from 'react';
+            1. 它们是在渲染时创建的，但它们在绘制后运行。
+            2. 它们将在下一次绘制之前被销毁。
+            3. 它们按照已经被定义的顺序执行。
 
-    function useFriendStatus(friendID) {
-        const [isOnline, setIsOnline] = useState(null);
+            每个effect node应该具有以下模式：
 
-        function handleStatusChange(status) {
-            setIsOnline(status.isOnline);
-        }
+            1. tag - 一个二进制数，它将决定effect的行为
+            2. create - 绘制后应该运行的回调
+            3. destroy - 从create()返回的回调应该在初始渲染之前运行。
+            4. inputs - 一组值，用于确定是否应销毁和重新创建effect
+            5. next - 函数组件中定义的下一个effect的引用。
 
-        useEffect(() => {
-            ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
-            return () => {
-            ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
-            };
-        });
 
-        return isOnline;
-    }
-    ```
-    组件1使用
-    ```js
-    function FriendStatus(props) {
-        const isOnline = useFriendStatus(props.friend.id);
+    * 用法
 
-        if (isOnline === null) {
-            return 'Loading...';
-        }
-        return isOnline ? 'Online' : 'Offline';
-    }
-    ```
-    组件2使用
-    ```js
-    function FriendListItem(props) {
-        const isOnline = useFriendStatus(props.friend.id);
+        1. 普通hook
 
-        return (
-            <li style={{ color: isOnline ? 'green' : 'black' }}>
-            {props.friend.name}
-            </li>
-        );
-    }
-    ```
+            ```js
+            import React, { useState } from 'react';
 
-    useContext：不使用组件嵌套就可以订阅 React 的 Context
-    ```js
-    function Example() {
-        const locale = useContext(LocaleContext);
-        const theme = useContext(ThemeContext);
-        // ...
-    }
-    ```
+            function Example() {
+                // useState 会返回一对值：当前状态和一个让你更新它的函数,但是它不会把新的 state 和旧的 state 进行合并
+                const [count, setCount] = useState(0);
+                const [age, setAge] = useState(42);
+                const [fruit, setFruit] = useState('banana');
+                const [todos, setTodos] = useState([{ text: 'Learn Hooks' }]);
 
-    useReducer:通过 reducer 来管理组件本地的复杂 state
-    ```js
-    function Todos() {
-        const [todos, dispatch] = useReducer(todosReducer);
-        // ...
-    }
-    ```
-
-    自定义hook：一个函数，其名称以use开头，函数内部可以调用其他的 Hook
-    ```js
-    // myhooks.js
-    // 下面自定义了一个获取窗口长宽值的hooks
-    import React, { useState, useEffect, useCallback } from 'react'
-
-    function useWinSize() {
-        const [size, setSize] = useState({
-            width: document.documentElement.clientWidth,
-            height: document.documentElement.clientHeight
-        })
-        const onResize = useCallback(() => {
-            setSize({
-            width: document.documentElement.clientWidth,
-            height: document.documentElement.clientHeight
-            })
-        }, [])
-
-        useEffect(() => {
-            window.addEventListener('resize', onResize)
-            return () => {
-            window.removeEventListener('reisze', onResize)
+                return (
+                    <div>
+                    <p>You clicked {count} times</p>
+                    <button onClick={() => setCount(count + 1)}>
+                        Click me
+                    </button>
+                    </div>
+                );
             }
-        }, [onResize])
-        return size
-    }
+            ```
+            等价class
+            ```js
+            class Example extends React.Component {
+                constructor(props) {
+                    super(props);
+                    this.state = {
+                        count: 0
+                    };
+                }
 
-    export const useWinSize
+                render() {
+                    return (
+                    <div>
+                        <p>You clicked {this.state.count} times</p>
+                        <button onClick={() => this.setState({ count: this.state.count + 1 })}>
+                        Click me
+                        </button>
+                    </div>
+                    );
+                }
+            }
+            ```
+            错误代码示例：{count} 到「1」以后就加不上了，状态变更 触发 页面渲染的本质是props, state, context其中一个参数变更,每次 count 都是重新声明的变量，指向一个全新的数据；每次的 setCount 虽然是重新声明的，但指向的是同一个引用
+            ```js
+            function ErrorDemo() {
+                const [count, setCount] = useState(0);
+                const dom = useRef(null);
+                useEffect(() => {
+                    dom.current.addEventListener('click', () => setCount(count + 1));
+                }, []);
+                return <div ref={dom}>{count}</div>;
+            }
+            ```
+            修正方法1：消除依赖
+            ```js
+            () => setCount(prevCount => ++prevCount)
+            ```
+            修正方法2：重新绑定事件
+            ```js
+            useEffect(() => {
+                const $dom = dom.current;
+                const event = () => {
+                    console.log(count);
+                    setCount(prev => ++prev);
+                };
+                $dom.addEventListener('click', event);
+                return () => $dom.removeEventListener('click', event);
+            }, [count]);
+            ```
+            修正方法3：useRef
+            ```js
+            const [count, setCount] = useState(0);
+            const countRef = useRef(count);
+            useEffect(() => {
+                dom.current.addEventListener('click', () => {
+                        console.log(countRef.current);
+                        setCount(prevCount => {
+                        const newCount = ++prevCount;
+                        countRef.current = newCount;
+                        return newCount;
+                    });
+                });
+            }, []);
+            ```
 
-    ```
+        2. Effect Hook
 
+            ```js
+            import React, { useState, useEffect } from 'react';
+
+            function Example() {
+                const [count, setCount] = useState(0);
+                // 相当于 componentDidMount 和 componentDidUpdate:
+                // 副作用函数
+                useEffect(() => {
+                    document.title = `You clicked ${count} times`;
+                });
+
+                const [isOnline, setIsOnline] = useState(null);
+
+                function handleStatusChange(status) {
+                    setIsOnline(status.isOnline);
+                }
+
+                //可以多次使用
+                useEffect(() => {
+                    ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+                    // 通过返回一个函数来指定如何“清除”副作用
+                    return () => {
+                        ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+                    };
+                });
+
+                if (isOnline === null) {
+                    return 'Loading...';
+                }
+                return isOnline ? 'Online' : 'Offline';
+            }
+            ```
+
+            注意：
+
+            1. 只能在函数最外层调用 Hook。不要在循环、条件判断或者子函数中调用
+            2. 只能在 React 的函数组件中调用 Hook。不要在其他 JavaScript 函数中调用。（除了自定义HOOK）
+
+            重用状态逻辑： Hook 的每次调用都有一个完全独立的 state
+
+            抽取逻辑useFriendStatus
+            ```js
+            import React, { useState, useEffect } from 'react';
+
+            function useFriendStatus(friendID) {
+                const [isOnline, setIsOnline] = useState(null);
+
+                function handleStatusChange(status) {
+                    setIsOnline(status.isOnline);
+                }
+
+                useEffect(() => {
+                    ChatAPI.subscribeToFriendStatus(friendID, handleStatusChange);
+                    return () => {
+                    ChatAPI.unsubscribeFromFriendStatus(friendID, handleStatusChange);
+                    };
+                });
+
+                return isOnline;
+            }
+            ```
+            组件1使用
+            ```js
+            function FriendStatus(props) {
+                const isOnline = useFriendStatus(props.friend.id);
+
+                if (isOnline === null) {
+                    return 'Loading...';
+                }
+                return isOnline ? 'Online' : 'Offline';
+            }
+            ```
+            组件2使用
+            ```js
+            function FriendListItem(props) {
+                const isOnline = useFriendStatus(props.friend.id);
+
+                return (
+                    <li style={{ color: isOnline ? 'green' : 'black' }}>
+                    {props.friend.name}
+                    </li>
+                );
+            }
+            ```
+
+        3. useContext：不使用组件嵌套就可以订阅 React 的 Context
+
+            ```js
+            function Example() {
+                const locale = useContext(LocaleContext);
+                const theme = useContext(ThemeContext);
+                // ...
+            }
+            ```
+
+        4. useReducer:通过 reducer 来管理组件本地的复杂 state
+
+            ```js
+            function Todos() {
+                const [todos, dispatch] = useReducer(todosReducer);
+                // ...
+            }
+            ```
+
+        5. 自定义hook：一个函数，其名称以use开头，函数内部可以调用其他的 Hook
+
+            ```js
+            // myhooks.js
+            // 下面自定义了一个获取窗口长宽值的hooks
+            import React, { useState, useEffect, useCallback } from 'react'
+
+            function useWinSize() {
+                const [size, setSize] = useState({
+                    width: document.documentElement.clientWidth,
+                    height: document.documentElement.clientHeight
+                })
+                const onResize = useCallback(() => {
+                    setSize({
+                    width: document.documentElement.clientWidth,
+                    height: document.documentElement.clientHeight
+                    })
+                }, [])
+
+                useEffect(() => {
+                    window.addEventListener('resize', onResize)
+                    return () => {
+                    window.removeEventListener('reisze', onResize)
+                    }
+                }, [onResize])
+                return size
+            }
+            export const useWinSize
+            ```
+
+        6. useCallback(缓存函数)和useMemo(缓存函数的返回值)
+
+            在组件内部，那些会成为其他useEffect依赖项的方法，建议用 useCallback 包裹，或者直接编写在引用它的useEffect中
+
+            如果function会作为props传递给子组件，一定要使用 useCallback 包裹，对于子组件来说，如果每次render都会导致传递的函数发生变化，可能会造成非常大的困扰。同时也不利于react做渲染优化
+
+            节流防抖很容易将useCallback与useMemo混淆
+
+            错误示例:防止用户连续点击触发多次变更，加了防抖，停止点击1秒后才触发 count + 1 ，这个组件在理想下是OK的。但我们的页面组件非常多，这个 BadDemo 可能由于父级操作就重新render了。现在假使我们页面每500毫秒会重新render一次，那么就是这样：每次render导致handleClick其实是不同的函数，那么这个防抖自然而然就失效了。
+            ```js
+            function BadDemo() {
+                const [count, setCount] = useState(1);
+                const [, setRerender] = useState(false);
+                const handleClick = debounce(() => {
+                    setCount(c => ++c);
+                }, 1000);
+                useEffect(() => {
+                    // 每500ms，组件重新render
+                    window.setInterval(() => {
+                    setRerender(r => !r);
+                    }, 500);
+                }, []);
+                return <div onClick={handleClick}>{count}</div>;
+            }
+            ```
+            错误修改1:只有第一次点击会count++,因为传入useCallback的是一段执行语句，而不是一个函数声明
+            ```js
+            const handleClick = useCallback(
+                debounce(() => {
+                    setCount(count + 1);
+                }, 1000),
+                []
+            );
+            ```
+            正确修改:这样保证每当 count 发生变化时，会返回一个新的加了防抖功能的新函数
+            ```js
+            const handleClick = useMemo(
+                () => debounce(() => {
+                    setCount(count + 1);
+                }, 1000),
+                [count]
+            );
+            ```
+            「连续点击后1秒，真正执行逻辑，在这过程中的重复点击失效」。而如果业务逻辑改成了「点击后立即发生状态变更，再之后的1秒内重复点击无效」又失效了
+            ```js
+            const handleClick = useMemo( () => throttle(() => { setCount(count + 1); }, 1000), [count] );
+            ```
+            这样又回到「消除依赖」 或 「使用ref」
 
 ## react和vue的区别
 
@@ -2490,3 +2712,129 @@
     比如 redux的combineReducer就对应vuex的modules，
     比如reselect就对应vuex的getter和vue组件的computed，
     vuex的mutation是直接改变的原始数据，而redux的reducer是返回一个全新的state，所以redux结合immutable来优化性能，vue不需要。
+
+## Fragments
+
+1. 参考链接
+
+    [react文档](https://react.docschina.org/docs/fragments.html)
+
+2. 详解
+
+    Fragments 允许你将子列表分组，而无需向 DOM 添加额外节点
+
+    如果Columns组件是以div包裹，则div紧跟tr，标签无效
+    ```jsx
+    class Table extends React.Component {
+        render() {
+            return (
+                <table>
+                    <tr>
+                        <Columns />
+                    </tr>
+                </table>
+            );
+        }
+    }
+    ```
+    把Columns组件改为如下
+    ```jsx
+    class Columns extends React.Component {
+        render() {
+            return (
+                <React.Fragment>
+                    <td>Hello</td>
+                    <td>World</td>
+                </React.Fragment>
+            );
+        }
+    }
+    ```
+    带 key 的 Fragments(key 是唯一可以传递给 Fragment 的属性)
+    ```jsx
+    function Glossary(props) {
+        return (
+            <dl>
+            {props.items.map(item => (
+                // 没有`key`，React 会发出一个关键警告
+                <React.Fragment key={item.id}>
+                <dt>{item.term}</dt>
+                <dd>{item.description}</dd>
+                </React.Fragment>
+            ))}
+            </dl>
+        );
+    }
+    ```
+
+## 插槽
+
+1. 参考链接
+
+    [react文档](https://react.docschina.org/docs/portals.html)
+
+2. 详解
+
+    Portal 提供了一种将子节点渲染到存在于父组件以外的 DOM 节点的方案。
+
+    用法
+
+    React 挂载了一个新的 div，并且把子元素渲染其中
+    ```jsx
+    render() {
+        return (
+            <div>
+            {this.props.children}
+            </div>
+        );
+    }
+    ```
+
+    将子元素插入到 DOM 节点中的指定位置,domNode是一个可以在任何位置的有效 DOM 节点
+    ```jsx
+    render() {
+        return ReactDOM.createPortal(
+            this.props.children,
+            domNode
+        );
+    }
+    ```
+
+## 分析器
+
+1. 参考链接
+
+    [react文档](https://react.docschina.org/docs/profiler.html)
+
+2. 详解
+
+    Profiler 能添加在 React 树中的任何地方来测量树中这部分渲染所带来的开销。 它的目的是识别出应用中渲染较慢的部分。
+
+    样例
+    ```jsx
+    render(
+        <App>
+            <Profiler id="Panel" onRender={callback}>
+            <Panel {...props}>
+                <Profiler id="Content" onRender={callback}>
+                <Content {...props} />
+                </Profiler>
+                <Profiler id="PreviewPane" onRender={callback}>
+                <PreviewPane {...props} />
+                </Profiler>
+            </Panel>
+            </Profiler>
+        </App>
+    );
+    function onRenderCallback(
+        id, // 发生提交的 Profiler 树的 “id”
+        phase, // "mount" （如果组件树刚加载） 或者 "update" （如果它重渲染了）之一
+        actualDuration, // 本次更新 committed 花费的渲染时间
+        baseDuration, // 估计不使用 memoization 的情况下渲染整颗子树需要的时间
+        startTime, // 本次更新中 React 开始渲染的时间
+        commitTime, // 本次更新中 React committed 的时间
+        interactions // 属于本次更新的 interactions 的集合
+    ) {
+    // 合计或记录渲染时间。。。
+    }
+    ```

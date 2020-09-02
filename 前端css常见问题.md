@@ -13,6 +13,7 @@
 - [grid](#grid)
 - [css比较函数](#css比较函数)
 - [before和after边框效果](#before和after边框效果)
+- [sass比css方便的地方](#sass比css方便的地方)
 
 ---
 
@@ -1826,11 +1827,104 @@
   </style>
   ```
 
+### sass比css方便的地方
 
+1. 参考链接：
 
+   [sass](https://www.sass.hk/)
 
+2. 详解：
 
+  1. 嵌套
 
+    ```scss
+    .container{
 
+      .box{
 
+        &.active{
 
+        }
+
+        &:hover{
+
+        }
+
+        &::after{
+
+        }
+      }
+    }
+    ```
+
+  2. 变量
+
+    ```scss
+    $imagePath: "/public/images/";//用于设置background，不用每次都写路径
+    $step: 3;//用于计算一行中每一块的宽度
+    $activeColor: #00A8FF;//定义公共active颜色
+    $errorColor: #FF3B30;//定义公共error颜色
+    ```
+
+  3. 函数与继承
+
+    ```scss
+    @function pxToRem($px, $base: 375px) {
+        $min: 1 / $base * 10 * 1;
+        $result: $px / $base * 10 * 1;
+
+        @if $result < 0.027 and $result > 0 {
+            @return 2px;
+        }
+
+        @else {
+            @return $px / $base * 10 * 1rem;
+        }
+    }
+
+    @mixin bg($path,$name,$ext) {
+        [data-dpr="1"] & {
+            background-image: url($path+$name+"."+$ext);
+        }
+
+        [data-dpr="2"] & {
+            background-image: url($path+$name+"@2x."+$ext);
+        }
+
+        [data-dpr="3"] & {
+            background-image: url($path+$name+"@3x."+$ext);
+        }
+    }
+
+    .box{
+      height: pxToRem(60px);
+      @include bg($imagePath,"hint_24","png");
+    }
+    ```
+
+  4. 循环
+
+    ```scss
+    .icon{
+        width: pxToRem(24px);
+        height: pxToRem(24px);
+        background-size: 100% 100%;
+        background-position: center center;
+
+        @for $i from 1 through $step{
+            &.icon#{$i}{
+                @include bg($imagePath,"step#{$i}_normal","png");
+            }
+        }
+    }
+    ```
+
+  5. 计算
+
+    ```scss
+    $step: 3;
+    .box{
+      width: (100%/$step);
+      height: percentage(211/(211+8+124));
+    }
+    ```
