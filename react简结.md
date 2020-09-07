@@ -2750,6 +2750,19 @@
         }
     }
     ```
+    可简写
+    ```jsx
+    class Columns extends React.Component {
+        render() {
+            return (
+                <>
+                    <td>Hello</td>
+                    <td>World</td>
+                </>
+            );
+        }
+    }
+    ```
     带 key 的 Fragments(key 是唯一可以传递给 Fragment 的属性)
     ```jsx
     function Glossary(props) {

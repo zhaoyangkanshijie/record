@@ -1967,6 +1967,17 @@ configeWebpack: (config) => {
 * 体验
 
   * app-skeleton 骨架屏
+
+      [网页骨架屏自动生成方案（dps）](https://mp.weixin.qq.com/s/tcItM2EvY2zPXk_NQCV-4g)
+
+      vue-skeleton-webpack-plugin
+
+      page-skeleton-webpack-plugin
+
+      draw-page-structure
+
+      https://github.com/famanoder/dps
+
   * app-shell
   * pwa serviceworker
 
