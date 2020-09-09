@@ -1257,6 +1257,13 @@
         }
         ```
 
+        单行文字居中，多行文字居左
+        ```css
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        ```
+
     3. flex-direction:主轴的方向（即项目的排列方向）
 
         * row（默认值）：主轴为水平方向，起点在左端。
@@ -1318,7 +1325,6 @@
               align-self: auto | flex-start | flex-end | center | baseline | stretch;
           }
           ```
-
 
 ### overflow:hidden 清除浮动的原理
 

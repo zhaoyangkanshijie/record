@@ -2632,6 +2632,385 @@ configeWebpack: (config) => {
       </script>
       ```
 
+
+5. vue3新写法
+
+  参考：[vue3 从入门到实战（上）](https://juejin.im/post/6869686131756269576#heading-0)
+
+  * 生命周期及nextTick
+
+    ```js
+    import { onMounted, onBeforeMount, nextTick} from 'vue'
+    export default {
+        name: 'App',
+        setup() {
+            nextTick(() => {
+                console.log('nextTick');
+            })
+            onMounted(() => {
+                console.log('mounted');
+            })
+
+            onBeforeMount(() => {
+                console.log('beforeMounted');
+            })
+            console.log('hello vite Vue3')
+        }
+    }
+    ```
+
+  * 响应式系统和methods
+
+    ```html
+    <template>
+      <div>
+        <h3>vue3响应式系统和methods</h3>
+        <div>年龄:{{ myAge }}</div>
+        <div>明年的年龄:{{ mylastAge }}</div>
+        <button @click="AgeAdd">年龄+1</button>
+        <div>姓名:{{ myName }}</div>
+        <div>
+          爱好:
+          <div v-for="(hoppy, index) in hoppys" :key="index">{{ hoppy }}</div>
+        </div>
+        <div>来自 {{ state1.from }}</div>
+      </div>
+    </template>
+
+    <script lang="ts">
+    import HelloWorld from './components/HelloWorld.vue'
+    import {
+      ref,
+      toRefs,
+      reactive,
+      watchEffect,
+      watch,
+      computed,
+      onMounted
+    } from 'vue'
+    export default {
+      name: 'App',
+      setup () {
+        let myAge = ref(23) //响应式数据
+        let myName = '黄力豪' //非响应式数据
+        const state = reactive({
+          //复杂数据响应式  类似data 基于proxy 操作数组也会触发响应式
+          hoppys: ['中国象棋', 'javaScript']
+        })
+        const state1 = reactive({
+          // 可以定义多个数据源
+          from: '江西抚州'
+        })
+        watchEffect(() => {
+          // watch 副作用函数 首次加载会触发,当值发生变化也会触发
+          console.log('年龄:' + myAge.value)
+          console.log('爱好:' + state.hoppys)
+        })
+        let mylastAge = computed(() => {
+          return myAge.value + 1
+        })
+        setTimeout(() => {
+          state.hoppys[1] = 'typeScript'
+          myAge.value += 1
+          myName = '力豪'
+        }, 1000)
+        watch([state.hoppys, myAge], newVal => {
+          //可以监听多个值
+          console.log('watch:' + newVal)
+        })
+        const methods = {
+          AgeAdd () {
+            myAge.value += 1
+          }
+        }
+        return {
+          myName,
+          myAge,
+          ...toRefs(state), //将reactive转化为ref
+          state1,
+          mylastAge,
+          ...methods
+        }
+      }
+    }
+    </script>
+    ```
+
+  * props和ref绑定dom
+
+    ```html
+    <template>
+      <div>
+        <h3 ref="H3">ref,props 和一些小功能</h3>
+      </div>
+    </template>
+
+    <script>
+    import { ref, onMounted } from 'vue'
+
+    export default {
+      setup () {
+        let H3 = ref(null)
+        onMounted(() => {
+          H3.value.style.color = 'red'
+        })
+
+        //还有一些小功能
+        //  readonly 数据只读
+        //  shallow -( reactive,ref,readonly) 只代理一层
+        //  toRaw 将reactive或者readonly 的值还原
+        //markRow 永远不会被代理
+        //isRef isReactive 等
+        //unref 如果参数是ref返回他的value否则返回参数
+        return { H3 }
+      }
+    }
+    </script>
+    ```
+
+  * 组件
+
+    ```html
+    <template>
+      <div>
+        <h3>组件</h3>
+        
+      <Hello name="黄力豪" @updateName="updateName"></Hello>
+      <Age :age="33"></Age>
+      <myInput> 
+        <template v-slot:desc>
+          <div>
+            这是输入框
+          </div>
+        </template>
+      </myInput>
+      </div>
+    </template>
+
+    <script lang="ts">
+    import Hello from './TSX/Hello'
+    import Age from './components/Age.vue'
+
+    export default {
+      components:{
+          Hello,Age
+      },
+      setup(){
+        const updateName =()=>{
+          console.log(1);
+        }
+        return {updateName}
+      }
+    }
+    </script>
+    ```
+    age
+    ```html
+    <template>
+      <div>
+        <div>{{ props.age }}</div>
+      </div>
+    </template>
+
+    <script lang="ts">
+    import { reactive, isReadonly, toRaw, inject, ref, readonly } from 'vue'
+    interface Props {
+      age: number
+    }
+    import vuex from '../shared/vuex'
+    export default {
+      props: {
+        age: {
+          type: Number,
+          default: 0
+        }
+      },
+      setup (props: Props) {
+        //   props 是readonly
+        //不要尝试去解构props，因为这样会让props失去响应式
+        // props.age = 23
+        // console.log(isReadonly(props))
+        props = reactive(toRaw(props)) 
+        return {
+          props
+        }
+      }
+    }
+    </script>
+    ```
+    hello
+    ```js
+    export default {
+      setup (
+        props: object,
+        { attrs, emit }: { attrs: { name: string }; emit: Function }
+      ) {
+        return { attrs, emit }
+      },
+      render (props: { attrs: { name: string }; emit: Function }) {
+        return (
+          <div
+            onClick={() => {
+              props.emit('updateName')
+            }}
+          >
+            hello {props.attrs.name}
+          </div>
+        )
+      }
+    }
+    ```
+    全局组件
+    ```js
+    import {
+      reactive,
+      vShow,
+      vModelText,
+      withDirectives,
+      App,
+      isReadonly
+    } from 'vue'
+    interface Props {
+      number: number
+      $slots: {
+        desc: () => any[]
+      }
+      desc: () => {}
+      input: any
+      isShow: boolean
+    }
+    import { toRefs } from 'vue'
+    const install = (app: App) => {
+      app.component('myInput', {
+        props: {
+          number: {
+            type: String
+          }
+        },
+        setup (props: Props, { slots }) {
+          const state = reactive({ input: 0, isShow: false })
+          return { ...toRefs(slots), ...toRefs(state) }
+        },
+        data () {
+          return {
+            number: 0
+          }
+        },
+        render (props: Props) {
+          console.log(isReadonly(props))
+          return (
+            <div>
+              <div v-show={props.isShow}>你看不见我</div>
+              {props.desc()}
+              {props.$slots.desc()[0]}
+              {/* {withDirectives(<input type='text' />, [[vModelText, this.number]])} */}
+              <div>{this.number}</div>
+              {withDirectives(<h1>Count: 2</h1>, [[vShow, true]])}
+            </div>
+          )
+        }
+      })
+    }
+
+    export default {
+      install
+    }
+    ```
+
+  * 指令与css属性响应式
+
+    ```html
+    <template>
+      <div>
+        css 属性响应式与指令
+    <h1 v-highlight="红色">这是一串被高亮为红色的字</h1>
+      </div>
+    </template>
+
+    <script>
+    export default {
+        setup(){
+          return {
+              "红色": 'red',
+              "字体大小": '40px',
+          }  
+        }
+    }
+    </script>
+
+    <style vars='{红色, 字体大小}'>
+      div{
+          color: var(--红色);
+          font-size: var(--字体大小);
+      }
+    </style>
+    ```
+    指令
+    ```js
+    const app = createApp(Demo)
+    app.directive('highlight', {
+        beforeMount(el, binding, vnode) {
+            el.style.color = binding.value;
+        },
+        pdated(){},
+        mounted(){},
+        created(){}    
+    });
+    ```
+
+  * 全局通信
+
+    provide和inject
+    ```html
+    <template> 
+      <div>
+      <h3>全局通信</h3>
+        {{myName}}
+        <Age></Age>
+        爱好：{{hoppy}}
+      </div>
+    </template>
+
+    <script lang="ts">
+    import {toRefs, provide,ref, inject} from 'vue'
+    import vuex from './shared/vuex'
+    import Age from './components/Age.vue'
+
+    export default {
+    components:{
+      Age
+    },
+    setup(){
+        const {myStore, updateName, updatedAge } = vuex
+        updateName('力豪')
+        updatedAge(18)
+        provide('hoppy',ref('javascript'))
+        let hoppy = ref(inject('hoppy') as string)
+        return {...toRefs(myStore),hoppy}
+    }
+    }
+    </script>
+    ```
+
+    vuex
+    ```js
+    import { reactive } from 'vue';
+
+    const myStore = {
+        myName: '黄力豪',
+        myAge: 23
+    };
+
+    const updateName = (newName: string) => {
+        myStore.myName = newName;
+    };
+    const updatedAge = (newAge: number) => {
+        myStore.myAge = newAge;
+    };
+
+    export default { myStore, updateName, updatedAge };
+    ```
+
 ## vue-loader 原理
 
 * 概念
