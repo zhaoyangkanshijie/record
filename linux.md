@@ -2,6 +2,7 @@
 
 * [文件属性](#文件属性)
 * [文件目录管理](#文件目录管理)
+* [文件传输](#文件传输)
 * [文本编辑器](#文本编辑器)
 * [包管理器](#包管理器)
 * [网络管理](#网络管理)
@@ -274,6 +275,25 @@
     * 把textfile1和textfile2的内容加上行号（空白行不加）之后将内容加到textfile3：cat -b textfile1 textfile2 >> textfile3
 
 
+
+
+## 文件传输
+
+* 参考链接：[Linux中rz和sz命令用法详解](https://blog.csdn.net/magaiou/article/details/80322060)
+
+rz，sz是Linux/Unix同Windows进行ZModem文件传输的命令行工具。优点就是不用再开一个sftp工具登录上去上传下载文件。
+sz：将选定的文件发送（send）到本地机器
+rz：运行该命令会弹出一个文件选择窗口，从本地选择文件上传到Linux服务器
+安装命令：
+
+yum install lrzsz
+从服务端发送文件到客户端：
+
+sz filename
+从客户端上传文件到服务端：
+
+rz
+在弹出的框中选择文件，上传文件的用户和组是当前登录的用户
 
 ## 文本编辑器
 
