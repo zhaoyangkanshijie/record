@@ -2635,7 +2635,11 @@ configeWebpack: (config) => {
 
 5. vue3新写法
 
-  参考：[vue3 从入门到实战（上）](https://juejin.im/post/6869686131756269576#heading-0)
+  参考：
+  
+  [vue3 从入门到实战（上）](https://juejin.im/post/6869686131756269576#heading-0)
+
+  [使用Vue3.0，我收获了哪些知识点（二）](https://juejin.im/post/6872113750636232712#heading-0)
 
   * 生命周期及nextTick
 
@@ -2993,22 +2997,109 @@ configeWebpack: (config) => {
     ```
 
     vuex
+
+    store/index.js
     ```js
-    import { reactive } from 'vue';
+    import { createStore } from 'vuex'
 
-    const myStore = {
-        myName: '黄力豪',
-        myAge: 23
-    };
+    export default createStore({
+      state: {},
+      mutations: {},
+      actions: {}
+    })
+    ```
 
-    const updateName = (newName: string) => {
-        myStore.myName = newName;
-    };
-    const updatedAge = (newAge: number) => {
-        myStore.myAge = newAge;
-    };
+    main.js
+    ```js
+    createApp(App).use(store)
+    ```
 
-    export default { myStore, updateName, updatedAge };
+    使用
+    ```js
+    import router from '@/router'
+    import store from '@/store'
+    router.beforeEach(async (to, from, next) => {
+      if (
+        to.path !== '/login' &&
+        store.getters['permission/getRoleMenus'].length === 0
+      ) {
+        await store.dispatch('permission/loadRoleMenus')
+        next()
+      } else {
+        next()
+      }
+    })
+    ```
+
+
+  * 路由
+
+    router.js
+    ```js
+    import { createRouter, createWebHashHistory } from 'vue-router'
+    const router = createRouter({
+      // vue-router有hash和history两种路由模式，可以通过createWebHashHistory和createWebHistory来指定
+      history: createWebHashHistory(),
+      routes
+    })
+
+    router.beforeEach(() => {
+      
+    })
+
+    router.afterEach(() => {
+      
+    })
+    export default router
+    ```
+
+    main.js
+    ```js
+    createApp(App).use(router)
+    ```
+
+    使用1
+    ```js
+    import { useRoute, useRouter() } from 'vue-router'
+
+    export default {
+      setup() {
+        // 获取当前路由
+        const route = useRoute()
+        // 获取路由实例
+        const router = useRouter()
+        // 当当前路由发生变化时，调用回调函数
+        watch(() => route, () => {
+          // 回调函数
+        }, {
+          immediate: true,
+          deep: true
+        })
+        
+        // 路由跳转
+        function getHome() {
+          router.push({
+            path: '/home'
+          })
+        }
+        
+        return {
+          getHome()
+        }
+      }
+    }
+    ```
+
+    使用2
+    ```js
+    import { onBeforeRouteUpdate, useRoute } from 'vue-router'
+    export default {
+      setup() {
+        onBeforeRouteUpdate(() => {
+          // 当当前路由发生变化时，调用回调函数
+        })
+      }
+    }
     ```
 
 ## vue-loader 原理
