@@ -25,6 +25,7 @@
 * [插槽](#插槽)
 * [分析器](#分析器)
 * [setState同步异步](#setState同步异步)
+* [react源码简述](#react源码简述)
 
 ---
 
@@ -2869,3 +2870,191 @@
     2. 能不能同步，什么时候是同步的？
 
         可以同步，在原生事件与setTimeout中是同步的
+
+## react源码简述
+
+参考链接：
+
+[「面试」你不知道的 React 和 Vue 的 20 个区别](https://mp.weixin.qq.com/s/vZo1XlMLxrzAyALzIPlktw)
+
+* React.Component
+
+    1. 原型上挂载了setState和forceUpdate方法;
+    2. 提供props,context,refs 等属性;
+    3. 组件定义通过 extends 关键字继承 Component;
+
+* 挂载
+
+    1. render 方法调用了React.createElement方法(实际是ReactElement方法)；
+    2. ReactDOM.render(component，mountNode)的形式对自定义组件/原生DOM/字符串进行挂载；
+    3. 调用了内部的ReactMount.render，进而执行ReactMount._renderSubtreeIntoContainer,就是将子DOM插入容器；
+    4. ReactDOM.render()根据传入不同参数会创建四大类组件，返回一个 VNode；
+    5. 四大类组件封装的过程中，调用了mountComponet方法，触发生命周期，解析出 HTML；
+
+* 组件类型和生命周期
+
+    1. ReactEmptyComponent,ReactTextComponent,ReactDOMComponent组件没有触发生命周期;
+    2. ReactCompositeComponent类型调用mountComponent方法,会触发生命周期,处理 state 执行componentWillMount钩子,执行 render,获得 html,执行componentDidMounted
+
+* data 更新 setState
+
+    1. setState 通过一个队列机制来实现 state 更新，当执行 setState() 时，会将需要更新的 state 浅合并后,根据变量 isBatchingUpdates(默认为 false)判断是直接更新还是放入状态队列；
+
+    2. 通过js的事件绑定程序 addEventListener 和使用setTimeout/setInterval 等 React 无法掌控的 API情况下isBatchingUpdates 为 false，同步更新。除了这几种情况外batchedUpdates函数将isBatchingUpdates修改为 true；
+
+    3. 放入队列的不会立即更新 state，队列机制可以高效的批量更新 state。而如果不通过setState，直接修改this.state 的值，则不会放入状态队列;
+
+    4. setState 依次直接设置 state 值会被合并，但是传入 function 不会被合并；
+
+        让setState接受一个函数的API的设计是相当棒的！不仅符合函数式编程的思想，让开发者写出没有副作用的函数，而且我们并不去修改组件状态，只是把要改变的状态和结果返回给 React，维护状态的活完全交给React去做。正是把流程的控制权交给了React，所以React才能协调多个setState调用的关系
+
+    5. 更新后执行四个钩子:shouleComponentUpdate,componentWillUpdate,render,componentDidUpdate
+
+* 数据绑定
+
+    setState 更新 data 后,shouldComponentUpdate为 true会生成 VNode,为 false 会结束;2.VNode会调用 DOM diff,为 true 更新组件;
+
+    * 注意
+
+        1. 单向数据流;
+        2. setSate 更新data 值后，组件自己处理;
+        3. differ 是首位是除删除外是固定不动的,然后依次遍历对比;
+
+    * AST 和 VNode 
+
+        1. 都是 JSON 对象；
+        2. AST 是HTML,JS,Java或其他语言的语法的映射对象，VNode 只是 DOM 的映射对象，AST 范围更广；
+        3. AST的每层的element，包含自身节点的信息(tag,attr等)，同时parent，children分别指向其父element和子element，层层嵌套，形成一棵树
+        4. vnode就是一系列关键属性如标签名、数据、子节点的集合，可以认为是简化了的dom:
+
+    * differ 算法
+
+        1. Virtual DOM 中的首个节点不执行移动操作（除非它要被移除），以该节点为原点，其它节点都去寻找自己的新位置; 一句话就是首位是老大,不移动;
+        2. 在 Virtual DOM 的顺序中，每一个节点与前一个节点的先后顺序与在 Real DOM 中的顺序进行比较，如果顺序相同，则不必移动，否则就移动到前一个节点的前面或后面;
+        3. tree diff:只会同级比较,如果是跨级的移动,会先删除节点 A,再创建对应的 A;将 O(n3) 复杂度的问题转换成 O(n) 复杂度;
+        4. component diff:
+        
+            根据batchingStrategy.isBatchingUpdates值是否为 true;如果true 同一类型组件,按照 tree differ 对比;如果 false将组件放入 dirtyComponent,下面子节点全部替换
+
+        5. element differ:
+        
+            tree differ 下面有三种节点操作:INSERT_MARKUP（插入）、MOVE_EXISTING（移动）和 REMOVE_NODE（删除）
+
+* 关于循环加key
+
+    1. 都是相同的节点，但由于位置发生变化，导致需要进行繁杂低效的删除、创建操作，其实只要对这些节点进行位置移动即可；
+
+        新老集合进行 diff 差异化对比，发现 B != A，则创建并插入 B 至新集合，删除老集合 A；以此类推，创建并插入 A、D 和 C，删除 B、C 和 D；
+
+    2. 新建：从新集合中取得 E，判断老集合中不存在相同节点 E，则创建新节点 ElastIndex不做处理E的位置更新为新集合中的位置，nextIndex++；
+
+    3. 删除：当完成新集合中所有节点 diff 时，最后还需要对老集合进行循环遍历，判断是否存在新集合中没有但老集合中仍存在的节点，发现存在这样的节点 D，因此删除节点 D；
+
+    4. 总结:
+
+        显然加了 key 后操作步骤要少很多,性能更好；
+        
+        但是都会存在一个问题，上面场景二只需要移动首位，位置就可对应，但是由于首位是老大不能动，所以应该尽量减少将最后一个节点移动到首位
+
+* 关于循环不用index为key
+
+    1. 如果列表是纯静态展示，不会 CRUD，这样用 index 作为 key 没得啥问题
+
+    2. 如果是list可能会重新渲染
+
+        ```js
+        const list = [1,2,3,4];
+        // list 删除 4 不会有问题,但是如果删除了非 4 就会有问题
+        // 如果删除 2
+        const listN= [1,3,4]
+        // 这样index对应的值就变化了,整个 list 会重新渲染
+        ```
+
+* Redux
+
+    1. Redux则是一个纯粹的状态管理系统，React利用React-Redux将它与React框架结合起来；
+
+    2. 只有一个用createStore方法创建一个 store；
+
+    3. action接收 view 发出的通知，告诉 Store State 要改变，有一个 type 属性；
+
+    4. reducer:纯函数来处理事件，纯函数指一个函数的返回结果只依赖于它的参数，并且在执行过程里面没有副作用,得到一个新的 state；
+
+    5. 源码组成:
+
+        1. createStore 创建仓库，接受reducer作为参数
+        2. bindActionCreator 绑定store.dispatch和action 的关系  
+        3. combineReducers 合并多个reducers  
+        4. applyMiddleware 洋葱模型的中间件,介于dispatch和action之间，重写dispatch
+        5. compose 整合多个中间件
+        6. 单一数据流;state 是可读的,必须通过 action 改变;reducer设计成纯函数;
+
+    * 对比
+        1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
+        2. Vuex：view——>commit——>mutations——>state变化——>view变化（同步操作） 
+        view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
+
+* redux 为什么要把 reducer 设计成纯函数
+
+    1. 纯函数概念:一个函数的返回结果只依赖于它的参数(外面的变量不会改变自己)，并且在执行过程里面没有副作用(自己不会改变外面的变量)；
+
+    2. 主要就是为了减小副作用，避免影响 state 值，造成错误的渲染；
+
+    3. 把reducer设计成纯函数，便于调试追踪改变记录；
+
+    4. 源码组成:
+
+        1. connect 将store和dispatch分别映射成props属性对象，返回组件
+        2. context 上下文 导出Provider和 consumer
+        3. Provider 一个接受store的组件，通过context api传递给所有子组件
+
+    5. 使用
+    ```js
+    function createStore(reducer) {
+        let state;
+        let listeners=[];
+        function getState() {
+            return state;
+        }
+
+        function dispatch(action) {
+            state=reducer(state,action);
+            listeners.forEach(l=>l());
+        }
+
+        function subscribe(listener) {
+            listeners.push(listener);
+            return function () {
+                const index=listeners.indexOf(listener);
+                listeners.splice(inddx,1);
+            }
+        }
+        
+        dispatch({});
+        
+        return {
+            getState,
+            dispatch,
+            subscribe
+        }
+
+    }
+    ```
+
+* React 的 state 是对象
+
+    因为 state 是定义在函数里面,作用域已经独立
+
+* react16 的 fiber 理解
+
+    1. react 可以分为 differ 阶段和 commit(操作 dom)阶段；
+
+    2. v16 之前是向下递归算法，会阻塞；
+
+    3. v16 引入了代号为 fiber 的异步渲染架构；
+
+    4. fiber 核心实现了一个基于优先级和requestIdleCallback循环任务调度算法；
+
+    5. 算法可以把任务拆分成小任务，可以随时终止和恢复任务，可以根据优先级不同控制执行顺序。
+
+    

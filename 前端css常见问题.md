@@ -14,6 +14,10 @@
 - [css比较函数](#css比较函数)
 - [before和after边框效果](#before和after边框效果)
 - [sass比css方便的地方](#sass比css方便的地方)
+- [禁止选中文本](#禁止选中文本)
+- [更改选中文本的背景颜色](#更改选中文本的背景颜色)
+- [在不使用br的情况下将文本换行](#在不使用br的情况下将文本换行)
+- [设置字与字之间的间距](#设置字与字之间的间距)
 
 ---
 
@@ -1934,3 +1938,64 @@
       height: percentage(211/(211+8+124));
     }
     ```
+
+## 禁止选中文本
+
+1. 参考链接
+
+  [这五个有用的 CSS 属性完全被我忽视了](https://mp.weixin.qq.com/s/aYWI2ZV1Pg8NM4_4C2u83Q)
+
+2. 详解
+
+  ```css
+  element {
+    -webkit-user-select: none; /* Safari */
+    -ms-user-select: none; /* IE 10+ and Edge */
+    user-select: none; /* Standard syntax */
+  }
+  ```
+
+## 更改选中文本的背景颜色
+
+1. 参考链接
+
+  [这五个有用的 CSS 属性完全被我忽视了](https://mp.weixin.qq.com/s/aYWI2ZV1Pg8NM4_4C2u83Q)
+
+2. 详解
+
+  ```css
+  ::selection {
+    color: #ececec;
+    background: #222831;
+  }
+  ```
+
+## 在不使用br的情况下将文本换行
+
+1. 参考链接
+
+  [这五个有用的 CSS 属性完全被我忽视了](https://mp.weixin.qq.com/s/aYWI2ZV1Pg8NM4_4C2u83Q)
+
+2. 详解
+
+  ```css
+  element {
+    white-space: pre-wrap; /*pre-wrap*/
+    white-space: pre-line; /*pre-line*/
+  }
+  ```
+
+## 设置字与字之间的间距
+
+1. 参考链接
+
+  [这五个有用的 CSS 属性完全被我忽视了](https://mp.weixin.qq.com/s/aYWI2ZV1Pg8NM4_4C2u83Q)
+
+2. 详解
+
+  ```css
+  element {
+    word-spacing: 6px; /* word spacing wow such */
+  }
+  ```
+

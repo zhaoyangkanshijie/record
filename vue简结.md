@@ -51,6 +51,7 @@
 * [.sync语法糖](#.sync语法糖)
 * [深层选择器](#深层选择器)
 * [递归菜单](#递归菜单)
+* [vue源码简述](#vue源码简述)
 
 ---
 
@@ -3702,3 +3703,143 @@ this.$emit('update:bar',newValue);
 * 点击菜单项，emit到上一层，每一层向数组push当前选中的id
 * 样式区分可把depth拼接到class即可
 * 注意数据源变动引发的 bug：组件渲染完成后过了一秒，菜单的最外层只剩下一项了，这时候在一秒之内点击了最外层的第二项，这个组件在数据源改变之后，会报错undefined，因为数据源已经改变了，但是组件内部的 activeId 状态依然停留在了一个已经不存在了的 id 上，所以如果activeId不存在了，需要设置为第一项，watch设为同步事件
+
+## vue源码简述
+
+参考链接：
+
+[「面试」你不知道的 React 和 Vue 的 20 个区别](https://mp.weixin.qq.com/s/vZo1XlMLxrzAyALzIPlktw)
+
+* 挂载
+
+  初始化$mounted会挂载组件,不存在 render 函数时需要编译(compile);
+
+* 编译
+
+  * parse解析
+
+    parse 调用 parseHtml 方法，方法核心是利用正则解析 template 的指令，class 和 stype，得到 AST
+
+  * optimize优化
+
+    optimize 作用标记 static 静态节点，后面 patch,diff会跳过静态节点
+
+  * generate生成
+
+    generate 是将 AST 转化为 render 函数表达式，执行 vm._render 方法将 render 表达式转化为VNode，得到 render 和 staticRenderFns 字符串
+
+    * AST 和 VNode 
+
+      1. 都是 JSON 对象；
+      2. AST 是HTML,JS,Java或其他语言的语法的映射对象，VNode 只是 DOM 的映射对象，AST 范围更广；
+      3. AST的每层的element，包含自身节点的信息(tag,attr等)，同时parent，children分别指向其父element和子element，层层嵌套，形成一棵树
+      4. vnode就是一系列关键属性如标签名、数据、子节点的集合，可以认为是简化了的dom:
+
+    * differ 算法
+
+      1. 自主研发了一套Virtual DOM，是借鉴开源库snabbdom，
+      2. 同级比较，因为在 compile 阶段的optimize标记了static 点，可以减少 differ 次数；
+      3. Vue 的这个 DOM Diff 过程就是一个查找排序的过程，遍历 Virtual DOM 的节点，在 Real DOM 中找到对应的节点，并移动到新的位置上。不过这套算法使用了双向遍历的方式，加速了遍历的速度
+
+  * render渲染
+  
+    vm._render 方法调用了 VNode 创建的方法createElement
+
+* 依赖收集与监听
+
+  1. 调用 observer()，作用是遍历对象属性进行双向绑定
+  2. 在 observer 过程中会注册Object.defineProperty的 get 方法进行依赖收集，依赖收集是将Watcher 对象的实例放入 Dep 中；
+  3. Object.defineProperty的 set 会调用Dep 对象的 notify 方法通知它内部所有的 Watcher 对象调用对应的 update()进行视图更新；
+
+  * Vue 的 this 改变
+
+      1. vue 自身维护 一个 更新队列，当你设置 this.a = 'new value'，DOM 并不会马上更新；
+      2. 在更新 DOM 时是异步执行的。只要侦听到数据变化，Vue 将开启一个队列，并缓冲在同一事件循环中发生的所有数据变更；
+      3. 如果同一个 watcher 被多次触发，只会被推入到队列中一次；
+      4. 也就是下一个事件循环开始时执行更新时才会进行必要的DOM更新和去重；
+      5. 所以 for 循环 10000次 this.a = i vue只会更新一次，而不会更新10000次;
+      6. data 变化后如果 computed 或 watch 监听则会执行;
+
+* diff 和 patch
+
+  1. patch 的 differ 是将同层的树节点进行比较,通过唯一的 key 进行区分，时间复杂度只有 O(n)；
+  2. 上面得到 set 被触发会调用 watcher 的 update()修改视图；
+  3. update 方法里面调用 patch()得到同级的 VNode 变化;
+  4. update 方法里面调用createElm通过虚拟节点创建真实的 DOM 并插入到它的父节点中；
+  5. createElm实质是遍历虚拟 dom，逆向解析成真实 dom；
+
+  * 注意：
+  1. v-model 可以实现双向数据流,但只是v-bind:value 和 v-on:input的语法糖;
+  2. 通过 this 改变值，会触发 Object.defineProperty的 set，将依赖放入队列，下一个事件循环开始时执行更新时才会进行必要的DOM更新，是外部监听处理更新；
+  3. differcompile 阶段的optimize标记了static 点，可以减少 differ 次数，而且是采用双向遍历方法；
+
+* 关于循环加key
+
+  1. 将使用了双向遍历的方式查找,发现 A,B,C,D都不等,先删除再创建
+
+  2. 双向遍历的方式查找只需要创建E，删除D，改变 B、C、A的位置
+
+* 关于循环不用index为key
+
+  1. 如果列表是纯静态展示，不会 CRUD，这样用 index 作为 key 没得啥问题
+
+  2. 如果是list可能会重新渲染
+
+    ```js
+    const list = [1,2,3,4];
+    // list 删除 4 不会有问题,但是如果删除了非 4 就会有问题
+    // 如果删除 2
+    const listN= [1,3,4]
+    // 这样index对应的值就变化了,整个 list 会重新渲染
+    ```
+
+* Vuex
+
+  1. Vuex是吸收了Redux的经验，放弃了一些特性并做了一些优化，代价就是VUEX只能和VUE配合；
+  2. store:通过 new Vuex.store创建 store，辅助函数mapState；
+  3. getters:获取state，有辅助函数 mapGetters；
+  4. action:异步改变 state，像ajax，辅助函数mapActions；
+  5. mutation:同步改变 state,辅助函数mapMutations；
+
+  * 对比
+    1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
+    2. Vuex：view——>commit——>mutations——>state变化——>view变化（同步操作） 
+    view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
+
+* 双向绑定和 vuex 是否冲突
+
+  1. 在严格模式中使用Vuex，当用户输入时，v-model会试图直接修改属性值，但这个修改不是在mutation中修改的，所以会抛出一个错误；
+
+  2. 当需要在组件中使用vuex中的state时，有2种解决方案：
+
+    ```ts
+    在input中绑定value(vuex中的state)，然后监听input的change或者input事件，在事件回调中调用mutation修改state的值;  
+
+    // 双向绑定计算属性
+    <input v-model="message">
+
+    computed: {
+      message: {
+        get () {
+          return this.$store.state.obj.message
+        },
+        set (value) {
+          this.$store.commit('updateMessage', value)
+        }
+      }
+    }
+    ```
+
+* Vue 的 data 必须是函数
+
+  对象是引用类型，内存是存贮引用地址，那么子组件中的 data 属性值会互相污染，产生副作用；
+
+  如果是函数，函数的{}构成作用域，每个实例相互独立，不会相互影响；
+
+* Vue 的合并策略
+
+  1. 生命周期钩子:合并为数组
+  2. watch：合并为数组，执行有先后顺序；
+  3. assets（components、filters、directives）：合并为原型链式结构,合并的策略就是返回一个合并后的新对象，新对象的自有属性全部来自 childVal， 但是通过原型链委托在了 parentVal 上
+  4. data为function，需要合并执行后的结果，就是执行 parentVal 和 childVal 的函数，然后再合并函数返回的对象；
+  5. 自定义合并策略
