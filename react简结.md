@@ -2860,6 +2860,8 @@
 1. 参考链接
 
     [前端面试题 （一）:（React）setState为什么异步？能不能同步？什么时候异步？什么时候同步？](https://blog.csdn.net/qq_39989929/article/details/94041143)
+    
+    [React 架构的演变 - 从同步到异步](https://juejin.im/post/6875681311500025869#heading-2)
 
 2. 详解
 
@@ -2870,6 +2872,40 @@
     2. 能不能同步，什么时候是同步的？
 
         可以同步，在原生事件与setTimeout中是同步的
+
+    * V15 setState更新机制
+
+        setState 的主要逻辑都在 ReactUpdateQueue 中实现，在调用 setState 后，并没有立即修改 state，而是将传入的参数放到了组件内部的 _pendingStateQueue 中，之后调用 enqueueUpdate 来进行更新。
+
+        enqueueUpdate 首先会通过 batchingStrategy.isBatchingUpdates 判断当前是否在更新流程，如果不在更新流程，会调用 batchingStrategy.batchedUpdates() 进行更新。如果在流程中，会将待更新的组件放入 dirtyComponents 进行缓存。
+
+        atchingStrategy 是 React 进行批处理的一种策略，该策略的实现基于 Transaction,Transaction 通过 perform 方法启动，然后通过扩展的 getTransactionWrappers 获取一个数组，该数组内存在多个 wrapper 对象，每个对象包含两个属性：initialize、close。perform 中会先调用所有的 wrapper.initialize，然后调用传入的回调，最后调用所有的 wrapper.close。
+
+        启动事务可以拆分成三步来看：
+
+        1. 先执行 wrapper 的 initialize，此时的 initialize 都是一些空函数，可以直接跳过；
+        2. 然后执行 callback（也就是 enqueueUpdate），执行 enqueueUpdate 时，由于已经进入了更新状态，batchingStrategy.isBatchingUpdates 被修改成了 true，所以最后还是会把 component 放入脏组件队列，等待更新；
+        3. 后面执行的两个 close 方法，第一个方法的 flushBatchedUpdates 是用来进行组件更新的，第二个方法用来修改更新状态，表示更新已经结束。
+
+        flushBatchedUpdates 里面会取出所有的脏组件队列进行 diff，最后更新到 DOM。
+
+        在组件 mount 和事件调用的时候，都会调用 batchedUpdates，这个时候已经开始了事务，所以只要不脱离 React，不管多少次 setState 都会把其组件放入脏组件队列等待更新。一旦脱离 React 的管理，比如在 setTimeout 中，setState 立马变成单打独斗。
+
+    * Concurrent 
+
+        React 16 引入的 Fiber 架构，就是为了后续的异步渲染能力做铺垫，虽然架构已经切换，但是异步渲染的能力并没有正式上线，我们只能在实验版中使用。异步渲染指的是 Concurrent 模式(Concurrent 模式是 React 的新功能，可帮助应用保持响应，并根据用户的设备性能和网速进行适当的调整。)
+
+        除了 Concurrent 模式，React 还提供了另外两个模式， Legacy 模式依旧是同步更新的方式，可以认为和旧版本保持一致的兼容模式，而 Blocking 模式是一个过渡版本。
+
+        Concurrent 模式说白就是让组件更新异步化，切分时间片，渲染之前的调度、diff、更新都只在指定时间片进行，如果超时就暂停放到下个时间片进行，中途给浏览器一个喘息的时间。
+
+        浏览器是单线程，它将 GUI 描绘，时间器处理，事件处理，JS 执行，远程资源加载统统放在一起。当做某件事，只有将它做完才能做下一件事。如果有足够的时间，浏览器是会对我们的代码进行编译优化（JIT）及进行热代码优化，一些 DOM 操作，内部也会对 reflow 进行处理。reflow 是一个性能黑洞，很可能让页面的大多数元素进行重新布局。
+
+        浏览器的运作流程: 渲染 -> tasks -> 渲染 -> tasks -> 渲染 -> ....
+
+        这些 tasks 中有些我们可控，有些不可控，比如 setTimeout 什么时候执行不好说，它总是不准时；资源加载时间不可控。但一些JS我们可以控制，让它们分派执行，tasks的时长不宜过长，这样浏览器就有时间优化 JS 代码与修正 reflow ！
+
+        说明在 Concurrent 模式下，即使脱离了 React 的生命周期(在setTimeout中)，setState 依旧能够合并更新。主要原因是 Concurrent 模式下，真正的更新操作被移到了下一个事件队列中，类似于 Vue 的 nextTick。
 
 ## react源码简述
 
