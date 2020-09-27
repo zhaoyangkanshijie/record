@@ -26,6 +26,7 @@
 * [分析器](#分析器)
 * [setState同步异步](#setState同步异步)
 * [react源码简述](#react源码简述)
+* [点击外部元素](#点击外部元素)
 
 ---
 
@@ -3093,4 +3094,38 @@
 
     5. 算法可以把任务拆分成小任务，可以随时终止和恢复任务，可以根据优先级不同控制执行顺序。
 
-    
+## 点击外部元素
+
+参考链接：
+
+[react 实现点击div外部触发事件](https://blog.csdn.net/zSY_snake/article/details/89405112)
+
+```js
+
+constructor(){
+    this.divElement = null;
+}
+ 
+render() {
+    return(
+        <div ref={ node => this.divElement = node}><div/>
+    )
+}
+
+componentDidMount() {
+    document.addEventListener('click', this.outDivClickHandler);   
+}
+
+componentWillUnmount() {
+    document.removeEventListener('click', this.outDivClickHandler);
+}
+
+
+outDivClickHandler(e) {
+    const target = e.target;
+    // 组件已挂载且事件触发对象不在div内
+    if( this.divElement  && target !== this.menu && !this.divElement.contains(target)) {
+        
+    }  
+}
+```
