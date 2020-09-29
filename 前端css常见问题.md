@@ -21,6 +21,117 @@
 
 ---
 
+
+### 已知或者未知宽度的垂直水平居中
+
+1. 参考链接：
+
+   [一年半经验，百度，有赞，阿里前端面试总结](https://zhuanlan.zhihu.com/p/83803079)
+
+2. 详解：
+
+   ```scss
+   // 1
+   .wrapper {
+     position: relative;
+     .box {
+       position: absolute;
+       top: 50%;
+       left: 50%;
+       width: 100px;
+       height: 100px;
+       margin: -50px 0 0 -50px;
+     }
+   }
+
+   // 2
+   .wrapper {
+     position: relative;
+     .box {
+       position: absolute;
+       top: 50%;
+       left: 50%;
+       transform: translate(-50%, -50%);
+     }
+   }
+   // 3
+   .wrapper {
+     .box {
+       display: flex;
+       justify-content: center;
+       align-items: center;
+       height: 100px;
+     }
+   }
+
+   // 4
+   .wrapper {
+     display: table;
+     .box {
+       display: table-cell;
+       vertical-align: middle;
+     }
+   }
+   ```
+
+   - 弹窗窗口不定宽高居中 + 窗口带图标不定宽标题居中
+
+      ```html
+      <div class="mask">
+          <div class="modal">
+            <div class="head-group">
+                <div class="head-icon"></div>
+                <p class="head-word">提示</p>
+            </div>
+          </div>
+      </div>
+      ```
+      ```scss
+      .mask{
+          position: fixed;
+          width: 100%;
+          height: 100%;
+          background-color: rgba($color: #000000, $alpha: 0.2);
+          z-index: 999;
+          top: 0;
+          left: 0;
+
+          .modal{
+              background: #FFFFFF;
+              box-shadow: 0 2px 10px 0 rgba(0,0,0,0.20);
+              position: absolute;
+              left: 50%;
+              top: 50%;
+              transform: translate(-50%,-50%);
+              text-align: center;
+
+              .head-group{
+                  height: 24px;
+                  display: inline-block;
+
+                  .head-icon{
+                      width: 24px;
+                      height: 24px;
+                      @include bg($imagePath,"warning_24","png");
+                      background-size: 100% 100%;
+                      background-position: center center;
+                      background-repeat: no-repeat;
+                      float: left;
+                  }
+
+                  .head-word{
+                      font-size: 16px;
+                      color: #333333;
+                      line-height: 24px;
+                      float: left;
+                      margin-left: 8px;
+                  }
+              }
+          }
+      }
+      ```
+
+
 ### 三角形
 
 1.  参考链接：
