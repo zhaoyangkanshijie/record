@@ -18,6 +18,7 @@
 - [更改选中文本的背景颜色](#更改选中文本的背景颜色)
 - [在不使用br的情况下将文本换行](#在不使用br的情况下将文本换行)
 - [设置字与字之间的间距](#设置字与字之间的间距)
+- [媒体查询手机屏幕横屏竖屏](#媒体查询手机屏幕横屏竖屏)
 
 ---
 
@@ -2110,3 +2111,26 @@
   }
   ```
 
+## 媒体查询手机屏幕横屏竖屏
+
+1. 参考链接
+
+  [这五个有用的 CSS 属性完全被我忽视了](https://mp.weixin.qq.com/s/aYWI2ZV1Pg8NM4_4C2u83Q)
+
+2. 详解
+
+  ```css
+  /*手机横屏时执行*/
+  @media screen and (orientation:landscape){
+      .txtle{
+          color: red
+      }
+  }
+  
+  /*手机竖屏时执行*/
+  @media screen and (orientation:portrait){
+      #wrap{
+          display:none;
+      }
+  }
+  ```
