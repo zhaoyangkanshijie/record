@@ -52,6 +52,7 @@
 * [深层选择器](#深层选择器)
 * [递归菜单](#递归菜单)
 * [vue源码简述](#vue源码简述)
+* [页面加载闪烁问题](#页面加载闪烁问题)
 
 ---
 
@@ -3843,3 +3844,19 @@ this.$emit('update:bar',newValue);
   3. assets（components、filters、directives）：合并为原型链式结构,合并的策略就是返回一个合并后的新对象，新对象的自有属性全部来自 childVal， 但是通过原型链委托在了 parentVal 上
   4. data为function，需要合并执行后的结果，就是执行 parentVal 和 childVal 的函数，然后再合并函数返回的对象；
   5. 自定义合并策略
+
+## 页面加载闪烁问题
+
+参考链接：
+
+[vue页面加载闪烁问题的解决方法](https://www.jb51.net/article/137288.htm)
+
+这个指令可以隐藏未编译的Mustache标签直到实例准备完毕
+```css
+[v-cloak]{
+    display:none;
+}
+<div v-cloak>
+    {{ message }}
+</div>
+```
