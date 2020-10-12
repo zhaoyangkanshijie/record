@@ -3104,6 +3104,121 @@ configeWebpack: (config) => {
     }
     ```
 
+  * 总结
+
+    1. 数据、方法，需要return，才能给template使用
+    2. 失去2个生命周期:beforecreate/created，生命周期改名:beforeDestroy->onBeforeUnmount/destroyed->onUnmounted，新增生命周期:onRenderTracked/ onRenderTriggered/onErrorCaptured
+    3. ref和reactive均能使数据变为响应式，ref针对单数据，需要XX.value=XXX赋值，reactive则无限制，XX.XXX = XXXX赋值
+    4. 组件可定义name/props，props和context(emit,attrs,slots)传入setup后使用，用法依旧
+    5. template和style的用法依旧
+    6. 样例
+    ```html
+    <template>
+        <div>
+            <p @click="changeMessage()">{{message}}</p>
+            <p @click="methods.changeMessage2()">{{state.message}}</p>
+            <p @click="changeMessage3()">{{state.lowerCaseMessage}}</p>
+            <p>{{newMessage}}</p>
+        </div>
+    </template>
+
+    <script>
+    import { ref, reactive, onMounted, computed, watch, watchEffect, onRenderTracked, onRenderTriggered, onBeforeUpdate, onUpdated, onBeforeUnmount, onUnmounted, onErrorCaptured } from "vue";
+    export default {
+        name: 'test',
+        props: {
+            propsData: String
+        },
+        //props,context:emit,attrs,slots
+        setup(props, context) {
+            //data
+            const message = ref(new Date().toString());
+            const state = reactive({
+                message: new Date().toString(),
+                lowerCaseMessage: computed(() => state.message.toLowerCase())
+            })
+
+            //computed
+            const newMessage = computed(()=>{
+              return message.value + Math.random().toString();
+            })
+
+            //beforeCreate created
+            setTimeout(() => {
+              message.value = '1'
+            }, 1000)
+            
+            //method
+            const changeMessage = () => {
+                message.value = 'hello';
+            }
+            const methods = {
+                changeMessage2() {
+                    message.value = 'hello2';
+                },
+                changeMessage3() {
+                    message.value = 'hello3';
+                }
+            }
+
+            onMounted(() => {
+                console.log(props, context, context.emit, context.attrs, context.slots)
+                // const timer = setInterval(()=>{
+                //     message.value = Math.random().toString();
+                //     state.message = Math.random().toString();
+                // },1000);
+            })
+            onBeforeUpdate(() => {
+                console.log('onBeforeUpdate')
+            })
+            onUpdated(() => {
+                console.log('onUpdated')
+            })
+            onBeforeUnmount(() => {
+                console.log('onBeforeUnmount')
+            })
+            onUnmounted(() => {
+                console.log('onUnmounted')
+            })
+            //当一个 reactive对象属性或一个ref被追踪时触发
+            onRenderTracked((e)=>{
+                console.log(e)
+            })
+            //依赖项变更被触发时
+            onRenderTriggered((e)=>{
+                console.log(e);
+            })
+            onErrorCaptured((e)=>{
+                console.log(e);
+            })
+
+            //watch
+            watch([message, state.lowerCaseMessage], newVal => {
+              //可以监听多个值
+              console.log('watch:' + newVal)
+            })
+            watchEffect(() => {
+              // watch 副作用函数 首次加载会触发,当值发生变化也会触发
+              console.log('message.value:' + message.value)
+            })
+            
+            return {
+                message,
+                state,
+                newMessage,
+                changeMessage,
+                methods,
+                ...methods
+            }
+        }
+    }
+    </script>
+
+    <style scoped>
+
+    </style>
+    ```
+
 ## vue-loader 原理
 
 * 概念
