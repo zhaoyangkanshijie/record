@@ -53,6 +53,7 @@
 * [递归菜单](#递归菜单)
 * [vue源码简述](#vue源码简述)
 * [页面加载闪烁问题](#页面加载闪烁问题)
+* [Vue3.0数据响应机制](#Vue3.0数据响应机制)
 
 ---
 
@@ -3974,4 +3975,238 @@ this.$emit('update:bar',newValue);
 <div v-cloak>
     {{ message }}
 </div>
+```
+
+## Vue3.0数据响应机制
+
+参考链接：
+
+[vue 3.0 原理源码进阶](https://www.cnblogs.com/fs0196/p/12691407.html)
+
+1. 实现响应式数据reactive
+
+```js
+const toProxy = new WeakMap(); // 存放被代理过的对象
+const toRaw = new WeakMap(); // 存放已经代理过的对象
+function reactive(target) {//对应vue2的defineReactive()
+  // 创建响应式对象
+  return createReactiveObject(target);
+}
+function isObject(target) {
+  return typeof target === "object" && target !== null;
+}
+function hasOwn(target,key){
+  return target.hasOwnProperty(key);
+}
+function createReactiveObject(target) {
+  if (!isObject(target)) {
+    return target;
+  }
+  let observed = toProxy.get(target);
+  if(observed){ // 判断是否被代理过
+    return observed;
+  }
+  if(toRaw.has(target)){ // 判断是否要重复代理
+    return target;
+  }
+  const handlers = {
+    get(target, key, receiver) {
+      // 取值
+      console.log("获取");
+      let res = Reflect.get(target, key, receiver);
+      // track(target,'get',key); // 依赖收集
+      return isObject(res) ? reactive(res) : res;
+    },
+    set(target, key, value, receiver) {
+      let oldValue = target[key];
+      let hadKey = hasOwn(target,key);
+      let result = Reflect.set(target, key, value, receiver);
+      if(!hadKey){
+        console.log('更新 添加')
+        // trigger(target,'add',key); // 触发添加
+      }else if(oldValue !== value){
+        console.log('更新 修改')
+        // trigger(target,'set',key); // 触发修改
+      }
+      return result;
+    },
+    deleteProperty(target, key) {
+      console.log("删除");
+      const result = Reflect.deleteProperty(target, key);
+      return result;
+    }
+  };
+  // 开始代理
+  observed = new Proxy(target, handlers);
+  toProxy.set(target,observed);
+  toRaw.set(observed,target); // 做映射表
+  return observed;
+}
+let p = reactive({
+  a: 'hello',
+  b: 1,
+  c: [1,2],
+  d: {
+    a: 'hi'
+  }
+});
+console.log(p.a); // 获取
+p.a = 'hello2'; // 更新 修改
+p.b = 2; // 更新 修改
+p.c = [2,3,4]; // 更新 修改
+p.d = {
+  a: 'hi2',
+  b: 1
+}; // 更新 修改
+p.e = 3; // 更新 添加
+console.log(p); 
+delete p.a; // 删除
+```
+
+2. 实现依赖收集effect与数据更新tigger
+
+```js
+//effect(()=>{
+//  ...数据操作
+//})
+function effect(fn) {
+  const effect = createReactiveEffect(fn); // 创建响应式的effect
+  effect(); // 先执行一次
+  return effect;
+}
+const activeReactiveEffectStack = []; // 存放响应式effect，依赖收集数组，对应vue2的dep[]
+function createReactiveEffect(fn) {
+  const effect = function() {
+    // 响应式的effect
+    return run(effect, fn);
+  };
+  return effect;
+}
+function run(effect, fn) {
+    try {
+      activeReactiveEffectStack.push(effect);
+      return fn(); // 先让fn执行,执行时会触发get方法，可以将effect存入对应的key属性
+    } finally {
+      activeReactiveEffectStack.pop(effect);
+    }
+}
+function trigger(target, type, key) {
+  const depsMap = targetMap.get(target);
+  if (!depsMap) {
+    return;
+  }
+  let effects = depsMap.get(key);
+  if (effects) {
+    effects.forEach(effect => {
+      effect();
+    });
+  }
+  // 处理如果当前类型是增加属性，如果用到数组的length的effect应该也会被执行
+  if (type === "add") {
+    let effects = depsMap.get("length");
+    if (effects) {
+      effects.forEach(effect => {
+        effect();
+      });
+    }
+  }
+}
+```
+
+3. 实现ref，把原始数据转换为响应式数据
+
+```js
+function convert(val) {
+  return isObject(val) ? reactive(val) : val;
+}
+function ref(raw) {
+  raw = convert(raw);
+  const v = {
+    _isRef:true, // 标识是ref类型
+    get value() {
+      track(v, "get", "");
+      return raw;
+    },
+    set value(newVal) {
+      raw = newVal;
+      trigger(v,'set','');
+    }
+  };
+  return v;
+}
+//let r = ref(1);
+//let c = reactive({
+//    a:r
+//});
+//console.log(c.a.value);每次都要多来一个.value
+//在get方法中判断如果获取的是ref的值，就将此值的value直接返回即可
+let res = Reflect.get(target, key, receiver);
+if(res._isRef){
+  return res.value
+}
+```
+
+4. computed实现
+
+```js
+let a = reactive({name:'youxuan'});
+let c = computed(()=>{
+  console.log('执行次数')
+  return a.name +'webyouxuan';
+})
+// 不取不执行，取n次只执行一次
+console.log(c.value);
+console.log(c.value);
+function computed(getter){
+  let dirty = true;
+  const runner = effect(getter,{ // 标识这个effect是懒执行
+    lazy:true, // 懒执行
+    scheduler:()=>{ // 当依赖的属性变化了，调用此方法，而不是重新执行effect
+      dirty = true;
+    }
+  });
+  let value;
+  return {
+    _isRef:true,
+    get value(){
+      if(dirty){
+        value = runner(); // 执行runner会继续收集依赖
+        dirty = false;
+      }
+      return value;
+    }
+  }
+}
+function effect(fn,options) {
+  let effect = createReactiveEffect(fn,options);
+  if(!options.lazy){ // 如果是lazy 则不立即执行
+    effect();
+  }
+  return effect;
+}
+function createReactiveEffect(fn,options) {
+  const effect = function() {
+    return run(effect, fn);
+  };
+  effect.scheduler = options.scheduler;
+  return effect;
+}
+//在trigger时判断
+deps.forEach(effect => {
+  if(effect.scheduler){ // 如果有scheduler 说明不需要执行effect
+    effect.scheduler(); // 将dirty设置为true,下次获取值时重新执行runner方法
+  }else{
+    effect(); // 否则就是effect 正常执行即可
+  }
+});
+let a = reactive({name:'youxuan'});
+let c = computed(()=>{
+  console.log('执行次数')
+  return a.name +'webyouxuan';
+})
+// 不取不执行，取n次只执行一次
+console.log(c.value);
+a.name = 'zf10'; // 更改值 不会触发重新计算,但是会将dirty变成true
+
+console.log(c.value); // 重新调用计算方法
 ```
