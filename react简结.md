@@ -17,7 +17,7 @@
 * [使用cookie](#使用cookie)
 * [react组件实例ref](#react组件实例ref)
 * [单元测试](#单元测试)
-* [fiber](#fiber)
+* [fiber与虚拟dom](#fiber与虚拟dom)
 * [高阶组件](#高阶组件)
 * [hook](#hook)
 * [react和vue的区别](#react和vue的区别)
@@ -2264,11 +2264,47 @@
 
     [你不知道的React 和 Vue 的20个区别【面试必备】](https://juejin.im/post/6847009771355127822#heading-30)
 
+    [深入理解React16之：（一）.Fiber架构](https://www.jianshu.com/p/bf824722b496)
+
 2. 详解
 
     * 虚拟dom
 
         从 render 方法返回的不可变 React 元素树，通常称为虚拟DOM。
+
+    * 比较V16前后组件渲染顺序
+
+        V16前：
+
+        如果这是一个很大，层级很深的组件，react渲染它需要几十甚至几百毫秒，在这期间，react会一直占用浏览器主线程，任何其他的操作（包括用户的点击，鼠标移动等操作）都无法执行
+        ```txt
+        父(constructor,willMount,render)->
+            子(constructor,willMount,render)->
+                孙1(constructor,willMount,render)->
+                孙1(didMount)->
+                孙2(constructor,willMount,render)->
+                孙2(didMount)->
+                    子(didMount)->
+                        父(didMount)
+        ```
+
+        V16后：
+
+        组件更新分为两个时期：render前的生命周期为phase1,render后的生命周期为phase2
+
+        phase1的生命周期是可以被打断的，每隔一段时间它会跳出当前渲染进程，去确定是否有其他更重要的任务。
+
+            React 在 workingProgressTree 上复用当前 Fiber 数据结构，通过requestIdleCallback来构建新的 tree，标记需要更新的节点，放入队列中。
+
+            如果不被打断，那么phase1执行完会直接进入render函数，构建真实的virtualDomTree
+
+            如果组件phase1过程中被打断，即当前组件只渲染到一半，react会放弃当前组件所有干到一半的事情，去做更高优先级更重要的任务，当所有高优先级任务执行完之后，react通过callback回到之前渲染到一半的组件，从头开始渲染。
+
+            也就是 所有phase1的生命周期函数都可能被执行多次，因为可能会被打断重来，那么我们最好就得保证phase1的生命周期每一次执行的结果都是一样的，否则就会有问题，因此，最好都是纯函数。
+
+        phase2的生命周期是不可被打断的，React 将其所有的变更一次性更新到DOM上。
+
+        fiber并不是为了减少组件的渲染时间，事实上也并不会减少，最重要的是现在可以使得一些更高优先级的任务，至少用户不会感觉到卡顿
 
     * fiber
 
@@ -3101,7 +3137,6 @@
 [react 实现点击div外部触发事件](https://blog.csdn.net/zSY_snake/article/details/89405112)
 
 ```js
-
 constructor(){
     this.divElement = null;
 }
@@ -3120,7 +3155,6 @@ componentWillUnmount() {
     document.removeEventListener('click', this.outDivClickHandler);
 }
 
-
 outDivClickHandler(e) {
     const target = e.target;
     // 组件已挂载且事件触发对象不在div内
@@ -3129,3 +3163,4 @@ outDivClickHandler(e) {
     }  
 }
 ```
+

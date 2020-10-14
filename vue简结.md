@@ -54,6 +54,7 @@
 * [vue源码简述](#vue源码简述)
 * [页面加载闪烁问题](#页面加载闪烁问题)
 * [Vue3.0数据响应机制](#Vue3.0数据响应机制)
+* [Vue3任意传送门Teleport](#Vue3任意传送门Teleport)
 
 ---
 
@@ -4210,3 +4211,70 @@ a.name = 'zf10'; // 更改值 不会触发重新计算,但是会将dirty变成tr
 
 console.log(c.value); // 重新调用计算方法
 ```
+
+## Vue3任意传送门Teleport
+
+参考链接：
+
+[Vue 3 任意传送门——Teleport](https://www.jianshu.com/p/1ecf5006b1ae)
+
+[vue3.0 teleport](https://zhuanlan.zhihu.com/p/143042237)
+
+1. 功能：自定义html可移动到div app之外，此html可包含子组件，用法相当于一个封装好的组件，里面自定义插槽内容，同transition和keep-alive，是内部组件，可摇树
+
+2. 使用场景：全局modal，toast
+
+3. 使用样例
+
+  index.html
+  ```html
+  <div id="app"></div>
+  <div id="teleport-target"></div>
+  <div id="modal-container"></div>
+  ```
+
+  某页面
+  ```html
+  <teleport to="#teleport-target">
+    <div v-if="visible" class="toast-wrap">
+      <div class="toast-msg">我是一个 Toast 文案</div>
+    </div>
+  </teleport>
+  <teleport to="#modal-container">
+    <!-- use the modal component, pass in the prop -->
+    <modal :show="showModal" @close="showModal = false">
+      <template #header>
+        <h3>custom header</h3>
+      </template>
+    </modal>
+  </teleport>
+  ```
+  ```js
+  import { ref } from 'vue';
+  import Modal from './Modal.vue';
+  export default {
+    components: {
+      Modal
+    },
+    setup() {
+      // toast 的封装
+      const visible = ref(false);
+      let timer;
+      const showToast = () => {
+        visible.value = true;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          visible.value = false;
+        }, 2000);
+      }
+      const showModal = ref(false);
+      return {
+        visible,
+        showToast,
+        showModal
+      }
+    }
+  }
+  ```
+
+  在本页面内查看html源码，看到teleport-target，modal-container出现指定内容，并在app之外
