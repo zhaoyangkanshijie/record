@@ -9,7 +9,6 @@
 - [作用域与变量等题目](#作用域与变量等题目)
 - [严格模式](#严格模式)
 - [前端路由原理](#前端路由原理)
-- [virtualDOM_Diff](#virtualDOM_Diff)
 - [抽象语法树 AST 与 babel](#抽象语法树AST与babel)
 - [判断js运行环境](#判断js运行环境)
 
@@ -2022,64 +2021,6 @@
      状态对象是能被序列化的对象(小于 640k)，用户导航到新的状态，popstate 事件就会被触发，且该事件的 state 属性包含该历史记录条目状态对象的副本。
 
      获取当前状态：let currentState = history.state;
-
-### virtualDOM_Diff
-
-1. 参考链接：
-
-   - [虚拟 DOM](https://www.jianshu.com/p/580157c93c53)
-   - [Diff 算法](https://www.jianshu.com/p/cdb4ad82df20)
-
-2. 详解
-
-   - 产生虚拟 DOM 的原因：由原本事件驱动变为数据驱动，jquery 频繁操作 DOM 可能会造成不必要的浪费
-     ```js
-     $("li").on("click", function () {
-       $(this).show().siblings().hide();
-     });
-     var li = $("li");
-     //优化
-     li.on("click", function () {
-       li.hide();
-       $(this).show();
-     });
-     ```
-   - diff 三大策略:
-
-     1. Tree Diff:层次遍历找出不同
-     2. Component Diff:组件脏检查，看组件实例是否改变，没改变，继续步骤 1，改变，到步骤 3
-     3. Element Diff:发现与真实 DOM 不同，当节点处于同一层级时，Diff 提供三种 DOM 操作：删除、移动、插入。(removeChild/removeChildren/createElement/insertBefore/setTextContent/appendChild/replaceChild(new,old))
-
-   - diff 示例
-     1. 先标记新老 DOM 元素如下
-        ```txt
-               oldS        oldE
-        old:    a   b   c   d
-        new:    a   f   d   e   c
-               newS            newE
-        ```
-     2. 比较 oldS 和 newS 发现一样，oldS++，newS++，发现 b 和 f 不一致，在 oldS 前插入 f，oldS++，newS++
-        ```txt
-                       oldS    oldE
-        old:    a   f   b   c   d
-        new:    a   f   d   e   c
-                       newS    newE
-        ```
-     3. 此时 oldE 和 newS 相同，oldE 移动到 oldS 前，oldS++,newS++
-        ```txt
-                          oldS oldE
-        old:    a   f   d   b   c
-        new:    a   f   d   e   c
-                          newS newE
-        ```
-     4. newE 与 oldE 相同,oldE--,newE--,此时新老都不同，oldS 前插入 newE，删除 oldS，oldS++，newS++，newE--，oldE--
-        ```txt
-                          oldE oldS
-        old:    a   f   d   e   c
-        new:    a   f   d   e   c
-                          newE newS
-        ```
-     5. oldS > oldE，Diff 结束
 
 
 ### 抽象语法树 AST 与 babel

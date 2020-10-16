@@ -55,6 +55,7 @@
 * [页面加载闪烁问题](#页面加载闪烁问题)
 * [Vue3.0数据响应机制](#Vue3.0数据响应机制)
 * [Vue3任意传送门Teleport](#Vue3任意传送门Teleport)
+* [Vue3优化diff](#Vue3优化diff)
 
 ---
 
@@ -4278,3 +4279,250 @@ console.log(c.value); // 重新调用计算方法
   ```
 
   在本页面内查看html源码，看到teleport-target，modal-container出现指定内容，并在app之外
+
+## Vue3优化diff
+
+参考链接：
+
+[虚拟 DOM](https://www.jianshu.com/p/580157c93c53)
+
+[Diff 算法](https://www.jianshu.com/p/cdb4ad82df20)
+
+[Vue3 DOM Diff 核心算法解析](https://zhuanlan.zhihu.com/p/260434581)
+
+[Vue3的getSequence最长上升子序列](https://blog.csdn.net/webyouxuan/article/details/108414286)
+
+[详解vue3.0 diff算法的使用(超详细)](https://www.jb51.net/article/189862.htm)
+
+1. 不存在diff的更新方法
+
+  只要有改变就没有一个可以复用，全部重新创建节点
+
+2. Vue2 diff 
+
+  优先处理特殊场景的情况，即头头比对，头尾比对，尾头比对，尾尾对比等。通过双指针实现。
+
+  - 产生虚拟 DOM 的原因：由原本事件驱动变为数据驱动，jquery 频繁操作 DOM 可能会造成不必要的浪费
+     ```js
+     $("li").on("click", function () {
+       $(this).show().siblings().hide();
+     });
+     var li = $("li");
+     //优化
+     li.on("click", function () {
+       li.hide();
+       $(this).show();
+     });
+     ```
+   - diff 三大策略:
+
+     1. Tree Diff:层次遍历找出不同
+     2. Component Diff:组件脏检查，看组件实例是否改变，没改变，继续步骤 1，改变，到步骤 3
+     3. Element Diff:发现与真实 DOM 不同，当节点处于同一层级时，Diff 提供三种 DOM 操作：删除、移动、插入。(removeChild/removeChildren/createElement/insertBefore/setTextContent/appendChild/replaceChild(new,old))
+
+   - diff 示例
+     1. 先标记新老 DOM 元素如下
+        ```txt
+               oldS        oldE
+        old:    a   b   c   d
+        new:    a   f   d   e   c
+               newS            newE
+        ```
+     2. 比较 oldS 和 newS 发现一样，oldS++，newS++，发现 b 和 f 不一致，在 oldS 前插入 f，oldS++，newS++
+        ```txt
+                       oldS    oldE
+        old:    a   f   b   c   d
+        new:    a   f   d   e   c
+                       newS    newE
+        ```
+     3. 此时 oldE 和 newS 相同，oldE 移动到 oldS 前，oldS++,newS++
+        ```txt
+                          oldS oldE
+        old:    a   f   d   b   c
+        new:    a   f   d   e   c
+                          newS newE
+        ```
+     4. newE 与 oldE 相同,oldE--,newE--,此时新老都不同，oldS 前插入 newE，删除 oldS，oldS++，newS++，newE--，oldE--
+        ```txt
+                          oldE oldS
+        old:    a   f   d   e   c
+        new:    a   f   d   e   c
+                          newE newS
+        ```
+     5. oldS > oldE，Diff 结束
+
+3. Vue3 diff
+
+  头头比对，尾尾对比，中间使用最长稳定序列作为基准，原地复用，仅对需要移动或已经patch的节点进行操作，最大限度地提升替换效率，相比于Vue2版本是质的提升
+
+  方法源码
+
+  图解见：[详解vue3.0 diff算法的使用(超详细)](https://www.jb51.net/article/189862.htm)
+
+  ```txt
+       0 1 2 3 4 5
+  old: A B C D E F
+  new: A B D E C I
+  头头比对，尾尾对比后
+       2 3 4 5
+  old: C D E F
+  new: D E C I
+  遍历new，看new的节点从old哪个位置移过来，如果是新增，视为从0位置移动(如I)，同时old中元素不存在于new，则移除(如F)
+  得到数组[3,4,2,0],表示D从3位置移过来，E从4位置移过来，C从2位置移过来，I为0表示新增
+  [3,4,2,0]的最长上升子序列(贪心+二分)为[3,4]
+  因此在old中，D、E不动，移动C，移除F，新增I
+  ```
+
+  该方法返回的是数组中子序列的索引值
+  ```js
+  function getSequence(arr) {
+    const p = arr.slice()                 //  保存原始数据
+    const result = [0]                    //  存储最长增长子序列的索引数组
+    let i, j, u, v, c
+    const len = arr.length
+    for (i = 0; i < len; i++) {
+      const arrI = arr[i]
+      if (arrI !== 0) {
+        j = result[result.length - 1]     //  j是子序列索引最后一项
+        if (arr[j] < arrI) {              //  如果arr[i] > arr[j], 当前值比最后一项还大，可以直接push到索引数组(result)中去
+          p[i] = j                        //  p记录第i个位置的索引变为j
+          result.push(i)
+          continue
+        }
+        u = 0                             //  数组的第一项
+        v = result.length - 1             //  数组的最后一项
+        while (u < v) {                   //  如果arrI <= arr[j] 通过二分查找，将i插入到result对应位置；u和v相等时循环停止
+          c = ((u + v) / 2) | 0           //  二分查找 
+          if (arr[result[c]] < arrI) {
+            u = c + 1                     //  移动u
+          } else {
+            v = c                         //  中间的位置大于等于i,v=c
+          }
+        }
+        if (arrI < arr[result[u]]) {
+          if (u > 0) {
+            p[i] = result[u - 1]          //  记录修改的索引
+          }
+          result[u] = i                   //  更新索引数组(result)
+        }
+      }
+    }
+    u = result.length
+    v = result[u - 1]
+    //把u值赋给result  
+    while (u-- > 0) {                     //  最后通过p数组对result数组进行进行修订，取得正确的索引
+      result[u] = v
+      v = p[v];
+    }
+    return result
+  }
+  ```
+
+  LeetCode 真题 300. 最长上升子序列
+
+  1. 动态规划,时间复杂度：O(n^2),空间复杂度：O(n)
+
+    ```js
+    let lis = (nums) => {
+       let len = nums.length;
+       if (len == 0) return 0;
+       let dp = new Array(len).fill(1);
+       let pos = [];
+       let res = 0;
+       //i表示最新的一位数
+       for (let i = 0; i < nums.length; i++) {
+         //j表示i前面的所有数
+         for (let j = 0; j < i; j++) {
+           //找出i前比i小的位置的最长递增子序列的最大值（找到以nums[i]结尾的最长递增子序列），虽然此处不一定是整个数组中的最大值
+           if (nums[j] < nums[i]) {
+             //改变运算符可变型为最长不减子序列，最长下降子序列等
+             dp[i] = Math.max(dp[i], dp[j] + 1); //状态转移方程
+           }
+         }
+         //找出整个数组中的最大值
+         //res = Math.max(res,dp[i]);
+         if (res < dp[i]) {
+           res = dp[i];
+           pos.push(nums[i]); //储存序列，用于输出
+         }
+       }
+       console.log(nums, dp, pos);
+       //[1, 2, 3, 4, 5, 3, 6, 4, 5]
+       //[1, 3, 6, 7, 9, 10]
+       return res;
+     };
+
+     $(() => {
+       let numbers = [1, 3, 6, 7, 9, 4, 10, 5, 6];
+       console.log(lis(numbers)); //6
+     });
+    ```
+
+  2. 贪心+二分,时间复杂度：O(nlogn),空间复杂度：O(n)
+
+    ```js
+    const lengthOfLIS = function(nums) {
+        let len = nums.length;
+        if (len <= 1) {
+            return len;
+        }
+        let tails = [nums[0]];
+        for (let i = 0; i < len; i++) {
+            // 当前遍历元素 nums[i] 大于 前一个递增子序列的 尾元素时，追加到后面即可
+            if (nums[i] > tails[tails.length - 1]) {
+                tails.push(nums[i]);
+            } else {
+                // 否则，查找递增子序列中第一个大于当前值的元素，用当前遍历元素 nums[i] 替换它
+                // 递增序列，可以使用二分查找
+                let left = 0;
+                let right = tails.length - 1;
+                while (left < right) {
+                    let mid = (left + right) >> 1;
+                    if (tails[mid] < nums[i]) {
+                        left = mid + 1;
+                    } else {
+                        right = mid;
+                    }
+                }
+                tails[left] = nums[i];
+            }
+        }
+        return tails.length;
+    };
+    ```
+    ```js
+    let lis = (nums) => {
+       let top = new Array(nums.length);
+       let piles = 0; // 牌堆数初始化为 0
+       for (let i = 0; i < nums.length; i++) {
+         let poker = nums[i]; // 要处理的扑克牌
+         //二分查找:决定新来的牌插入哪一个牌堆(插入到刚好比这牌大的牌堆中)
+         //牌堆顶：1 2 3 4 5 6 7 8 -> 新牌：3
+         //1 2 3 4
+         //3 4
+         //4
+         //牌堆顶：1 2 3 3 5 6 7 8 -> 替换
+
+         //牌堆顶：1 2 3 3 5 6 7 8 -> 新牌：9
+         //5 6 7 8
+         //7 8
+         //8
+         //牌堆顶：1 2 3 3 5 6 7 8 9 -> 新建
+         let left = 0,
+           right = piles;
+         while (left < right) {
+           let mid = parseInt((left + right) / 2);
+           if (top[mid] >= poker) {
+             right = mid;
+           } else {
+             left = mid + 1;
+           }
+         }
+         console.log("left:" + left, "piles:" + piles);
+         if (left == piles) piles++; // 没找到合适的牌堆，新建一堆
+         top[left] = poker; // 把这张牌放到牌堆顶
+         console.log("poker top", top);
+       }
+       return piles; //最后牌堆数即为最长递增子序列长度
+    };
+    ```
