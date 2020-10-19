@@ -2266,6 +2266,8 @@
 
     [深入理解React16之：（一）.Fiber架构](https://www.jianshu.com/p/bf824722b496)
 
+    [React16 diff全面讲解](https://blog.csdn.net/susuzhe123/article/details/107890118)
+
 2. 详解
 
     * 虚拟dom
@@ -2350,6 +2352,44 @@
         当节点处于同一层级的时候，react diff 提供了三种节点操作：插入、删除、移动。
 
         新集合元素与旧集合元素对比，找是否存在相同的key，有相同，则看老游标<新游标，则进行移动，否则不动，key不存在则插入新元素，最后看是否存在新集合中没有但老集合中仍存在的节点，有则删除
+
+    * react16 diff算法
+
+        ```txt
+        操作:插入
+        old:key0 key1 key2
+        new:key1 key2 key0
+        操作:复用 复用 插入
+        ```
+        ```txt
+        操作:插入      插入
+        old:key0 key1 key2 key3
+        new:key1 key0 key3 key2
+        操作:复用 插入  复用 插入
+        ```
+        ```txt
+        操作:插入      移除
+        old:key0 key1 key2 key3
+        new:key1 key5 key3 key0
+        操作:复用 新建  复用  插入
+        ```
+        性能最差的一种情况
+        ```txt
+        操作:插入 插入
+        old:key0 key1 key2
+        new:key2 key0 key1
+        操作:复用  插入 插入
+        ```
+        ```txt
+        同级相同位置新老节点比较，
+            如果不相同，则找map中是否存在新节点的key，
+                有则复用，
+                    当旧节点索引小于当前新节点替换索引时，则节点插入，
+                    否则直接更新当前新节点替换索引为旧节点索引
+                无则新建，当前节点不为null，插入
+                被复用过的节点从 map 集合中移除
+        最后遍历existingChildren，删除旧节点中没使用的元素
+        ```
 
     * V16前(同步渲染)
     
