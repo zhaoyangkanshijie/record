@@ -1107,6 +1107,7 @@
    - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
    - [11 个 JavaScript 小技巧](https://mp.weixin.qq.com/s/qBuTTXzt7ZNFttXwu5ryMw)
    - [当裸辞遇到了面试难，你需要了解一下这些面试题](https://juejin.im/post/6866920515420815374)
+   - [js解决0.1+0.2==0.3的问题的几种方法](https://blog.csdn.net/weixin_34018202/article/details/88596223)
 
 2. 详解
 
@@ -1240,13 +1241,15 @@
      3. 52 位表示尾数(整数+小数)
 
      ```js
-     (0.1 + 0.2 ===
-       0.3(
-         //false
-         0.1 * 10 + 0.2 * 10
-       ) /
-         10) ==
-       0.3; // true
+     0.1 + 0.2 === 0.3//false
+     (0.1 * 10 + 0.2 * 10) / 10) == 0.3; // true
+     
+     function numbersequal(a,b){ return Math.abs(a-b)<Number.EPSILON; } 
+     Number.EPSILON=(function(){   //解决兼容性问题
+       return Number.EPSILON?Number.EPSILON:Math.pow(2,-52);
+     })();
+     var a=0.1+0.2， b=0.3;
+     console.log(numbersequal(a,b)); //true
      ```
 
      bigint 类型:小数部分会取整

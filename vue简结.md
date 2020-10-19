@@ -3321,6 +3321,7 @@ Vue的编译过程就是将template转化为render函数的过程
 
 ## SSR
 
+* 核心库：vue-server-renderer
 * 服务端渲染，将Vue在客户端把标签渲染成HTML的工作放在服务端完成，然后再把html直接返回给客户端。
 * SSR有着更好的SEO、并且首屏加载速度更快等优点。
 * 开发条件会受到限制，服务器端渲染只支持beforeCreate和created两个钩子，应用程序需要处于Node.js的运行环境。
