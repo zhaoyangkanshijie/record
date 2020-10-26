@@ -56,6 +56,7 @@
 * [Vue3.0数据响应机制](#Vue3.0数据响应机制)
 * [Vue3任意传送门Teleport](#Vue3任意传送门Teleport)
 * [Vue3优化diff](#Vue3优化diff)
+* [Vue Composition API 和 React Hooks](#VueCompositionAPI和ReactHooks)
 
 ---
 
@@ -2646,6 +2647,8 @@ configeWebpack: (config) => {
 
   [使用Vue3.0，我收获了哪些知识点（二）](https://juejin.im/post/6872113750636232712#heading-0)
 
+  [让你30分钟快速掌握vue 3](https://juejin.im/post/6887359442354962445)
+
   * 生命周期及nextTick
 
     ```js
@@ -3112,9 +3115,36 @@ configeWebpack: (config) => {
     1. 数据、方法，需要return，才能给template使用
     2. 失去2个生命周期:beforecreate/created，生命周期改名:beforeDestroy->onBeforeUnmount/destroyed->onUnmounted，新增生命周期:onRenderTracked/ onRenderTriggered/onErrorCaptured
     3. ref和reactive均能使数据变为响应式，ref针对单数据，需要XX.value=XXX赋值，reactive则无限制，XX.XXX = XXXX赋值
-    4. 组件可定义name/props，props和context(emit,attrs,slots)传入setup后使用，用法依旧
-    5. template和style的用法依旧
-    6. 样例
+    4. 组件可定义name/props，props和context(emit,attrs,slots,parent,root,refs)传入setup后使用，用法依旧
+    5. template和style的用法依旧，但template支持多个根标签了
+    6. 新增 Suspense 组件，处理动态引入的组件。defineAsyncComponent可以接受返回承诺的工厂函数
+    ```ts
+    <template>
+      <Suspense>
+        <template #default>
+          <my-component />
+        </template>
+        <template #fallback>
+          Loading ...
+        </template>
+      </Suspense>
+    </template>
+
+    <script lang='ts'>
+    import { defineComponent, defineAsyncComponent } from "vue";
+    const MyComponent = defineAsyncComponent(() => import('./Component'));
+
+    export default defineComponent({
+      components: {
+        MyComponent
+      },
+      setup() {
+        return {}
+      }
+    })
+    </script>
+    ```
+    7. 样例
     ```html
     <template>
         <div>
@@ -4527,3 +4557,75 @@ console.log(c.value); // 重新调用计算方法
        return piles; //最后牌堆数即为最长递增子序列长度
     };
     ```
+
+## Vue Composition API 和 React Hooks
+
+参考链接：
+
+[Vue Composition API 和 React Hooks 对比](https://juejin.im/post/6847902223918170126)
+
+1. 什么是 React Hook
+
+  它可以让你在不编写 Class 的情况下，让你在函数组件里“钩入” React state 及生命周期等特性的函数
+
+2. 解决逻辑复用方法
+
+  * minix 与组件之间存在隐式依赖，可能产生冲突。倾向于增加更多状态，降低了应用的可预测性
+  * 高阶组件 多层包裹嵌套组件，增加了复杂度和理解成本，对于外层是黑盒
+  * Render Props 使用繁琐，不好维护, 代码体积过大，同样容易嵌套过深
+  * Hook 通过 function 抽离的方式，实现了复杂逻辑的内部封装：逻辑代码的复用、减小了代码体积、没有 this 的烦恼
+
+3. 使用区别
+
+react
+```js
+const [currentNote, setCurrentNote] = useState("");
+useEffect(() => {
+  console.log(`Current note: ${currentNote}`);
+});
+```
+
+vue
+```js
+const currentNote = ref("");
+currentNote.value = "";
+const state = reactive({
+  name: "Mary",
+  age: 25,
+});
+state.name = ""
+```
+
+4. 原理
+
+  * react
+
+    React Hook 底层是基于链表实现，调用的条件是每次组件被 render 的时候都会顺序执行所有的 Hooks
+
+    每一个 Hook 的 next 是指向下一个 Hook 的，if 会导致顺序不正确，从而导致报错
+
+    React 数据更改的时候，会导致重新 render，重新 render 又会重新把 Hooks 重新注册一次
+
+    由于 React Hooks 会多次运行，所以 render 方法必须遵守规则：不要在循环内部、条件语句中或嵌套函数里调用 Hooks
+
+    可以将 useEffect Hook 视为 componentDidMount、componentDidUpdate 及 componentWillUnmount 的合集
+
+  * vue
+
+    Vue Hook 只会被注册调用一次，Vue 能避开这些麻烦的问题，原因在于它对数据的响应是基于 proxy 的，对数据直接代理观察。
+
+    只要更改 data，相关的 function 或者 template 都会被重新计算，因此避开了 React 可能遇到的性能上的问题
+
+  * 对比
+
+    React Hooks 会在组件每次渲染时候运行，而 Vue setup() 只在组件创建时运行一次
+
+    react 使用 use***声明，通常为useState，vue 使用 ref 或 reactive 声明
+
+    React 的 useRef 和 Vue 的 ref 都允许你引用一个子组件 或 要附加到的 DOM 元素。
+
+    React Hooks 在每次渲染时都会运行，没有等价于 Vue 中 computed 函数的方法。所以可以自由地声明一个变量，其值基于状态或属性，并将指向每次渲染后的最新值
+
+    React 中的 useContext Hook，可以作为一种读取特定上下文当前值的新方式。Vue 中类似的 API 叫 provide/inject。
+
+    React 所有 Hooks 代码都在组件中定义,且在同一个函数中返回要渲染的 React 元素,Vue 在 template 或 render 选项中定义模板,使用单文件组件，就要从 setup() 中返回一个包含了你想输出到模板中的所有值的对象
