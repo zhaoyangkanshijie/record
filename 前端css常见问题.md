@@ -19,6 +19,7 @@
 - [在不使用br的情况下将文本换行](#在不使用br的情况下将文本换行)
 - [设置字与字之间的间距](#设置字与字之间的间距)
 - [媒体查询手机屏幕横屏竖屏](#媒体查询手机屏幕横屏竖屏)
+- [硬件加速](#硬件加速)
 
 ---
 
@@ -1448,6 +1449,8 @@
 
    [为什么"overflow:hidden"能清除浮动的影响](https://www.jianshu.com/p/7e04ed3f4bea)
 
+   [【建议收藏】css晦涩难懂的点都在这啦](https://juejin.im/post/6888102016007176200)
+
 2. 详解：
 
    - BFC
@@ -1468,6 +1471,12 @@
        - overflow 的值不为 visible
        - position 的值为 fixed / absolute
        - display 的值为 table-cell / table-caption / inline-block / flex / inline-flex
+
+     - 用途
+
+       - 清除元素内部浮动：计算BFC的高度时，自然也会检测浮动或者定位的盒子高度
+       - 解决外边距合并(塌陷)问题：盒子垂直方向的距离由margin决定。属于同一个BFC的两个相邻盒子的margin会发生重叠
+       - 制作右侧自适应的盒子问题：普通流体元素BFC后，为了和浮动元素不产生任何交集，顺着浮动边缘形成自己的封闭上下文
 
    ```html
    <body>
@@ -1499,6 +1508,16 @@
    ```
 
    在 parent 加入 overflow: hidden 前，parent 高度为 50px，加入后高度为 100px，所以父元素 overflow: hidden，可以清除包含块内子元素的浮动。
+
+   - IFC
+
+      行级格式化上下
+
+      - 布局规则：
+
+        - 内部的盒子会在水平方向，一个个地放置(默认就是IFC)
+        - IFC的高度，由里面最高盒子的高度决定(里面的内容会撑开父盒子)
+        - 当一行不够放置的时候会自动切换到下一行
 
 
 ### css样式穿透
@@ -2134,3 +2153,35 @@
       }
   }
   ```
+## 硬件加速
+
+1. 参考链接
+
+  [【建议收藏】css晦涩难懂的点都在这啦](https://juejin.im/post/6888102016007176200)
+
+2. 详解
+
+  * 硬件加速
+
+    将浏览器的渲染过程交给GPU(图形处理器Graphics Processing Unit)处理，创建了一个新的复合图层，而不是使用自带的比较慢的渲染器。
+
+  * 浏览器什么时候会创建一个独立的复合图层呢？
+
+    * 3D或者CSS transform
+    * video和canvas标签
+    * css filters(滤镜效果)
+    * 元素覆盖时，比如使用了z-index属性
+
+  * 为什么硬件加速会使页面流畅
+
+    transform属性不会触发浏览器的repaint（重绘），而绝对定位absolute中的left和top则会一直触发repaint（重绘）。
+
+  * 为什么transform没有触发repaint呢？
+
+    transform动画由GPU控制，支持硬件加载，并不需要软件方面的渲染。并不是所有的CSS属性都能触发GPU的硬件加载，事实上只有少数的属性可以，比如transform、opacity、filter
+
+  * 如何用CSS开启硬件加速
+
+    CSS animation、transform以及transition不会自动开启GPU加速，而是由浏览器的缓慢的软件渲染引擎来执行
+
+    当浏览器检测到页面中某个DOM元素应用了某些CSS规则时就会开启，最显著的特征的元素是3D变化。如translate3d(250px,250px,250px);rotate3d(250px,250px,250px,-120deg);scale3d(0.5,0.5,0.5);
