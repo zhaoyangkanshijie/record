@@ -27,6 +27,7 @@
 * [setState同步异步](#setState同步异步)
 * [react源码简述](#react源码简述)
 * [点击外部元素](#点击外部元素)
+* [react性能优化](#react性能优化)
 
 ---
 
@@ -3206,3 +3207,283 @@ outDivClickHandler(e) {
 }
 ```
 
+## react性能优化
+
+参考链接：
+
+[Vue转React两个月来总结的性能优化方法](https://juejin.im/post/6889825025638006797)
+
+1. 循环加key，diff算法相关
+2. 精简节点，diff算法相关
+
+    ```html
+    <div className="root">
+        <div>
+            <h1>我的名字：{name}</h1>
+        </div>
+        <div>
+            <p>我的简介: {content}</p>
+        </div>
+    </div>
+    精简为
+    <div className="root">
+        <h1>我的名字：{name}</h1>
+        <p>我的简介: {content}</p>
+    </div>
+    ```
+3. 精简state:只把响应式数据放入state
+4. useMemo缓存计算结果
+
+    ```jsx
+    import React, { useMemo } from 'react';
+
+    export default function App() {
+        const [num, setNum] = useState(0);
+
+        // const [factorializeNum, setFactorializeNum] = useState(5);
+
+        // 阶乘函数
+        // const factorialize = (): Number => {
+        //     console.log('触发了');
+        //     let result = 1;
+        //     for (let i = 1; i <= factorializeNum; i++) {
+        //         result *= i;
+        //     }
+        //     return result;
+        // };
+
+        const [factorializeNum, setFactorializeNum] = useState(5);
+
+        // 当factorializeNum值不变的时候，这个函数不会再重复触发了
+        const factorialize = useMemo((): Number => {
+            console.log('触发了');
+            let result = 1;
+            for (let i = 1; i <= factorializeNum; i++) {
+            result *= i;
+            }
+            return result;
+        }, [factorializeNum]);
+
+        return (
+            <>
+            {num}
+            <button onClick={() => setNum(num + factorialize())}>修改num</button>
+            <button onClick={() => setFactorializeNum(factorializeNum + 1)}>修改阶乘参数</button>
+            </>
+        );
+    }
+    ```
+5. 三元表达式/&&替代if else
+6. 异步组件（懒加载组件）
+
+    ```jsx
+    import React from 'react';
+
+    export default (props) => {
+        return (
+            <>
+            <Drawer>
+                <Tabs defaultActiveKey="1">
+                <TabPane>
+                    <React.Suspense fallback={<Loading />}>
+                    {React.lazy(() => import('./Component1'))}
+                    </React.Suspense>
+                </TabPane>
+                <TabPane>
+                    <React.Suspense fallback={<Loading />}>
+                    {React.lazy(() => import('./Component2'))}
+                    </React.Suspense>
+                </TabPane>
+                </Tabs>
+            </Drawer>
+            </>
+        );
+    };
+    ```
+7. 减少组件的render
+
+    * React.memo:会判断子组件的props是否有改变，如果没有，将不会重复render
+
+        ```jsx
+        import React from 'react';
+
+        const Child = React.memo(() => {
+            console.log('触发Child组件渲染');
+            return (
+                <h1>这是child组件的渲染内容！</h1>
+            )
+        });
+
+        export default () => {
+            const [num, setNum] = useState(0);
+            
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child />
+                </>
+            );
+        }
+        ```
+
+    * 不要直接使用内联对象
+
+        样例
+        ```jsx
+        import React from 'react';
+
+        const Child = React.memo((props) => {
+            const { style } = props;
+            console.log('触发Child组件渲染');
+            return (
+                <h1 style={style}>这是child组件的渲染内容！</h1>
+            )
+        });
+
+        export default () => {
+            const [num, setNum] = useState(0);
+            
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child style={{color: 'green'}}/>
+                </>
+            );
+        }
+        ```
+        修改1
+        ```jsx
+        // 如果传入的参数是完全独立的，没有任何的耦合
+        // 可以将该参数，提取到渲染函数之外
+        const childStyle = { color: 'green' };
+        export default () => {
+            const [num, setNum] = useState(0);
+            
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child style={childStyle}/>
+                </>
+            );
+        }
+        // 如果传入的参数需要使用渲染函数里的参数或者方法
+        // 可以使用useMemo
+        export default () => {
+            const [num, setNum] = useState(0);
+            const [style, setStyle] = useState('green');
+            // 如果不需要参数
+            const childStyle = useMemo(() => ({ color: 'green' }), []);
+            // 如果需要使用state或者方法
+            const childStyle = useMemo(() => ({ color: style }), [style]);
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child style={childStyle}/>
+                </>
+            );
+        }
+        ```
+        修改2
+        ```jsx
+        import React from 'react';
+
+        const Child = React.memo((props) => {
+            const { style } = props;
+            console.log('触发Child组件渲染');
+            return (
+                <h1 style={style}>这是child组件的渲染内容！</h1>
+            )
+        });
+
+        export default () => {
+            const [num, setNum] = useState(0);
+            
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child style={{color: 'green'}}/>
+                </>
+            );
+        }
+        ```
+    * 传入组件的函数使用React.useCallback
+
+        ```jsx
+        export default () => {
+            const [num, setNum] = useState(0);
+            const oneFnc = useCallback(() => {
+                console.log('这是传入child的方法');
+            }, []);
+            return (
+                <>
+                {num}
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child onFnc={oneFnc} />//要避免在子组件的传入参数上直接写匿名函数<Child onFnc={() => console.log('这是传入child的方法')} />
+                </>
+            );
+        }
+        ```
+    * 使用children来避免React Context子组件的重复渲染
+
+        样例
+        ```jsx
+        import React, { useContext, useState } from 'react';
+
+        const DemoContext = React.createContext();
+
+        const Child = () => {
+            console.log('触发Child组件渲染');
+            return (
+                <h1 style={style}>这是child组件的渲染内容！</h1>
+            )
+        };
+
+        export default () => {
+            const [num, setNum] = useState(0);
+            return (
+                <DemoContext.Provider value={num}>
+                <button onClick={() => setNum(num + 1)}>num加1</button>
+                <Child />
+                {...一些其他需要使用num参数的组件}
+                </DemoContext.Provider>
+            );
+        }
+        ```
+        修改:修改state,只是对于DemoComponent这个组件内部进行render，对于外部传入的Child组件，将不会重复渲染。
+        ```jsx
+        import React, { useContext, useState } from 'react';
+
+        const DemoContext = React.createContext();
+
+        const Child = () => {
+        console.log('触发Child组件渲染');
+        return (
+            <h1 style={style}>这是child组件的渲染内容！</h1>
+        )
+        };
+
+        function DemoComponent(props) {
+        const { children } = props;
+        const [num, setNum] = useState(0);
+        return (
+            <DemoContext.Provider value={num}>
+            <button onClick={() => setNum(num + 1)}>num加1</button>
+            {children}
+            </DemoContext.Provider>
+        );
+        }
+
+        export default () => {
+        return (
+            <DemoComponent>
+            <Child />
+            {...一些其他需要使用num参数的组件}
+            </DemoComponent>
+        );
+        }
+        ```
