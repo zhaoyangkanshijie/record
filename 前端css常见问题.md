@@ -20,6 +20,7 @@
 - [设置字与字之间的间距](#设置字与字之间的间距)
 - [媒体查询手机屏幕横屏竖屏](#媒体查询手机屏幕横屏竖屏)
 - [硬件加速](#硬件加速)
+- [position:sticky](#position:sticky)
 
 ---
 
@@ -2153,6 +2154,7 @@
       }
   }
   ```
+
 ## 硬件加速
 
 1. 参考链接
@@ -2185,3 +2187,64 @@
     CSS animation、transform以及transition不会自动开启GPU加速，而是由浏览器的缓慢的软件渲染引擎来执行
 
     当浏览器检测到页面中某个DOM元素应用了某些CSS规则时就会开启，最显著的特征的元素是3D变化。如translate3d(250px,250px,250px);rotate3d(250px,250px,250px,-120deg);scale3d(0.5,0.5,0.5);
+
+## position:sticky
+
+1. 参考链接
+
+  [使用 position:sticky 实现粘性布局](https://www.cnblogs.com/coco1s/p/6402723.html)
+
+  [CSS中position属性（sticky）](https://segmentfault.com/a/1190000018861422)
+
+2. 详解
+
+  * 兼容性
+
+    Firefox47+,Chrome56+,Safari9.1+,IOS Safari8.4+
+
+  * 描述
+
+    * position:sticky不脱离文档流
+    * 当元素在容器中被滚动超过指定的偏移值时，元素在容器内固定在指定位置。亦即如果你设置了top: 50px，那么在sticky元素到达距离相对定位的元素顶部50px的位置时固定，不再向上移动（相当于此时fixed定位）
+    * 元素固定的相对偏移是相对于离它最近的具有滚动框的祖先元素，如果祖先元素都不可以滚动，那么是相对于viewport来计算元素的偏移量
+
+  * 使用场景
+
+    特效产品专题
+
+  * 样例
+
+    ```html
+    <style>
+      .container {
+        background: #eee;
+        width: 600px;
+        height: 2000px;
+        margin: 0 auto;
+      }
+
+      .sticky-box {
+        position: sticky;
+        height: 60px;
+        margin-bottom: 30px;
+        background: #ff7300;
+        top: 10px;
+      }
+
+      div {
+        font-size: 30px;
+        text-align: center;
+        color: #fff;
+        line-height: 60px;
+      }
+    </style>
+    <div class="container">
+      <div class="sticky-box">内容1</div>
+      <div class="sticky-box">内容2</div>
+      <div class="sticky-box">内容3</div>
+      <div class="sticky-box">内容4</div>
+    </div>
+    <div class="container" style="background: #000;">
+      <div>hello</div>
+    </div>
+    ```
