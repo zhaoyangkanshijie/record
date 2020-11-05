@@ -2214,6 +2214,7 @@
 
   * 样例
 
+    静态
     ```html
     <style>
       .container {
@@ -2246,5 +2247,83 @@
     </div>
     <div class="container" style="background: #000;">
       <div>hello</div>
+    </div>
+    ```
+
+    带动效
+    ```html
+    <style>
+      body,p{
+        margin: 0;
+        padding: 0;
+      }
+      #main{
+
+      }
+
+      .block{
+        position: relative;
+        width: 100%;
+        height: 1920px;
+      }
+
+      .bg-pink{
+        background-color: pink;
+      }
+      .bg-greed{
+        background-color: green;
+      }
+      .bg-blue{
+        background-color: blue;
+      }
+      .bg-yellow{
+        background-color: yellow;
+      }
+
+      .container{
+        width: 100%;
+        min-height: 100vh;
+        position: sticky;
+        top: 0;
+        overflow: hidden;
+      }
+
+      .word{
+        margin: 100px 0 0 100px;
+        color: bisque;
+      }
+    </style>
+    <script>
+      let oldY = window.scrollY;
+      window.onscroll = function(){
+        let distance = document.getElementById("distance");
+        distance.innerHTML = window.scrollY + '    ' + distance.getBoundingClientRect().top;
+        console.log(window.scrollY,distance.getBoundingClientRect().top)
+        if(distance.getBoundingClientRect().top == 100 && window.scrollY != oldY){
+          distance.style.transform = `translate3d(${oldY-1920}px,0px,${oldY-1920}px)`;
+          oldY = window.scrollY;
+        }
+        else if(distance.getBoundingClientRect().top < 100 && window.scrollY != oldY){
+          distance.style.transform = `translate3d(980px,0px,980px)`;
+          oldY = window.scrollY;
+        }
+        else{
+          distance.style.transform = `translate3d(0px,0px,0px)`;
+          oldY = window.scrollY;
+        }
+      }
+    </script>
+    <div id="main">
+      <div class="block bg-pink">
+        
+      </div>
+      <div class="block bg-blue">
+        <div class="container">
+          <p id="distance" class="word">test</p>
+        </div>
+      </div>
+      <div class="block bg-yellow">
+        
+      </div>
     </div>
     ```
