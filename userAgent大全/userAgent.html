@@ -9,14 +9,15 @@
   <script src="./userAgentData.js"></script>
   <script src="./broswerInfo.js"></script>
   <script>
-    console.log(navigator.userAgent, getBrowserInfo(navigator.userAgent))
-    console.log(userAgents.length)
-    userAgents.map((value, index) => {
-      let info = getBrowserInfo(value);
-      if (!info.browserName || !info.browserVersionNumber || !info.os) {
-        console.log(index, value, info.browserName, info.browserVersionNumber, info.os)
-      }
-    });
+    getBrowserInfo().then(value=>console.log(value));
+    // console.log(navigator.userAgent, getBrowserInfo(navigator.userAgent))
+    // console.log(userAgents.length)
+    // userAgents.map((value, index) => {
+    //   let info = getBrowserInfo(value);
+    //   if (!info.browserName || !info.browserVersionNumber || !info.os) {
+    //     console.log(index, value, info.browserName, info.browserVersionNumber, info.os)
+    //   }
+    // });
   </script>
 
 </body>

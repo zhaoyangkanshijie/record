@@ -1,4 +1,4 @@
-let getBrowserInfo = function (ua) {
+let getBrowserInfo = (ua) => {
     // If an UA is not provided, default to the current browser UA.
     if (ua === undefined) {
         ua = window.navigator.userAgent;
@@ -101,7 +101,7 @@ let getBrowserInfo = function (ua) {
         versionNumber: browser_match[4] || browser_match[2] || "0",
         platform: platform_match[0] || "unknown",
         os: os_match[0] || "unknown",
-        netType: net_match[0] || "unknown",
+        netType: net_match[0] || window.navigator.connection.effectiveType || "unknown",
         language: language_match[0] || "unknown",
         model: model_match[2] || model_match[0] || "unknown"
     };
@@ -116,6 +116,23 @@ let getBrowserInfo = function (ua) {
     browser.language = matched.language;
     browser.platform = matched.platform;
     browser.model = matched.model;
+    browser.domain = document.domain || ''; // 域名
+    browser.url = document.URL || ''; // 当前 URL 地址
+    browser.title = document.title || ''; // 当前页面标题
+    browser.referrer = document.referrer || ''; // 上一个访问页面 URL 地址
+    browser.lastModified = document.lastModified || ''; 
+    browser.screenHeight = window.screen.height || 0; // 屏幕高度
+    browser.screenWidth = window.screen.width || 0; // 屏幕宽度
+    browser.colorDepth = window.screen.colorDepth || 0; // 屏幕颜色深度
+    browser.devicePixelRatio = window.devicePixelRatio; 
+    browser.performance = window.performance; // 性能表现
+    browser.dnsTime = window.performance.timing.domainLookupEnd - window.performance.timing.domainLookupStart;
+    browser.tcpTime = window.performance.timing.connectEnd - window.performance.timing.connectStart;
+    browser.firstPaintTime = window.performance.getEntriesByType('paint').length > 0 ? (window.performance.getEntriesByType('paint')[0].startTime || window.performance.timing.responseStart - window.performance.timing.navigationStart) : window.performance.timing.responseStart - window.performance.timing.navigationStart;
+    browser.FirstContentfulPaintTime = window.performance.getEntriesByType('paint').length > 1 ? (window.performance.getEntriesByType('paint')[1].startTime || '') : '';
+    browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
+    browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+
 
     if (matched.platform) {
         browser[matched.platform] = true;
@@ -214,6 +231,23 @@ let getBrowserInfo = function (ua) {
         matched.browser = silk;
         browser[silk] = true;
     }
-
-    return browser;
+    
+    return new Promise((resolve,reject)=>{
+        let tryTimes = 0;
+        let timer = setInterval(()=> {
+            if(window.performance.getEntriesByType('paint').length == 0 && tryTimes < 10){
+                tryTimes++;
+            }
+            else{
+                browser.dnsTime = window.performance.timing.domainLookupEnd - window.performance.timing.domainLookupStart;
+                browser.tcpTime = window.performance.timing.connectEnd - window.performance.timing.connectStart;
+                browser.firstPaintTime = window.performance.getEntriesByType('paint').length > 0 ? (window.performance.getEntriesByType('paint')[0].startTime || window.performance.timing.responseStart - window.performance.timing.navigationStart) : window.performance.timing.responseStart - window.performance.timing.navigationStart;
+                browser.FirstContentfulPaintTime = window.performance.getEntriesByType('paint').length > 1 ? (window.performance.getEntriesByType('paint')[1].startTime || '') : '';
+                browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
+                browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                clearInterval(timer);
+                resolve(browser);
+            }
+        },1000);
+    });
 }
