@@ -1078,14 +1078,64 @@
 
    [CSS八种让人眼前一亮的HOVER效果](https://juejin.im/post/6861501624993447950#heading-0)
 
+   [特效属性「Transform」+ 矩阵 matrix](https://www.jianshu.com/p/f943e2014c39)
+
 2. 详解：
 
-   关键词：transform,translate,scale,rotate,transition,animation,@keyframes,drag 系列事件,cursor
+  关键词：transform,translate,scale,rotate,skew(倾斜度数),transition,animation,@keyframes,drag 系列事件,cursor
 
-   transition 和 animation 的区别：
+  transition 和 animation 的区别：
 
-   1. transition 是 css 过渡效果，需要和 hover 等事件配合，由事件触发。动画过程中所有样式属性都要一起变化
-   2. animation 基于帧动画，配合 keyframes 使用，可以设定每一帧的单一样式变化和时间以及循环次数。
+  1. transition 是 css 过渡效果，需要和 hover 等事件配合，由事件触发。动画过程中所有样式属性都要一起变化
+  2. animation 基于帧动画，配合 keyframes 使用，可以设定每一帧的单一样式变化和时间以及循环次数。
+
+  * transform:matrix
+
+    transform: matrix(a,b,c,d,e,f)
+
+    ```txt
+    a c e   x   ax+cy+e
+    b d f . y = bx+dy+f
+    0 0 1   1   0+0+1
+    x' = ax + cy +  e   // 即：x坐标
+    y' = bx + dy + f    // 即：y坐标
+    ```
+
+    纯平移:transform: matrix(1, 0, 0, 1, x轴偏移量，y轴偏移量)
+    ```txt
+    x' = ax + cy +  e  = 1*0 + 0*0 + 30 = 30
+    y' = bx + dy + f = 0*1 + 1*0 + 30 = 30
+    ```
+
+    纯缩放:transform: matrix(s, 0, 0, s, 0, 0)
+    ```txt
+    x' = ax+cy+e = s*x+0*y+0 = s*x;
+    y' = bx+dy+f = 0*x+s*y+0 = s*y;
+    transform: matrix(sx,0,0,sy,0,0); 等同于 scale(sx, sy);
+    ```
+
+    纯旋转:transform: matrix(cosθ,sinθ,-sinθ,cosθ,0,0)
+    ```txt
+    x' = x*cosθ-y*sinθ+0 = x*cosθ-y*sinθ
+    y' = x*sinθ+y*cosθ+0 = x*sinθ+y*cosθ
+    ```
+
+    纯拉伸:transform: matrix(1,tan(θy),tan(θx),1,0,0)
+    ```txt
+    x' = x+y*tan(θx)+0 = x+y*tan(θx)
+    y' = x*tan(θy)+y+0 = x*tan(θy)+y
+    对应于skew(θx + "deg"，θy+ "deg")
+    ```
+
+  * 视距
+
+    transform: perspective(100px);
+
+    perspective: 100px;
+
+  * 变换原点
+
+    transform-origin: x y;
 
   普通平移
   ```html

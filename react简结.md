@@ -2269,6 +2269,8 @@
 
     [React16 diff全面讲解](https://blog.csdn.net/susuzhe123/article/details/107890118)
 
+    [轻烤 React 核心机制 Reconciliation](https://juejin.im/post/6891242214324699143)
+
 2. 详解
 
     * 虚拟dom
@@ -2308,6 +2310,11 @@
         phase2的生命周期是不可被打断的，React 将其所有的变更一次性更新到DOM上。
 
         fiber并不是为了减少组件的渲染时间，事实上也并不会减少，最重要的是现在可以使得一些更高优先级的任务，至少用户不会感觉到卡顿
+
+    * react架构
+
+        组件return render信息 给任务调度器(scheduler),Scheduler 决定渲染（更新）任务优先级，将高优的更新任务优先交给 Reconciler(调和器/协调器)， Reconciler负责找出前后两个 Virtual DOM（React Element）树的「差异」，并把「差异」告诉 Renderer(渲染器)。
+
 
     * fiber
 
