@@ -231,7 +231,7 @@ let getBrowserInfo = (ua) => {
         matched.browser = silk;
         browser[silk] = true;
     }
-    
+
     return new Promise((resolve,reject)=>{
         let tryTimes = 0;
         let timer = setInterval(()=> {
@@ -244,7 +244,10 @@ let getBrowserInfo = (ua) => {
                 browser.firstPaintTime = window.performance.getEntriesByType('paint').length > 0 ? (window.performance.getEntriesByType('paint')[0].startTime || window.performance.timing.responseStart - window.performance.timing.navigationStart) : window.performance.timing.responseStart - window.performance.timing.navigationStart;
                 browser.FirstContentfulPaintTime = window.performance.getEntriesByType('paint').length > 1 ? (window.performance.getEntriesByType('paint')[1].startTime || '') : '';
                 browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
+                browser.domAnalysisTime = window.performance.timing.domComplete - window.performance.timing.domInteractive;
                 browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
+                browser.blankTime = (window.performance.timing.domInteractive || window.performance.timing.domLoading) - window.performance.timing.fetchStart;
+                browser.redirectTime = window.performance.timing.redirectEnd - window.performance.timing.redirectStart;
                 clearInterval(timer);
                 resolve(browser);
             }
