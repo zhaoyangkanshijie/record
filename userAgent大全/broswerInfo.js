@@ -121,6 +121,8 @@ let getBrowserInfo = (ua) => {
     browser.title = document.title || ''; // 当前页面标题
     browser.referrer = document.referrer || ''; // 上一个访问页面 URL 地址
     browser.lastModified = document.lastModified || ''; 
+    browser.cookie = document.cookie;
+    browser.characterSet = document.characterSet;
     browser.screenHeight = window.screen.height || 0; // 屏幕高度
     browser.screenWidth = window.screen.width || 0; // 屏幕宽度
     browser.colorDepth = window.screen.colorDepth || 0; // 屏幕颜色深度
