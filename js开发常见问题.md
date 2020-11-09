@@ -33,6 +33,7 @@
 - [video深入理解](#video深入理解)
 - [获取浏览器的唯一标识](#获取浏览器的唯一标识)
 - [全部替代一个子串为另一个子串](#全部替代一个子串为另一个子串)
+- [isNaN和Number.isNaN函数的区别](#isNaN和Number.isNaN函数的区别)
 
 ---
 
@@ -4317,6 +4318,8 @@
 
    [ECMAScript 6 入门](https://es6.ruanyifeng.com/#docs/reflect)
 
+   [12 道腾讯前端面试真题及答案整理](https://mp.weixin.qq.com/s/mouL2lrCvttHpMwP4iesKw)
+
 2. 详解
 
    - 描述
@@ -4356,7 +4359,7 @@
         let person = Reflect.construct(Person, ["chen"]);
         ```
 
-     4. Reflect 与 Proxy 是相辅相成的，在 Proxy 上有的方法，在 Reflect 就一定有
+     4. Reflect 与 Proxy 是相辅相成的，在 Proxy 上有的方法，在 Reflect 就一定有，不管 Proxy 怎么修改默认行为，总可以在 Reflect 上获取 默认行为。
 
         ```js
         let target = {};
@@ -4390,9 +4393,6 @@
      Reflect.getPrototypeOf(target);
      Reflect.setPrototypeOf(target, prototype);
      ```
-
-
-
 
 ### 深冻结
 
@@ -6634,3 +6634,19 @@
     ```js
     'aabbcc'.replaceAll('b', '.');
     ```
+
+### isNaN和Number.isNaN函数的区别
+
+1. 参考链接：
+
+  [12 道腾讯前端面试真题及答案整理](https://mp.weixin.qq.com/s/mouL2lrCvttHpMwP4iesKw)
+
+2. 详解
+
+  * isNaN:传入任何非数字值均为NaN
+  * Number.isNaN:先判断是否数字，再判断NaN
+
+  ```js
+  isNaN('a')//true
+  Number.isNaN('a')//false
+  ```

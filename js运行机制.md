@@ -183,6 +183,8 @@
 
    [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
 
+   [12 道腾讯前端面试真题及答案整理](https://mp.weixin.qq.com/s/mouL2lrCvttHpMwP4iesKw)
+
 2. 详解：
 
    - js 数据类型
@@ -308,6 +310,14 @@
 
    - 每个对象的 toString 和 valueOf 方法都可以被改写，每个对象执行完毕，如果被用以操作 JavaScript 解析器就会自动调用对象的 toString 或者 valueOf 方法
 
+   - 什么情况下会发生布尔值的隐式强制类型转换？
+
+      1. if (..) 语句中的条件判断表达式。
+      2. for ( .. ; .. ; .. ) 语句中的条件判断表达式（第二个）。
+      3. while (..) 和 do..while(..) 循环中的条件判断表达式。
+      4. ? : 中的条件判断表达式。
+      5. 逻辑运算符 ||（逻辑或）和 &&（逻辑与）左边的操作数（作为条件判断表达式）。
+
 ### js 事件循环机制
 
 1. 参考链接：
@@ -347,6 +357,8 @@
    [什么是事件循环？](https://cloud.tencent.com/developer/news/566935)
 
    [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
+
+   [浏览器与Node的事件循环(Event Loop)有何区别?](https://zhuanlan.zhihu.com/p/54882306)
 
 2. 详解：
 
@@ -400,6 +412,36 @@
      - setTimeout setImmediate 都是宏任务
      - nextTick 和 then 都属于微任务
      - i/o 文件操作为宏任务
+
+   - 浏览器和node的事件循环区别
+
+      node会在每个阶段之间执行微任务，6个阶段:
+
+      * timers 阶段：这个阶段执行 timer（setTimeout、setInterval）的回调
+      * I/O callbacks 阶段：处理一些上一轮循环中的少数未执行的 I/O 回调
+      * idle, prepare 阶段：仅 node 内部使用
+      * poll 阶段：获取新的 I/O 事件, 适当的条件下 node 将阻塞在这里
+      * check 阶段：执行 setImmediate() 的回调
+      * close callbacks 阶段：执行 socket 的 close 事件回调
+
+      process.nextTick是独立于 Event Loop 之外的，它有一个自己的队列，当每个阶段完成后，如果存在 nextTick 队列，就会清空队列中的所有回调函数，并且优先于其他 microtask 执行
+
+      ```js
+      setTimeout(()=>{
+          console.log('timer1')
+          Promise.resolve().then(function() {
+              console.log('promise1')
+          })
+      }, 0)
+      setTimeout(()=>{
+          console.log('timer2')
+          Promise.resolve().then(function() {
+              console.log('promise2')
+          })
+      }, 0)
+      //浏览器:timer1=>promise1=>timer2=>promise2
+      //node:timer1=>timer2=>promise1=>promise2
+      ```
 
    - nextTick、setTimeout、setImmediate 的区别
 
@@ -659,7 +701,7 @@
   ```js
   async function sum(...rest) {
     let result = 0
-    // 隐氏类型转换， 对象 + 数字，会先调用对象的toString 方法
+    // 隐式类型转换， 对象 + 数字，会先调用对象的toString 方法
     const obj = {}
     obj.toString = function() {
       return result
