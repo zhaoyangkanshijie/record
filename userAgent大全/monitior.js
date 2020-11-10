@@ -1,94 +1,134 @@
-let monitorInfo = {
-    eventType: '',
-    happenTime: -1,
-    target: null,
-    content: null
-}
-
-let startTime = new Date().getTime();
-let stayTime = 0;
-let stayInPage = true;
-
-let browserMonitor = () => {
-    clickEvent();
-    copyEvent();
-    unloadEvent();
-    hashchangeEvent();
-    popstateEvent();
-}
-
-let clickEvent = () => {
-    window.addEventListener("click",function(event){
-        let info = JSON.parse(JSON.stringify(monitorInfo));
-        info.eventType = event.type;
-        info.happenTime = event.timeStamp;
-        info.target = event.target.nodeName;
-        info.content = event.target.textContent.slice(100);
-        console.log(info);
-    });
-}
-
-let copyEvent = () => {
-    window.addEventListener("copy",function(event){
-        let info = JSON.parse(JSON.stringify(monitorInfo));
-        info.eventType = event.type;
-        info.happenTime = event.timeStamp;
-        info.target = event.target.nodeName;
-        info.content = window.getSelection().toString();
-        console.log(info);
-    });
-}
-
-let unloadEvent = () => {
-    window.addEventListener('unload', () => {
-        // var client = new XMLHttpRequest();
-        // client.open('POST', '/log', false);// 第三个参数表示同步发送
-        // client.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
-        // client.send(data);
-        navigator.sendBeacon('/log', {
-            url: document.URL,
-            stayTime: stayTime + (new Date().getTime() - startTime)
+class browserMonitor{
+    constructor(){
+        this.startTime = new Date().getTime();
+        this.stayTime = 0;
+        this.stayInPage = true;
+        this.clickEvent();
+        this.copyEvent();
+        this.unloadEvent();
+        this.hashchangeEvent();
+        this.popstateEvent();
+        this.elementErrorEvent();
+        this.windowErrorEvent();
+        this.promiseErrorEvent();
+    }
+    clickEvent(){
+        document.addEventListener("click",(event)=>{
+            navigator.sendBeacon('/monitor/event', {
+                url: document.URL,
+                info: {
+                    eventType: event.type,
+                    happenTime: event.timeStamp,
+                    target: event.target.nodeName,
+                    content: event.target.textContent.slice(100).trim()
+                }
+            });
+        },false);
+    }
+    copyEvent(){
+        document.addEventListener("copy",(event)=>{
+            navigator.sendBeacon('/monitor/event', {
+                url: document.URL,
+                info: {
+                    eventType: event.type,
+                    happenTime: event.timeStamp,
+                    target: event.target.nodeName,
+                    content: window.getSelection().toString()
+                }
+            });
+        },false);
+    }
+    unloadEvent(){
+        window.addEventListener('unload', () => {
+            // var client = new XMLHttpRequest();
+            // client.open('POST', '/log', false);// 第三个参数表示同步发送
+            // client.setRequestHeader('Content-Type', 'text/plain;charset=UTF-8');
+            // client.send(data);
+            navigator.sendBeacon('/monitor/leave', {
+                url: document.URL,
+                stayTime: this.stayTime + (new Date().getTime() - this.startTime)
+            });
+        }, false);
+    }
+    hashchangeEvent(){
+        window.addEventListener("hashchange",(event)=>{
+            console.log("hashchange");
+            navigator.sendBeacon('/monitor', {
+                url: document.URL,
+                stayTime: this.stayTime + (new Date().getTime() - this.startTime)
+            });
+            this.startTime = new Date().getTime();
+            this.stayTime = 0;
+            this.stayInPage = true;
         });
-    }, false);
-}
-
-let hashchangeEvent = () => {
-    window.addEventListener("hashchange",function(event){
-        console.log("hashchange");
-        navigator.sendBeacon('/log', {
-            url: document.URL,
-            stayTime: stayTime + (new Date().getTime() - startTime)
+    }
+    popstateEvent(){
+        window.addEventListener("popstate",(event)=>{
+            console.log("popstate");
+            navigator.sendBeacon('/monitor', {
+                url: document.URL,
+                stayTime: this.stayTime + (new Date().getTime() - this.startTime)
+            });
+            this.startTime = new Date().getTime();
+            this.stayTime = 0;
+            this.stayInPage = true;
         });
-        let startTime = new Date().getTime();
-        let stayTime = 0;
-        let stayInPage = true;
-    });
-}
-
-let popstateEvent = () => {
-    window.addEventListener("popstate",function(event){
-        console.log("popstate");
-        navigator.sendBeacon('/log', {
-            url: document.URL,
-            stayTime: stayTime + (new Date().getTime() - startTime)
-        });
-        let startTime = new Date().getTime();
-        let stayTime = 0;
-        let stayInPage = true;
-    });
-}
-
-let visibilitychangeEvent = () => {
-    document.addEventListener('visibilitychange', function() {
-        if(stayInPage){
-            stayTime += new Date().getTime() - startTime;
-            stayInPage = !stayInPage;
+    }
+    visibilitychangeEvent(){
+        document.addEventListener('visibilitychange', (e)=>{
+            console.log(e)
+            if(this.stayInPage){
+                this.stayTime += new Date().getTime() - this.startTime;
+                this.stayInPage = !this.stayInPage;
+            }
+            else{
+                this.startTime = new Date().getTime();
+                this.stayInPage = !this.stayInPage;
+            }
+        })
+    }
+    elementErrorEvent(){
+        document.addEventListener('error', (e) => {
+            const target = e.target
+            if (target != window) {
+                navigator.sendBeacon('/monitor/error', {
+                    url: document.URL,
+                    info: {
+                        type: target.localName,
+                        url: target.src || target.href,
+                        msg: (target.src || target.href) + ' is load error',
+                        time: new Date().getTime()
+                    }
+                });
+            }
+        }, true)
+    }
+    windowErrorEvent(){
+        window.onerror = (msg, url, row, col, error)=>{
+            navigator.sendBeacon('/monitor/error', {
+                url: document.URL,
+                info: {
+                    type: 'javascript',
+                    row: row,
+                    col: col,
+                    msg: error && error.stack? error.stack : msg,
+                    url: url,
+                    time: new Date().getTime()
+                }
+            });
         }
-        else{
-            startTime = new Date().getTime();
-            stayInPage = !stayInPage;
-        }
-    })
+    }
+    promiseErrorEvent(){
+        document.addEventListener('unhandledrejection', (e) => {
+            navigator.sendBeacon('/monitor/error', {
+                url: document.URL,
+                info: {
+                    type: 'promise',
+                    msg: (e.reason && e.reason.msg) || e.reason || '',
+                    time: new Date().getTime()
+                }
+            });
+        })
+    }
 }
-
-browserMonitor();
+new browserMonitor();

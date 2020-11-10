@@ -250,6 +250,7 @@ let getBrowserInfo = (ua) => {
                 browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
                 browser.blankTime = (window.performance.timing.domInteractive || window.performance.timing.domLoading) - window.performance.timing.fetchStart;
                 browser.redirectTime = window.performance.timing.redirectEnd - window.performance.timing.redirectStart;
+                browser.resourceInfo = window.performance.getEntriesByType('resource');
                 clearInterval(timer);
                 resolve(browser);
             }
