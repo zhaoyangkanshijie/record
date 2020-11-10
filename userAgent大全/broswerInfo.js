@@ -134,7 +134,7 @@ let getBrowserInfo = (ua) => {
     browser.FirstContentfulPaintTime = window.performance.getEntriesByType('paint').length > 1 ? (window.performance.getEntriesByType('paint')[1].startTime || '') : '';
     browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
     browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
-
+    browser.resourceInfo = window.performance.getEntriesByType('resource');
 
     if (matched.platform) {
         browser[matched.platform] = true;

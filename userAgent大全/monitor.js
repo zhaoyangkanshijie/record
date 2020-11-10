@@ -93,12 +93,12 @@ class browserMonitor{
             if (target != window) {
                 navigator.sendBeacon('/monitor/error', {
                     url: document.URL,
-                    info: {
-                        type: target.localName,
-                        url: target.src || target.href,
-                        msg: (target.src || target.href) + ' is load error',
-                        time: new Date().getTime()
-                    }
+                    type: target.localName,
+                    row: -1,
+                    col: -1,
+                    source: target.src || target.href,
+                    msg: (target.src || target.href) + ' is load error',
+                    time: new Date().getTime()
                 });
             }
         }, true)
@@ -107,14 +107,12 @@ class browserMonitor{
         window.onerror = (msg, url, row, col, error)=>{
             navigator.sendBeacon('/monitor/error', {
                 url: document.URL,
-                info: {
-                    type: 'javascript',
-                    row: row,
-                    col: col,
-                    msg: error && error.stack? error.stack : msg,
-                    url: url,
-                    time: new Date().getTime()
-                }
+                type: 'javascript',
+                row: row,
+                col: col,
+                source: url,
+                msg: error && error.stack? error.stack : msg,
+                time: new Date().getTime()
             });
         }
     }
@@ -122,11 +120,12 @@ class browserMonitor{
         document.addEventListener('unhandledrejection', (e) => {
             navigator.sendBeacon('/monitor/error', {
                 url: document.URL,
-                info: {
-                    type: 'promise',
-                    msg: (e.reason && e.reason.msg) || e.reason || '',
-                    time: new Date().getTime()
-                }
+                type: 'promise',
+                row: -1,
+                col: -1,
+                source: '',
+                msg: (e.reason && e.reason.msg) || e.reason || '',
+                time: new Date().getTime()
             });
         })
     }
