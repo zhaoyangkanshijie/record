@@ -3,14 +3,31 @@ class browserMonitor{
         this.startTime = new Date().getTime();
         this.stayTime = 0;
         this.stayInPage = true;
+        this.addHistoryEvent();
         this.clickEvent();
         this.copyEvent();
         this.unloadEvent();
         this.hashchangeEvent();
         this.popstateEvent();
+        this.pushStateEvent();
+        this.replaceStateEvent();
         this.elementErrorEvent();
         this.windowErrorEvent();
         this.promiseErrorEvent();
+    }
+    addHistoryEvent(){
+        let historyEvent = function(type) {
+            let origin = history[type];
+            return function() {
+                let result = origin.apply(this, arguments);
+                let event = new Event(type);
+                event.arguments = arguments;
+                window.dispatchEvent(event);
+                return result;
+            };
+        };
+        history.pushState = historyEvent('pushState');
+        history.replaceState = historyEvent('replaceState');
     }
     clickEvent(){
         document.addEventListener("click",(event)=>{
@@ -62,6 +79,30 @@ class browserMonitor{
     popstateEvent(){
         window.addEventListener("popstate",(event)=>{
             console.log("popstate");
+            navigator.sendBeacon('/monitor', JSON.stringify({
+                url: document.URL,
+                stayTime: this.stayTime + (new Date().getTime() - this.startTime)
+            }));
+            this.startTime = new Date().getTime();
+            this.stayTime = 0;
+            this.stayInPage = true;
+        });
+    }
+    pushStateEvent(){
+        window.addEventListener("pushState",(event)=>{
+            console.log("pushState");
+            navigator.sendBeacon('/monitor', JSON.stringify({
+                url: document.URL,
+                stayTime: this.stayTime + (new Date().getTime() - this.startTime)
+            }));
+            this.startTime = new Date().getTime();
+            this.stayTime = 0;
+            this.stayInPage = true;
+        });
+    }
+    replaceStateEvent(){
+        window.addEventListener("replaceState",(event)=>{
+            console.log("replaceState");
             navigator.sendBeacon('/monitor', JSON.stringify({
                 url: document.URL,
                 stayTime: this.stayTime + (new Date().getTime() - this.startTime)
