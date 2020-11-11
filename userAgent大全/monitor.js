@@ -11,6 +11,7 @@ class browserMonitor{
         this.popstateEvent();
         this.pushStateEvent();
         this.replaceStateEvent();
+        this.visibilitychangeEvent();
         this.elementErrorEvent();
         this.windowErrorEvent();
         this.promiseErrorEvent();
@@ -115,12 +116,13 @@ class browserMonitor{
     visibilitychangeEvent(){
         document.addEventListener('visibilitychange', (e)=>{
             console.log(e)
+            let now = new Date().getTime();
             if(this.stayInPage){
-                this.stayTime += new Date().getTime() - this.startTime;
+                this.stayTime += now - this.startTime;
                 this.stayInPage = !this.stayInPage;
             }
             else{
-                this.startTime = new Date().getTime();
+                this.startTime = now;
                 this.stayInPage = !this.stayInPage;
             }
         })
