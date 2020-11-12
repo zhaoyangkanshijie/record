@@ -1971,6 +1971,7 @@
    - [前端渣渣唠嗑一下前端中的设计模式（真实场景例子）](https://juejin.im/post/5e0eaff4e51d45413b7b77f3)
    - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
    - [“浅尝”JavaScript设计模式](https://juejin.im/post/5eb3be806fb9a043426818c7#heading-5)
+   - [proxy-polyfill](https://github.com/linsk1998/proxy-polyfill/blob/master/proxy.js)
 
 2. 详解：
 
@@ -2814,6 +2815,122 @@
         * Proxy可以直接监听数组的变化，对数组进行操作(push、shift、splice等)时，会触发对应的方法名称和length的变化
         * Proxy有多达13种拦截方法,不限于apply、ownKeys、deleteProperty、has
         * Proxy时es6语法，不兼容低版本浏览器，如ie9
+
+        proxy polyfill
+        ```js
+        if(!this.Proxy){
+          (function(window){
+            var seq=0;
+            var dfGetter=function(target, property, receiver){
+              return target[property];
+            };
+            var dfSetter=function(target, property, value,  receiver){
+              target[property]=value;
+            };
+            var afterRevoke=function(){
+              throw "illegal operation attempted on a revoked proxy";
+            };
+            if(Object.defineProperties){
+              window.Proxy=function(target, handler){
+                var me=this;
+                if(!handler.get){
+                  handler.get=dfGetter;
+                }
+                if(!handler.set){
+                  handler.set=dfSetter;
+                }
+                Object.keys(target).forEach(function(key){
+                  Object.defineProperty(me,key,{
+                    enumerable:true,
+                    get:function(){
+                      return handler.get(target,key,me);
+                    },
+                    set:function(value){
+                      if(handler.set(target,key,value,me)===false){
+                        throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
+                      }
+                    }
+                  });
+                });
+              };
+            }else if(window.execScript){
+              //从avalon学到的方式，通过VB
+              window.VBProxySetter=function(target, property, value, receiver, handler){
+                if(handler.set(target, property, value, receiver)===false){
+                  throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
+                }
+              };
+              window.VBProxyGetter=function(target,property, receiver, handler){
+                return handler.get(target,property, receiver);
+              };
+              window.VBProxyPool=new Map();
+              window.VBProxyFactory=function(target,handler){
+                var className=VBProxyPool.get(target);
+                if(!className){
+                  className="VBClass_"+(seq++);
+                  VBProxyPool.set(target,className);
+                  var buffer=["Class "+className];
+                  buffer.push('Public [__target__]');
+                  buffer.push('Public [__handler__]');
+                  Object.keys(target).forEach(function(key){
+                    if(key.match(/[a-zA-Z0-9_$]/)){
+                      buffer.push(
+                        'Public Property Let ['+key+'](var)',
+                        '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
+                        'End Property',
+                        'Public Property Set ['+key+'](var)',
+                        '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
+                        'End Property',
+                        'Public Property Get ['+key+']',
+                        '	On Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
+                        '	Set ['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
+                        '	If Err.Number <> 0 Then',
+                        '		['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
+                        '	End If',
+                        '	On Error Goto 0',
+                        'End Property');
+                    }
+                  });
+                  buffer.push('End Class');
+                  buffer.push(
+                    'Function '+className+'_Factory(target,handler)',
+                    '	Dim o',
+                    '	Set o = New '+className,
+                    '	Set o.[__target__]=target',
+                    '	Set o.[__handler__]=handler',
+                    '	Set '+className+'_Factory=o',
+                    'End Function'
+                  );
+                  try{
+                    window.execScript(buffer.join('\n'), 'VBScript');
+                  }catch(e){
+                    alert(buffer.join('\n'));
+                  }
+                }
+                return window[className+'_Factory'](target,handler); //得到其产品
+              };
+              window.Proxy=function(target, handler){
+                if(!handler.get){
+                  handler.get=dfGetter;
+                }
+                if(!handler.set){
+                  handler.set=dfSetter;
+                }
+                var me=VBProxyFactory(target,handler);
+                return me;
+              };
+            }
+            Proxy.revocable=function(target,handler){
+              var r={};
+              r.proxy=new Proxy(target,handler);
+              r.revoke=function(){
+                handler.get=handler.set=afterRevoke;
+              };
+              return r;
+            };
+          })(this);
+        }
+        ```
     
     * 责任链模式
     
