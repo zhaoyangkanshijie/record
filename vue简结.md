@@ -57,6 +57,7 @@
 * [Vue3任意传送门Teleport](#Vue3任意传送门Teleport)
 * [Vue3优化diff](#Vue3优化diff)
 * [Vue Composition API 和 React Hooks](#VueCompositionAPI和ReactHooks)
+* [vue常见问题解决方案](#vue常见问题解决方案)
 
 ---
 
@@ -4629,3 +4630,329 @@ state.name = ""
     React 中的 useContext Hook，可以作为一种读取特定上下文当前值的新方式。Vue 中类似的 API 叫 provide/inject。
 
     React 所有 Hooks 代码都在组件中定义,且在同一个函数中返回要渲染的 React 元素,Vue 在 template 或 render 选项中定义模板,使用单文件组件，就要从 setup() 中返回一个包含了你想输出到模板中的所有值的对象
+
+## vue常见问题解决方案
+
+参考链接：
+
+[Vue 项目一些常见问题的解决方案](https://juejin.im/post/6895497352120008717)
+
+1. 页面权限控制
+
+route
+```js
+routes: [
+    {
+        path: '/login',
+        name: 'login',
+        meta: {
+            roles: ['admin', 'user']
+        },
+        component: () => import('../components/Login.vue')
+    },
+    {
+        path: 'home',
+        name: 'home',
+        meta: {
+            roles: ['admin']
+        },
+        component: () => import('../views/Home.vue')
+    },
+]
+
+// 假设角色有两种：admin 和 user
+// 这里是从后台获取的用户角色
+const role = 'user'
+// 在进入一个页面前会触发 router.beforeEach 事件
+router.beforeEach((to, from, next) => {
+    if (to.meta.roles.includes(role)) {
+        next()
+    } else {
+        next({path: '/404'})
+    }
+})
+```
+
+2. 登陆验证
+
+route
+```js
+router.beforeEach((to, from, next) => {
+    // 如果有token 说明该用户已登陆
+    if (localStorage.getItem('token')) {
+        // 在已登陆的情况下访问登陆页会重定向到首页
+        if (to.path === '/login') {
+            next({path: '/'})
+        } else {
+            next({path: to.path || '/'})
+        }
+    } else {
+        // 没有登陆则访问任何页面都重定向到登陆页
+        if (to.path === '/login') {
+            next()
+        } else {
+            next(`/login?redirect=${to.path}`)
+        }
+    }
+})
+```
+
+3. 递归菜单
+
+[递归菜单](#递归菜单)
+
+4. 动态菜单
+
+```js
+const asyncRoutes = {
+    'home': {
+        path: 'home',
+        name: 'home',
+        component: () => import('../views/Home.vue')
+    },
+    't1': {
+        path: 't1',
+        name: 't1',
+        component: () => import('../views/T1.vue')
+    },
+    'password': {
+        path: 'password',
+        name: 'password',
+        component: () => import('../views/Password.vue')
+    },
+    'msg': {
+        path: 'msg',
+        name: 'msg',
+        component: () => import('../views/Msg.vue')
+    },
+    'userinfo': {
+        path: 'userinfo',
+        name: 'userinfo',
+        component: () => import('../views/UserInfo.vue')
+    }
+}
+
+// 传入后台数据 生成路由表
+menusToRoutes(menusData)
+
+// 将菜单信息转成对应的路由信息 动态添加
+function menusToRoutes(data) {
+    const result = []
+    const children = []
+
+    result.push({
+        path: '/',
+        component: () => import('../components/Index.vue'),
+        children,
+    })
+
+    data.forEach(item => {
+        generateRoutes(children, item)
+    })
+
+    children.push({
+        path: 'error',
+        name: 'error',
+        component: () => import('../components/Error.vue')
+    })
+
+    // 最后添加404页面 否则会在登陆成功后跳到404页面
+    result.push(
+        {path: '*', redirect: '/error'},
+    )
+
+    return result
+}
+
+function generateRoutes(children, item) {
+    if (item.name) {
+        children.push(asyncRoutes[item.name])
+    } else if (item.children) {
+        item.children.forEach(e => {
+            generateRoutes(children, e)
+        })
+    }
+}
+```
+
+5. 前进刷新后退不刷新
+
+app.js
+```html
+<keep-alive include="list">
+    <router-view/>
+</keep-alive>
+```
+
+可以在详情页中删除对应的列表项
+
+* 方案1
+route
+```js
+{
+    path: '/detail',
+    name: 'detail',
+    component: () => import('../view/detail.vue'),
+    meta: {isRefresh: true}
+}
+```
+
+app.js
+```js
+watch: {
+    $route(to, from) {
+        const fname = from.name
+        const tname = to.name
+        if (from.meta.isRefresh || (fname != 'detail' && tname == 'list')) {
+            from.meta.isRefresh = false
+      // 在这里重新请求数据
+        }
+    }
+}
+```
+
+* 方案2
+
+```html
+<keep-alive>
+    <router-view :key="$route.fullPath"/>
+</keep-alive>
+```
+
+```js
+this.$router.push({
+    path: '/list',
+    query: { 'randomID': 'id' + Math.random() },
+})
+```
+
+6. 多个请求下 loading 的展示与关闭
+
+```html
+<div class="app">
+    <keep-alive :include="keepAliveData">
+        <router-view/>
+    </keep-alive>
+    <div class="loading" v-show="isShowLoading">
+        <spin size="large"></spin>
+    </div>
+</div>
+
+<script>
+export default {
+  name: 'home',
+  data () {
+    return {
+      loadingCount: 0
+    }
+  },
+  methods: {
+    addLoading() {
+        this.isShowLoading = true
+        this.loadingCount++
+    },
+    isCloseLoading() {
+        this.loadingCount--
+        if (this.loadingCount == 0) {
+            this.isShowLoading = false
+        }
+    }
+  }
+}
+</script>
+```
+
+设置 axios 拦截器
+```js
+// 添加请求拦截器
+this.$axios.interceptors.request.use(config => {
+    this.addLoading()
+    return config
+}, error => {
+    this.isShowLoading = false
+    this.loadingCount = 0
+    this.$Message.error('网络异常，请稍后再试')
+    return Promise.reject(error)
+})
+
+// 添加响应拦截器
+this.$axios.interceptors.response.use(response => {
+    this.isCloseLoading()
+    return response
+}, error => {
+    this.isShowLoading = false
+    this.loadingCount = 0
+    this.$Message.error('网络异常，请稍后再试')
+    return Promise.reject(error)
+})
+```
+
+7. 表格打印
+
+[print.js](https://github.com/crabbly/print.js)
+
+```js
+printJS({
+    printable: id, // DOM id
+    type: 'html',
+    scanStyles: false,
+})
+```
+
+解决打印的时候表体和表头错位问题
+```js
+function printHTML(id) {
+    const html = document.querySelector('#' + id).innerHTML
+    // 新建一个 DOM
+    const div = document.createElement('div')
+    const printDOMID = 'printDOMElement'
+    div.id = printDOMID
+    div.innerHTML = html
+
+    // 提取第一个表格的内容 即表头
+    const ths = div.querySelectorAll('.el-table__header-wrapper th')
+    const ThsTextArry = []
+    for (let i = 0, len = ths.length; i < len; i++) {
+        if (ths[i].innerText !== '') ThsTextArry.push(ths[i].innerText)
+    }
+
+    // 删除多余的表头
+    div.querySelector('.hidden-columns').remove()
+    // 第一个表格的内容提取出来后已经没用了 删掉
+    div.querySelector('.el-table__header-wrapper').remove()
+
+    // 将第一个表格的内容插入到第二个表格
+    let newHTML = '<tr>'
+    for (let i = 0, len = ThsTextArry.length; i < len; i++) {
+        newHTML += '<td style="text-align: center; font-weight: bold">' + ThsTextArry[i] + '</td>'
+    }
+
+    newHTML += '</tr>'
+    div.querySelector('.el-table__body-wrapper table').insertAdjacentHTML('afterbegin', newHTML)
+    // 将新的 DIV 添加到页面 打印后再删掉
+    document.querySelector('body').appendChild(div)
+    
+    printJS({
+        printable: printDOMID,
+        type: 'html',
+        scanStyles: false,
+        style: 'table { border-collapse: collapse }' // 表格样式
+    })
+
+    div.remove()
+}
+```
+
+8. 自动忽略 console.log 语句
+
+main.js
+```js
+export function rewriteLog() {
+    console.log = (function (log) {
+        return process.env.NODE_ENV == 'development'? log : function() {}
+    }(console.log))
+}
+```
+
+也可在配置中用terser-plugin消除console.log
+

@@ -21,6 +21,7 @@
 - [媒体查询手机屏幕横屏竖屏](#媒体查询手机屏幕横屏竖屏)
 - [硬件加速](#硬件加速)
 - [position:sticky](#position:sticky)
+- [scroll-snap-type滚动轮播](scroll-snap-type滚动轮播)
 
 ---
 
@@ -2377,3 +2378,13 @@
       </div>
     </div>
     ```
+
+## scroll-snap-type滚动轮播
+
+1. 参考链接
+
+  [不可思议，纯 css 都能图片滚动](https://juejin.im/post/6895584191073927175)
+
+2. 详解
+
+  不兼容IE、safari，慎用，样例代码见文末github
