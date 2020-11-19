@@ -241,16 +241,41 @@ let getBrowserInfo = (ua) => {
                 tryTimes++;
             }
             else{
+                browser.redirectTime = window.performance.timing.redirectEnd - window.performance.timing.redirectStart;
+                browser.redirectCount = window.performance.navigation.redirectCount;
                 browser.dnsTime = window.performance.timing.domainLookupEnd - window.performance.timing.domainLookupStart;
                 browser.tcpTime = window.performance.timing.connectEnd - window.performance.timing.connectStart;
+                browser.sslTime = window.performance.timing.connectEnd - window.performance.timing.secureConnectionStart;
+                browser.requestTime = window.performance.timing.responseStart - window.performance.timing.requestStart;
+                browser.responseTime = window.performance.timing.responseEnd - window.performance.timing.responseStart;
+                browser.domExplainTime = window.performance.timing.domInteractive - window.performance.timing.responseEnd;
+                browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
+                brpwser.resourceLoadTime = window.performance.timing.loadEventStart - window.performance.timing.domContentLoadedEventEnd;
+                browser.domAnalysisTime = window.performance.timing.domComplete - window.performance.timing.domInteractive;
+                browser.blankTime = (window.performance.timing.domInteractive || window.performance.timing.domLoading || window.performance.timing.responseEnd) - window.performance.timing.fetchStart;
+                browser.firstInteractiveTime = window.performance.timing.domInteractive - window.performance.timing.fetchStart;
+                browser.domReadyTime = window.performance.timing.domContentLoadEventEnd - window.performance.timing.fetchStart;
+                browser.loadCompleteTime = window.performance.timing.loadEventEnd - window.performance.timing.fetchStart;
                 browser.firstPaintTime = window.performance.getEntriesByType('paint').length > 0 ? (window.performance.getEntriesByType('paint')[0].startTime || window.performance.timing.responseStart - window.performance.timing.navigationStart) : window.performance.timing.responseStart - window.performance.timing.navigationStart;
                 browser.FirstContentfulPaintTime = window.performance.getEntriesByType('paint').length > 1 ? (window.performance.getEntriesByType('paint')[1].startTime || '') : '';
-                browser.domRenderTime = window.performance.timing.domContentLoadedEventEnd - window.performance.timing.navigationStart;
-                browser.domAnalysisTime = window.performance.timing.domComplete - window.performance.timing.domInteractive;
-                browser.loadTime = window.performance.timing.loadEventEnd - window.performance.timing.navigationStart;
-                browser.blankTime = (window.performance.timing.domInteractive || window.performance.timing.domLoading) - window.performance.timing.fetchStart;
-                browser.redirectTime = window.performance.timing.redirectEnd - window.performance.timing.redirectStart;
-                browser.resourceInfo = window.performance.getEntriesByType('resource');
+                let page = window.performance.getEntries();
+                let js = page.filter(ele => ele.initiatorType === "script");
+                let css = page.filter(ele => ele.initiatorType === "css");
+                let xhr = page.filter(ele => ele.initiatorType === "xmlhttprequest");
+                let img = page.filter(ele => ele.initiatorType === "img");
+                let resource = page.filter(ele => ele.initiatorType === "resource");
+                browser.entriesInfo = page;
+                browser.jsCount = js.length;
+                browser.cssCount = css.length;
+                browser.xhrCount = xhr.length;
+                browser.imgCount = img.length;
+                browser.resourceCount = resource.length;
+                browser.jsLoadTime = Math.max(...js.map((ele) => ele.responseEnd)) - Math.min(...js.map((ele) => ele.startTime));
+                browser.cssLoadTime = Math.max(...css.map((ele) => ele.responseEnd)) - Math.min(...css.map((ele) => ele.startTime));
+                browser.xhrLoadTime = Math.max(...xhr.map((ele) => ele.responseEnd)) - Math.min(...xhr.map((ele) => ele.startTime));
+                browser.imgLoadTime = Math.max(...img.map((ele) => ele.responseEnd)) - Math.min(...img.map((ele) => ele.startTime));
+                browser.resourceLoadTime = Math.max(...resource.map((ele) => ele.responseEnd)) - Math.min(...resource.map((ele) => ele.startTime));
+
                 clearInterval(timer);
                 resolve(browser);
             }
