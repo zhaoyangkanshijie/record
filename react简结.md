@@ -2448,9 +2448,13 @@
 
     [React Hook 的底层实现原理](https://mp.weixin.qq.com/s/a2nfI9fnQEh2gm2kGDRQlg)
 
+    [干货 | React Hook的实现原理和最佳实践](https://cloud.tencent.com/developer/article/1468196)
+
+    [React Hook 不完全指南](https://segmentfault.com/a/1190000019223106)
+
 2. 详解
 
-    Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性。
+    Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
 
     Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
 
@@ -2506,8 +2510,95 @@
             4. inputs - 一组值，用于确定是否应销毁和重新创建effect
             5. next - 函数组件中定义的下一个effect的引用。
 
+    * 为什么"不要在循环，条件或嵌套函数中调用 Hook， 确保总是在你的 React 函数的最顶层调用他们"?
+
+        因为我们是根据调用hook的顺序依次将值存入数组中，如果在判断逻辑循环嵌套中，就有可能导致更新时不能获取到对应的值，从而导致取值混乱。
+
+        同时useEffect第二个参数是数组，也是因为它就是以数组的形式存入的。
+
+    * 实现样例
+
+        * 简单的useState
+
+            ```js
+            let val; // 放到全局作用域
+            function useState(initVal) {
+                val = val|| initVal; // 判断val是否存在 存在就使用
+                function setVal(newVal) {
+                    val = newVal;
+                    render(); // 修改val后 重新渲染页面
+                }
+                return [val, setVal];
+            }
+            ```
+
+        * 简单的useEffect
+
+            ```js
+            let watchArr; // 为了记录状态变化 放到全局作用域
+            function useEffect(fn,watch){
+                // 判断是否变化 
+                const hasWatchChange = watchArr?
+                !watch.every((val,i)=>{ val===watchArr[i] }):true;
+                if( hasWatchChange ){
+                    fn();
+                    watchArr = watch;
+                }
+            }
+            ```
+
+        * 解决同时调用多个 useState useEffect的问题
+
+            ```js
+            // 通过数组维护变量
+            let memoizedState  = [];
+            let currentCursor = 0;
+
+            function useState(initVal) {
+                memoizedState[currentCursor] = memoizedState[currentCursor] || initVal;
+                function setVal(newVal) {
+                    memoizedState[currentCursor] = newVal;
+                    render(); 
+                }
+                // 返回state 然后 currentCursor+1
+                return [memoizedState[currentCursor++], setVal]; 
+            }
+
+            function useEffect(fn, watch) {
+                const hasWatchChange = memoizedState[currentCursor]
+                    ? !watch.every((val, i) => val === memoizedState[currentCursor][i])
+                    : true;
+                if (hasWatchChange) {
+                    fn();
+                    memoizedState[currentCursor] = watch;
+                    currentCursor++; // 累加 currentCursor
+                }
+            }
+            ```
 
     * 用法
+
+        * API
+
+            ```js
+            // 传入初始值，作为 state
+            const [state, setState] = useState(initialState)
+
+            //  `惰性初始 state`；传入函数，由函数计算出的值作为 state
+            // 此函数只在初始渲染时被调用
+            const [state, setState] = useState(() => {
+                const initialState = someExpensiveComputation(props)
+                return initialState
+            })
+
+            useEffect(() => {
+                const subscription = props.source.subscribe()
+                return () => {
+                    // 清除订阅
+                    subscription.unsubscribe()
+                }
+            }, [依赖])
+            ```
 
         1. 普通hook
 
