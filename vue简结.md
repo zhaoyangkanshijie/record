@@ -4093,7 +4093,7 @@ p.d = {
   b: 1
 }; // 更新 修改
 p.e = 3; // 更新 添加
-console.log(p); 
+console.log(p);
 delete p.a; // 删除
 ```
 
