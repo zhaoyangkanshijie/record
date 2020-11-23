@@ -2650,6 +2650,8 @@ configeWebpack: (config) => {
 
   [让你30分钟快速掌握vue 3](https://juejin.im/post/6887359442354962445)
 
+  [快速使用Vue3最新的15个常用API](https://juejin.cn/post/6897030228867022856)
+
   * 生命周期及nextTick
 
     ```js
@@ -3111,14 +3113,268 @@ configeWebpack: (config) => {
     }
     ```
 
+  * 浅响应(只对对象第一层做响应式，用于性能优化)
+
+    shallowRef，triggerRef，shallowReactive
+    ```html
+    <template>
+      <p>{{ state.a }}</p>
+      <p>{{ state.first.b }}</p>
+      <p>{{ state.first.second.c }}</p>
+      <button @click="change">改变</button>
+    </template>
+
+    <script>
+    import {shallowRef, triggerRef} from 'vue'
+    export default {
+        setup() {
+            const obj = {
+                a: 1,
+                first: {
+                    b: 2,
+                    second: {
+                        c: 3
+                    }
+                }
+            }
+
+            const state = shallowRef(obj)
+            console.log(state);
+
+            function change() {
+                state.value.first.b = 8
+                state.value.first.second.c = 9
+                // 修改值后立即驱动视图更新
+                triggerRef(state)
+                console.log(state);
+            }
+
+            return {state, change}
+        }
+    }
+    </script>
+    <script>
+    import {shallowReactive} from 'vue'
+    export default {
+        setup() {
+            const obj = {
+                a: 1,
+                first: {
+                    b: 2,
+                    second: {
+                        c: 3
+                    }
+                }
+            }
+
+            const state = shallowReactive(obj)
+
+            console.log(state)
+            console.log(state.first)
+            console.log(state.first.second)
+        }
+    }
+    </script>
+    ```
+
+  * 响应式和原始数据(不响应)互转
+
+    toRaw，toRef，markRaw
+    ```html
+    <script>
+    import {reactive, toRaw} from 'vue'
+    export default {
+        setup() {
+            const obj = {
+                name: '前端印象',
+                age: 22
+            }
+
+            const state = reactive(obj)	
+            const raw = toRaw(state)//转非响应数据
+
+            console.log(obj === raw)   // true
+        }
+    }
+    </script>
+    <script>
+    // 1. 导入 toRef
+    import {toRef} from 'vue'
+    export default {
+        setup() {
+            const obj = {count: 3}
+            // 2. 将 obj 对象中属性count的值转化为响应式数据
+            const state = toRef(obj, 'count')
+
+            // 3. 将toRef包装过的数据对象返回供template使用
+            return {state}
+        }
+    }
+    </script>
+    <template>
+      <p>{{ state.name }}</p>
+      <p>{{ state.age }}</p>
+      <button @click="change">改变</button>
+    </template>
+
+    <script>
+    import {reactive, markRaw} from 'vue'
+    export default {
+        setup() {
+            const obj = {
+                name: '前端印象',
+                age: 22
+            }
+            // 通过markRaw标记原始数据obj, 使其数据更新不再被追踪
+            const raw = markRaw(obj)
+            // 试图用reactive包装raw, 使其变成响应式数据
+            const state = reactive(raw)	
+
+            function change() {
+                state.age = 90
+                console.log(state);
+            }
+
+            return {state, change}
+        }
+    }
+    </script>
+    ```
+
+  * provide/inject
+
+    ```html
+    // A.vue
+    <script>
+    import {provide} from 'vue'
+    export default {
+        setup() {
+            const obj= {
+                name: '前端印象',
+                age: 22
+            }
+
+            // 向子组件以及子孙组件传递名为info的数据
+            provide('info', obj)
+        }
+    }
+    </script>
+
+    // B.vue
+    <script>
+    import {inject} from 'vue'
+    export default {
+        setup() {	
+            // 接收A.vue传递过来的数据
+            inject('info')  // {name: '前端印象', age: 22}
+        }
+    }
+    </script>
+
+    // C.vue
+    <script>
+    import {inject} from 'vue'
+    export default {
+        setup() {	
+            // 接收A.vue传递过来的数据
+            inject('info')  // {name: '前端印象', age: 22}
+        }
+    }
+    </script>
+    ```
+
+  * 获取当前组件实例
+
+    vue2使用this，vue3使用getCurrentInstance()
+    ```html
+    <template>
+      <p>{{ num }}</p>
+    </template>
+    <script>
+    import {ref, getCurrentInstance} from 'vue'
+    export default {
+        setup() {	
+            const num = ref(3)
+            const instance = getCurrentInstance()
+            console.log(instance)
+
+            return {num}
+        }
+    }
+    </script>
+    ```
+
+  * vuex
+
+    useStore
+    ```js
+    // store 文件夹下的 index.js
+    import Vuex from 'vuex'
+
+    const store = Vuex.createStore({
+        state: {
+            name: '前端印象',
+            age: 22
+        },
+        mutations: {
+            ……
+        },
+        ……
+    })
+
+    // example.vue
+    <script>
+    // 从 vuex 中导入 useStore 方法
+    import {useStore} from 'vuex'
+    export default {
+        setup() {	
+            // 获取 vuex 实例
+            const store = useStore()
+
+            console.log(store)
+        }
+    }
+    </script>
+    ```
+
+  * $refs变更
+
+    ```html
+    <template>
+      <div>
+        <div ref="el">div元素</div>
+      </div>
+    </template>
+
+    <script>
+    import { ref, onMounted } from 'vue'
+    export default {
+      setup() {
+          // 创建一个DOM引用，名称必须与元素的ref属性名相同
+          const el = ref(null)
+
+          // 在挂载后才能通过 el 获取到目标元素
+          onMounted(() => {
+            el.value.innerHTML = '内容被修改'
+          })
+
+          // 把创建的引用 return 出去
+          return {el}
+      }
+    }
+    </script>
+    ```
+
   * 总结
 
     1. 数据、方法，需要return，才能给template使用
     2. 失去2个生命周期:beforecreate/created，生命周期改名:beforeDestroy->onBeforeUnmount/destroyed->onUnmounted，新增生命周期:onRenderTracked/ onRenderTriggered/onErrorCaptured
-    3. ref和reactive均能使数据变为响应式，ref针对单数据，需要XX.value=XXX赋值，reactive则无限制，XX.XXX = XXXX赋值
+    3. ref和reactive均能使数据变为响应式，ref针对单数据，需要XX.value=XXX赋值，reactive则无限制，XX.XXX = XXXX赋值，$refs也改成ref的形式
     4. 组件可定义name/props，props和context(emit,attrs,slots,parent,root,refs)传入setup后使用，用法依旧
     5. template和style的用法依旧，但template支持多个根标签了
-    6. 新增 Suspense 组件，处理动态引入的组件。defineAsyncComponent可以接受返回承诺的工厂函数
+    6. provide/inject由对象改为函数
+    7. vuex由Vue.use(Vuex)，Vuex.Store({})变为Vuex.createStore({})，由this.$store.~~~变为useStore().~~~
+    8. 新增 Suspense 组件，处理动态引入的组件。defineAsyncComponent可以接受返回承诺的工厂函数
     ```ts
     <template>
       <Suspense>
@@ -3145,7 +3401,7 @@ configeWebpack: (config) => {
     })
     </script>
     ```
-    7. 样例
+    9. 样例
     ```html
     <template>
         <div>
