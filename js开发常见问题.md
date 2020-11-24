@@ -34,6 +34,7 @@
 - [获取浏览器的唯一标识](#获取浏览器的唯一标识)
 - [全部替代一个子串为另一个子串](#全部替代一个子串为另一个子串)
 - [isNaN和Number.isNaN函数的区别](#isNaN和Number.isNaN函数的区别)
+- [three.js基本使用](#three.js基本使用)
 
 ---
 
@@ -4397,7 +4398,6 @@
        };
        ```
 
-
 ### 可迭代对象
 
 1. 参考链接：
@@ -4634,8 +4634,6 @@
    obj.a().b().c();
    ```
 
-
-
 ### 数组的理解
 
 1. 参考链接：
@@ -4671,11 +4669,6 @@
    - 调用数组的 push，会在数组的最后加一项，每次长度加一
    - push(key)时，会隐式调用 toString 方法转为字符串
    - key 值相同被覆盖
-
-
-
-
-
 
 ### typescript
 
@@ -5165,10 +5158,6 @@
           }
         }
         ```
-
-
-
-
 
 ### blob
 
@@ -6765,3 +6754,145 @@
   isNaN('a')//true
   Number.isNaN('a')//false
   ```
+
+### three.js基本使用
+
+1. 参考链接：
+
+  [十分钟快速实战Three.js](https://mp.weixin.qq.com/s/CAn2JhweJ4wbJoa1M6ULMw)
+
+2. 详解
+
+* 场景对象
+
+```js
+var scene = new THREE.Scene();
+```
+
+* 几何对象
+
+```js
+var geometry = new THREE.BoxGeometry(200, 200, 200); //创建一个立方体几何对象Geometry
+```
+
+* 材质
+
+```js
+var material = new THREE.MeshLambertMaterial({
+  color: '#f4f4f4',
+}); //材质对象Material
+```
+
+* 网格模型
+
+```js
+var mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh); //网格模型添加到场景中
+```
+
+* 光源
+
+```js
+var point = new THREE.PointLight('#fff'); //点光源
+point.position.set(300, 100, 200); //点光源位置
+scene.add(point); //点光源添加到场景中
+
+var ambient = new THREE.AmbientLight('#333');//环境光
+scene.add(ambient); //环境光添加到场景中
+```
+
+* 相机
+
+```js
+var width = window.innerWidth; //窗口宽度
+var height = window.innerHeight; //窗口高度
+var k = width / height; //窗口宽高比
+var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+//创建相机对象
+var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
+camera.position.set(200, 300, 200); //设置相机位置
+camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
+```
+
+* 渲染器对象
+
+```js
+var renderer = new THREE.WebGLRenderer();
+renderer.setSize(width, height); //设置渲染区域尺寸
+renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
+```
+
+* 渲染操作
+
+```js
+renderer.render(scene, camera); //指定场景、相机作为参数
+document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
+```
+
+* 结合
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>three.js小案例</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+    <!--引入three.js-->
+    <script src="https://unpkg.com/three@0.122.0/build/three.js"></script>
+  </head>
+
+  <body>
+  <script>  
+      /*
+       * 创建场景对象
+       */
+      var scene = new THREE.Scene();
+      /*
+       * 创建网格模型
+       */
+      var geometry = new THREE.BoxGeometry(200, 200, 200); //创建一个立方体几何对象Geometry
+      var material = new THREE.MeshLambertMaterial({
+        color: '#f4f4f4',
+      }); //材质对象Material
+      var mesh = new THREE.Mesh(geometry, material); //网格模型对象Mesh
+      scene.add(mesh); //网格模型添加到场景中
+      /*
+       * 设置光源
+       */
+      var point = new THREE.PointLight('#fff'); //点光源
+      point.position.set(300, 100, 200); //点光源位置
+      scene.add(point); //点光源添加到场景中
+      var ambient = new THREE.AmbientLight('#333');//环境光
+      scene.add(ambient); //环境光添加到场景中
+      /*
+       * 设置相机
+       */
+      var width = window.innerWidth; //窗口宽度
+      var height = window.innerHeight; //窗口高度
+      var k = width / height; //窗口宽高比
+      var s = 200; //三维场景显示范围控制系数，系数越大，显示的范围越大
+      //创建相机对象
+      var camera = new THREE.OrthographicCamera(-s * k, s * k, s, -s, 1, 1000);
+      camera.position.set(200, 300, 200); //设置相机位置
+      camera.lookAt(scene.position); //设置相机方向(指向的场景对象)
+      /*
+       * 创建渲染器对象
+       */
+      var renderer = new THREE.WebGLRenderer();
+      renderer.setSize(width, height); //设置渲染区域尺寸
+      renderer.setClearColor(0xb9d3ff, 1); //设置背景颜色
+      /*
+       * 执行渲染操作  
+       */ 
+      renderer.render(scene, camera); //指定场景、相机作为参数
+      document.body.appendChild(renderer.domElement); //body元素中插入canvas对象
+    </script>
+  </body>
+</html>
+```
