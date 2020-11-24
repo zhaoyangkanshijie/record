@@ -21,6 +21,8 @@
 * [promise.all](#promise.all)
 * [promise.race](#promise.race)
 * [promise.finally](#promise.finally)
+* [promise.allSettled](#promise.allSettled)
+* [失败重试maxRequest次再reject](#失败重试maxRequest次再reject)
 * [链式调用](#链式调用)
 * [原生发送请求的几种方式](#原生发送请求的几种方式)
 * [实现ajax](#实现ajax)
@@ -1183,6 +1185,59 @@ Promise.prototype.finally = function (callback) {
         }
     );
 };
+```
+
+## promise.allSettled
+
+- 功能
+
+返回一个promise，该promise在所有给定的promise已被解析或被拒绝后解析，并且每个对象都描述每个promise的结果。
+
+- 实现
+
+```js
+Promise.allSettled = function(promises) {
+    let count = 0
+    let result = []
+    return new Promise((resolve, reject) => {
+        promises.forEach((promise, index) => {
+            Promise.resolve(promise).then(res => {
+                result[index] = {
+                    value: res,
+                    reason: null,
+                }
+            }, err => {
+                result[index] = {
+                    value: null,
+                    reason: err,
+                }
+            }).finally(() => {
+                count++
+                if (count === promises.length) {
+                    resolve(result)
+                }
+            })
+        })
+    })
+}
+```
+
+## 失败重试maxRequest次再reject
+
+```js
+function maxRequest(fn, maxNum) {
+    return new Promise((resolve, reject) => {
+        if (maxNum === 0) {
+            reject('max request number')
+            return
+        }
+        Promise.resolve(fn()).then(value => {
+            resolve(value)
+        }).catch(() => {
+            return maxRequest(fn, maxNum - 1)
+        })
+    })
+}
 ```
 
 ## 链式调用

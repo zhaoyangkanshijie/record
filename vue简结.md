@@ -828,6 +828,18 @@ store.registerModule(["nested", "myModule"], {
 });
 ```
 
+问题3：vuex与v-model是否冲突？
+
+v-model会去修改state的值，但是vuex数据修改又必须经过mutation，这样就冲突了
+
+解决办法：拆开v-model语法糖，在@input中使用commit提交数据
+
+问题4：什么场景下使用vuex，而不是localstorage？
+
+Vuex 的状态存储是响应式的，当多个组件拥有同一个状态的时候，vuex能够很好的帮我们处理
+
+Vuex 可以很好的使用vue开发者工具调试vuex的状态 这些优势是localStorage不能够很好的模拟的
+
 ## 小型vuex:Vue.observable
 
 项目规模不大，可以使用Vue2.6提供的新API Vue.observable手动打造一个Vuex

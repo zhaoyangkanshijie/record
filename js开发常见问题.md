@@ -3820,6 +3820,8 @@
 
    - [手写Promise核心原理，再也不怕面试官问我Promise原理](https://juejin.im/post/6856213486633304078#heading-0)
 
+   - [Promise 中的三兄弟 .all(), .race(), .allSettled()](https://segmentfault.com/a/1190000020034361)
+
 2. 详解
 
    - promise
@@ -4397,6 +4399,41 @@
          );
        };
        ```
+
+     - promise.allSettled
+
+      - 功能
+
+       返回一个promise，该promise在所有给定的promise已被解析或被拒绝后解析，并且每个对象都描述每个promise的结果。
+
+      - 实现
+
+        ```js
+        Promise.allSettled = function(promises) {
+            let count = 0
+            let result = []
+            return new Promise((resolve, reject) => {
+                promises.forEach((promise, index) => {
+                    Promise.resolve(promise).then(res => {
+                        result[index] = {
+                            value: res,
+                            reason: null,
+                        }
+                    }, err => {
+                        result[index] = {
+                            value: null,
+                            reason: err,
+                        }
+                    }).finally(() => {
+                        count++
+                        if (count === promises.length) {
+                            resolve(result)
+                        }
+                    })
+                })
+            })
+        }
+        ```
 
 ### 可迭代对象
 
