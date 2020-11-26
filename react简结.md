@@ -28,6 +28,9 @@
 * [react源码简述](#react源码简述)
 * [点击外部元素](#点击外部元素)
 * [react性能优化](#react性能优化)
+* [错误边界](#错误边界)
+* [jsx到javascript的转换过程](#jsx到javascript的转换过程)
+* [react源码api](#react源码api)
 
 ---
 
@@ -1524,6 +1527,8 @@
     
     [你不知道的React 和 Vue 的20个区别【面试必备】](https://juejin.im/post/6847009771355127822#heading-30)
 
+    [redux](https://www.yuque.com/chenzilong/rglnod/tie55t)
+
 2. 详解
 
     * 依赖：redux、react-redux、redux-devtools
@@ -2163,6 +2168,8 @@
 
     [React 通过ref获取DOM对象或者子组件实例的用法](https://www.cnblogs.com/greatdesert/p/12697726.html)
 
+    [Refs & DOM](https://www.yuque.com/chenzilong/rglnod/wravgb)
+
 2. 详解
 
     1. 字符串格式
@@ -2239,6 +2246,53 @@
         </script>
         ```
 
+    4. forwardRef(hoc高阶组件/函数式组件)
+
+        ```js
+        import React from 'react'
+
+        // 此函数接收一个组件...
+        function WithSubscription(WrappedComponent, selectData) {
+        // ...并返回另一个组件...
+        class WithSubscription extends React.Component {
+            constructor(props) {
+            super(props);
+            this.handleChange = this.handleChange.bind(this);
+            this.state = {
+                data: selectData(this.props.DataSource, props)
+            };
+            }
+
+            componentDidMount() {
+            // ...负责订阅相关的操作...
+            this.props.DataSource.addChangeListener(this.props.name, this.handleChange);
+            }
+
+            componentWillUnmount() {
+            this.props.DataSource.removeChangeListener(this.props.name);
+            }
+
+            handleChange() {
+            this.setState({
+                data: selectData(this.props.DataSource, this.props)
+            });
+            }
+
+            render() {
+            // ... 并使用新数据渲染被包装的组件!
+            // 请注意，我们可能还会传递其他属性
+            return <WrappedComponent ref={this.props.forwardedRef} data={this.state.data} {...this.props} />;
+            }
+        };
+        debugger
+        return React.forwardRef((props, ref) => {
+            return <WithSubscription {...props} forwardedRef={ref} />;
+        });
+        }
+
+        export default WithSubscription;
+        ```
+
 ## 单元测试
 
 1. 参考链接
@@ -2270,6 +2324,8 @@
     [React16 diff全面讲解](https://blog.csdn.net/susuzhe123/article/details/107890118)
 
     [轻烤 React 核心机制 Reconciliation](https://juejin.im/post/6891242214324699143)
+
+    [协调](https://www.yuque.com/chenzilong/rglnod/qmy155)
 
 2. 详解
 
@@ -2345,6 +2401,17 @@
 
         函数从最顶层的 HostRoot fiber 节点开始，一直找到工作未完成的节点，并进行处理，最后退出循环进行update
 
+    * diff总述
+
+        React 需要基于这两棵树之间的差别来判断如何有效率的更新 UI 以保证当前 UI 与最新的树保持同步。
+
+        生成将一棵树转换成另一棵树的最小操作数，即使在最前沿的算法中，该算法的复杂程度为 O(n^3)，其中 n 是树中元素的数量。
+
+        于是 React 在以下两个假设的基础之上提出了一套 O(n) 的启发式算法：
+
+        * 两个不同类型的元素会产生出不同的树
+        * 开发者可以通过 key prop 来暗示哪些子元素在不同的渲染下能保持稳定
+
     * 虚拟DOM树分层比较（tree diff）
 
         两棵树只会对同一层次的节点进行比较，忽略DOM节点跨层级的移动操作。当发现节点已经不存在，则该节点及其子节点会被完全删除掉，不会用于进一步的比较。跨层级操作则会先销毁再创建。
@@ -2405,7 +2472,7 @@
 
         传统的diff需要除了树编号比较之外，还需要跨级比较，会两两比较树的节点，有n^2的复杂度。然后需要编辑树，编辑的树可能发生在任何节点，需要对树进行再一次遍历操作，复杂度为n。加起来就是n^3。
 
-    * V16后(异步渲染)
+    * V16后(异步渲染,协调reconciliation)
     
         重写底层算法逻辑reconciliation 算法(比较两棵 DOM 树差异、从而判断哪一部分应当被更新), 引入fiber时间片, 异步渲染, react会在渲染一部分树后检查是否有更高优先级的任务需要处理(如用户操作或绘图), 处理完后再继续渲染, 并可以更新优先级, 以此管理渲染任务. 加入fiber的react将组件更新分为两个时期（phase 1 && phase 2），render前的生命周期为phase1，render后的生命周期为phase2, 1可以打断(放弃之前的计算成果), 2不能打断一次性更新. 三个will生命周期可能会重复执行, 尽量避免使用。
 
@@ -2426,15 +2493,25 @@
 
     [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
 
+    [高阶组件](https://www.yuque.com/chenzilong/rglnod/dzl1i6)
+
 2. 详解
 
     高阶组件就是一个函数，且该函数(wrapper)接受一个组件作为参数，并返回一个新的组件。
     高阶组件并不关心数据使用的方式和原因，而被包裹的组件也不关心数据来自何处.
 
+    ```js
+    const EnhancedComponent = higherOrderComponent(WrappedComponent);
+    ```
+
     react-dnd: 根组件, source, target等
     export default DragSource(type, spec, collect)(MyComponent)
 
     重构代码库使用HOC提升开发效率
+
+    HOC本身没有修改传入的组件，hoc通过将组件包装在容器组件。HOC是纯函数，没有副作用。这里提到容器组件，其实和redux的connet函数是同一个方式。
+
+    withSubscription 和包装组件之间的契约完全基于之间传递的 props。这种依赖方式使得替换 HOC 变得容易，只要它们为包装的组件提供相同的 prop 即可。
 
 ## hook
 
@@ -2966,6 +3043,8 @@
 
     [react文档](https://react.docschina.org/docs/portals.html)
 
+    [Portals](https://www.yuque.com/chenzilong/rglnod/vlvg3i)
+
 2. 详解
 
     Portal 提供了一种将子节点渲染到存在于父组件以外的 DOM 节点的方案。
@@ -2987,8 +3066,8 @@
     ```jsx
     render() {
         return ReactDOM.createPortal(
-            this.props.children,
-            domNode
+            this.props.children,//第一个参数（child）是任何可渲染的 React 子元素，例如一个元素，字符串或 fragment。需要渲染的组件
+            domNode//第二个参数（container）是一个 DOM 元素，需要渲染到的指定节点
         );
     }
     ```
@@ -3586,3 +3665,579 @@ outDivClickHandler(e) {
         }
         ```
 
+## 错误边界
+
+参考链接：
+
+[错误边界](https://www.yuque.com/chenzilong/rglnod/hbqly4)
+
+* 用途
+
+    用来解决系统crash，造成整个页面挂掉的问题
+
+    部分 UI 的 JavaScript 错误不应该导致整个应用崩溃，为了解决这个问题，React 16 引入了一个新的概念 —— 错误边界。
+
+    错误边界是一种 React 组件，这种组件可以捕获并打印发生在其子组件树任何位置的 JavaScript 错误，并且，它会渲染出备用 UI
+
+* 无法捕获错误的场景
+
+    1. 事件处理
+    2. 异步代码
+    3. ssr
+    4. 非子组件错误
+
+* 错误处理
+
+    抛出错误后，使用 static getDerivedStateFromError() 渲染备用 UI ，使用 componentDidCatch() 打印错误信息
+
+    错误边界的工作方式类似于 JavaScript 的 catch {}，不同的地方在于错误边界只针对 React 组件。只有 class 组件才可以成为错误边界组件。大多数情况下, 你只需要声明一次错误边界组件, 并在整个应用中使用它。
+
+    注意错误边界仅可以捕获其子组件的错误，它无法捕获其自身的错误。如果一个错误边界无法渲染错误信息，则错误会冒泡至最近的上层错误边界，这也类似于 JavaScript 中 catch {} 的工作机制。
+
+* 样例
+
+    ```js
+    import React from 'react'
+    import Main from './Main'
+
+    class ErrorBoundary extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = { hasError: false };
+        }
+
+        static getDerivedStateFromError(error) {
+            // 更新 state 使下一次渲染能够显示降级后的 UI
+            debugger
+            return { hasError: true };
+        }
+
+        componentDidCatch(error, errorInfo) {
+            // 你同样可以将错误日志上报给服务器
+            console.error(error, errorInfo);
+
+            debugger
+        }
+
+        render() {
+            if (this.state.hasError) {
+                // 你可以自定义降级后的 UI 并渲染
+                return <h1>Something went wrong.</h1>;
+            }
+
+            return this.props.children;
+        }
+    }
+
+    export default ErrorBoundary;
+    ```
+
+    ```js
+    import React from 'react'
+
+    class ErrorBoundary extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = { hasError: false };
+        }
+
+        render() {
+            return <div>
+            {this.state.form()}
+            </div>;
+        }
+    }
+
+    export default ErrorBoundary;
+    ```
+
+## jsx到javascript的转换过程
+
+参考链接：
+
+[jsx到javascript的转换过程](https://www.yuque.com/chenzilong/rglnod/bg3c94)
+
+* 过程
+
+```jsx
+function Component (props) {
+  return <div>{props.children}</div>
+}
+
+<div id="id" key="key1" style={{display: 'none'}} ref="123">
+  <Component key="key2" name="rodchen"><span>children</span></Component>
+  <span>2</span>
+  <span>3</span>
+</div>
+```
+
+```js
+function Component() {
+  return /*#__PURE__*/React.createElement("div", null, "component");
+}
+
+/*#__PURE__*/
+React.createElement(
+  "div", 
+  {
+    id: "id",
+    key: "key1",
+    style: {
+      display: 'none'
+    },
+    ref: "123"
+  },
+  React.createElement(
+    Component, 
+    {
+      key: "key2",
+      name: "rodchen"
+    },
+    React.createElement("span", null, "children")
+  ),
+  React.createElement("span", null, "2"),
+  React.createElement("span", null, "3")
+);
+```
+
+## react源码api
+
+参考链接：
+
+[jsx到javascript的转换过程](https://www.yuque.com/chenzilong/rglnod/bg3c94)
+
+* 版本v16.13.1
+
+* createElement(组件类型或者元素类型或者系统内置类型, props的集合, 子节点数据)
+
+```js
+export function createElement(type, config, children) {
+  // 处理参数
+
+  return ReactElement(
+    type,
+    key,
+    ref,
+    self,
+    source,
+    ReactCurrentOwner.current,
+    props,
+  );
+}
+
+const ReactElement = function(type, key, ref, self, source, owner, props) {
+  const element = {
+    // This tag allows us to uniquely identify this as a React Element
+    $$typeof: REACT_ELEMENT_TYPE,
+
+    // Built-in properties that belong on the element
+    type: type,
+    key: key,
+    ref: ref,
+    props: props,
+
+    // Record the component responsible for creating this element.
+    _owner: owner,
+  };
+
+  return element
+}
+```
+
+* Component
+
+基类
+```js
+function Component(props, context, updater) {
+  this.props = props;
+  this.context = context;
+  // If a component has string refs, we will assign a different object later.
+  this.refs = emptyObject;
+  // We initialize the default updater but the real one gets injected by the
+  // renderer.
+  this.updater = updater || ReactNoopUpdateQueue;
+}
+```
+
+原型操作
+```js
+Component.prototype.isReactComponent = {};
+
+Component.prototype.setState = function(partialState, callback) {
+  invariant(
+    typeof partialState === 'object' ||
+      typeof partialState === 'function' ||
+      partialState == null,
+    'setState(...): takes an object of state variables to update or a ' +
+      'function which returns an object of state variables.',
+  );
+  this.updater.enqueueSetState(this, partialState, callback, 'setState');
+};
+
+Component.prototype.forceUpdate = function(callback) {
+  this.updater.enqueueForceUpdate(this, callback, 'forceUpdate');
+};
+```
+
+* PureComponent
+
+这里就是做了PureComponent对Component的原型继承，然后多加了一个在PureComponent的原型上属性isPureReactComponent。
+
+这里中间用了一个ComponentDummy，是因为，需要在原型上面多加一个属性，又不能污染Component的原型。
+
+```js
+function ComponentDummy() {}
+ComponentDummy.prototype = Component.prototype;
+
+/**
+ * Convenience component with default shallow equality check for sCU.
+ */
+function PureComponent(props, context, updater) {
+  this.props = props;
+  this.context = context;
+  // If a component has string refs, we will assign a different object later.
+  this.refs = emptyObject;
+  this.updater = updater || ReactNoopUpdateQueue;
+}
+
+const pureComponentPrototype = (PureComponent.prototype = new ComponentDummy());
+pureComponentPrototype.constructor = PureComponent;
+// Avoid an extra prototype jump for these methods.
+Object.assign(pureComponentPrototype, Component.prototype);
+pureComponentPrototype.isPureReactComponent = true;
+```
+
+* createRef
+
+```js
+// an immutable object with a single mutable value
+export function createRef(): RefObject {
+  const refObject = {
+    current: null,
+  };
+  if (__DEV__) {
+    Object.seal(refObject);
+  }
+  return refObject;
+}
+```
+
+* forwardRef
+
+```js
+export function forwardRef<Props, ElementType: React$ElementType>(
+  render: (props: Props, ref: React$Ref<ElementType>) => React$Node,
+) {
+  const elementType = {
+    $$typeof: REACT_FORWARD_REF_TYPE,
+    render,
+  };
+
+  return elementType;
+}
+```
+
+* context
+
+```js
+/**
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * @flow
+ */
+
+import {REACT_PROVIDER_TYPE, REACT_CONTEXT_TYPE} from 'shared/ReactSymbols';
+
+import type {ReactContext} from 'shared/ReactTypes';
+
+export function createContext<T>(
+  defaultValue: T,
+  calculateChangedBits: ?(a: T, b: T) => number,
+): ReactContext<T> {
+  if (calculateChangedBits === undefined) {
+    calculateChangedBits = null;
+  } else {
+    if (__DEV__) {
+      // ****
+    }
+  }
+
+  const context: ReactContext<T> = {
+    $$typeof: REACT_CONTEXT_TYPE,
+    _calculateChangedBits: calculateChangedBits,
+    // As a workaround to support multiple concurrent renderers, we categorize
+    // some renderers as primary and others as secondary. We only expect
+    // there to be two concurrent renderers at most: React Native (primary) and
+    // Fabric (secondary); React DOM (primary) and React ART (secondary).
+    // Secondary renderers store their context values on separate fields.
+    _currentValue: defaultValue,
+    _currentValue2: defaultValue,
+    // Used to track how many concurrent renderers this context currently
+    // supports within in a single renderer. Such as parallel server rendering.
+    _threadCount: 0,
+    // These are circular
+    Provider: (null: any),
+    Consumer: (null: any),
+  };
+
+  context.Provider = {
+    $$typeof: REACT_PROVIDER_TYPE,
+    _context: context,
+  };
+
+  let hasWarnedAboutUsingNestedContextConsumers = false;
+  let hasWarnedAboutUsingConsumerProvider = false;
+  let hasWarnedAboutDisplayNameOnConsumer = false;
+
+  if (__DEV__) {
+    // ****
+  } else {
+    context.Consumer = context;
+  }
+
+
+  return context;
+}
+```
+
+* Lazy
+
+```js
+export function lazy<T>(
+  ctor: () => Thenable<{default: T, ...}>,
+): LazyComponent<T, Payload<T>> {
+  const payload: Payload<T> = {
+    // We use these fields to store the result.
+    _status: -1,
+    _result: ctor,
+  };
+
+  const lazyType: LazyComponent<T, Payload<T>> = {
+    $$typeof: REACT_LAZY_TYPE,
+    _payload: payload,
+    _init: lazyInitializer,
+  };
+
+  if (__DEV__) {
+    // ***
+  }
+
+  return lazyType;
+}
+```
+
+* useState
+
+```js
+export function useState<S>(
+  initialState: (() => S) | S,
+): [S, Dispatch<BasicStateAction<S>>] {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useState(initialState);
+}
+```
+
+* resolveDispatcher
+
+```js
+function resolveDispatcher() {
+  const dispatcher = ReactCurrentDispatcher.current;
+  invariant(
+    dispatcher !== null,
+    'Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for' +
+      ' one of the following reasons:\n' +
+      '1. You might have mismatching versions of React and the renderer (such as React DOM)\n' +
+      '2. You might be breaking the Rules of Hooks\n' +
+      '3. You might have more than one copy of React in the same app\n' +
+      'See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.',
+  );
+  return dispatcher;
+}
+```
+
+* ReactCurrentDispatcher
+
+```js
+const ReactCurrentDispatcher = {
+  /**
+   * @internal
+   * @type {ReactComponent}
+   */
+  current: (null: null | Dispatcher),
+};
+```
+
+* Router
+
+```js
+class Router extends React.Component {
+  static computeRootMatch(pathname) {
+    return { path: "/", url: "/", params: {}, isExact: pathname === "/" };
+  }
+
+  constructor(props) {
+    super(props);
+
+    this.state = {
+      location: props.history.location
+    };
+
+    // This is a bit of a hack. We have to start listening for location
+    // changes here in the constructor in case there are any <Redirect>s
+    // on the initial render. If there are, they will replace/push when
+    // they mount and since cDM fires in children before parents, we may
+    // get a new location before the <Router> is mounted.
+    this._isMounted = false;
+    this._pendingLocation = null;
+
+    if (!props.staticContext) {
+      
+      // 监控hash变化
+      this.unlisten = props.history.listen(location => {
+        if (this._isMounted) {
+          // 更新location
+          this.setState({ location });
+        } else {
+          this._pendingLocation = location;
+        }
+      });
+    }
+  }
+
+  componentDidMount() {
+    this._isMounted = true;
+
+    if (this._pendingLocation) {
+      this.setState({ location: this._pendingLocation });
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.unlisten) {
+      this.unlisten();
+      this._isMounted = false;
+      this._pendingLocation = null;
+    }
+  }
+
+  render() {
+    return (
+      // context 数据，会根据location的变化渲染子节点
+      <RouterContext.Provider
+        value={{
+          history: this.props.history,
+          location: this.state.location,
+          match: Router.computeRootMatch(this.state.location.pathname),
+          staticContext: this.props.staticContext
+        }}
+      >
+        <HistoryContext.Provider
+          children={this.props.children || null}
+          value={this.props.history}
+        />
+      </RouterContext.Provider>
+    );
+  }
+}
+```
+
+* Route
+
+```js
+class Route extends React.Component {
+  render() {
+    return (
+      <RouterContext.Consumer>
+        {context => {
+          invariant(context, "You should not use <Route> outside a <Router>");
+
+          const location = this.props.location || context.location;
+    
+          // 这里的computedMatch是服务语switch的，如果使用switch，这个值就会有值
+          const match = this.props.computedMatch
+            ? this.props.computedMatch // <Switch> already computed the match for us
+            : this.props.path
+            ? matchPath(location.pathname, this.props)  // match函数，是否路由命中
+            : context.match;
+
+          const props = { ...context, location, match };
+
+          let { children, component, render } = this.props;
+
+          // Preact uses an empty array as children by
+          // default, so use null if that's the case.
+          if (Array.isArray(children) && isEmptyChildren(children)) {
+            children = null;
+          }
+
+          return (
+            <RouterContext.Provider value={props}>
+              {props.match                    // 根据match的值渲染页面
+                ? children
+                  ? typeof children === "function"
+                    ? __DEV__
+                      ? evalChildrenDev(children, props, this.props.path)
+                      : children(props)
+                    : children
+                  : component
+                  ? React.createElement(component, props)
+                  : render
+                  ? render(props)
+                  : null
+                : typeof children === "function"
+                ? __DEV__
+                  ? evalChildrenDev(children, props, this.props.path)
+                  : children(props)
+                : null}
+            </RouterContext.Provider>
+          );
+        }}
+      </RouterContext.Consumer>
+    );
+  }
+}
+```
+
+* Switch
+
+```js
+class Switch extends React.Component {
+  render() {
+    return (
+      <RouterContext.Consumer>
+        {context => {
+          invariant(context, "You should not use <Switch> outside a <Router>");
+
+          const location = this.props.location || context.location;
+
+          let element, match;
+
+          // We use React.Children.forEach instead of React.Children.toArray().find()
+          // here because toArray adds keys to all child elements and we do not want
+          // to trigger an unmount/remount for two <Route>s that render the same
+          // component at different URLs.
+          React.Children.forEach(this.props.children, child => {
+            // 只会渲染当前路由命中的子节点
+            if (match == null && React.isValidElement(child)) {
+              element = child;
+
+              const path = child.props.path || child.props.from;
+
+              match = path
+                ? matchPath(location.pathname, { ...child.props, path })
+                : context.match;
+            }
+          });
+
+          return match
+            ? React.cloneElement(element, { location, computedMatch: match })
+            : null;
+        }}
+      </RouterContext.Consumer>
+    );
+  }
+}
+```
