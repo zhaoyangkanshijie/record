@@ -810,6 +810,29 @@
         * 返回新对象
     
         ```js
+        class a1{
+          constructor(val){
+            this.val = val
+            this.a1 = function(){
+              console.log(this.val)
+            }
+          }
+          a2(){
+
+          }
+        }
+        function a(val){
+          this.val = val;
+          this.a1 = function(){
+            console.log(this.val)
+          }
+        }
+        a.prototype.a2 = function(){}
+        let b = new a1(1);
+        let c = _new(a,1);//传a1会报错，es6的class必须new，否则apply报错:Uncaught TypeError: Class constructor a1 cannot be invoked without 'new'
+        console.log(b,c)
+        ```
+        ```js
         function create(){
             //创建一个空对象
             let obj = new Object();
