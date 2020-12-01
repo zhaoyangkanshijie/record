@@ -4521,6 +4521,8 @@ console.log(c.value); // 重新调用计算方法
 
 [vue3.0 teleport](https://zhuanlan.zhihu.com/p/143042237)
 
+[Vue3 Teleport 组件的实践及原理](https://juejin.cn/post/6900957010808963079)
+
 1. 功能：自定义html可移动到div app之外，此html可包含子组件，用法相当于一个封装好的组件，里面自定义插槽内容，同transition和keep-alive，是内部组件，可摇树
 
 2. 使用场景：全局modal，toast
@@ -4579,6 +4581,12 @@ console.log(c.value); // 重新调用计算方法
   ```
 
   在本页面内查看html源码，看到teleport-target，modal-container出现指定内容，并在app之外
+
+4. 源码
+
+  Teleport 组件通过 createBlock 进行创建，最后得到的 vnode 中会有一个 shapeFlag 属性，该属性用来表示 vnode 的类型。
+
+  在处理 Teleport 时，最后会调用 Teleport.process 方法，将 Teleport 的 children 挂载到属性 to 对应的 DOM 元素中。
 
 ## Vue3优化diff
 
