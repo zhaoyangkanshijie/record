@@ -310,7 +310,7 @@ person.fullName.myOwnApply(person1, ["Hello, "]);
 ## bind
 
 bind方法会创建一个函数实例,this会被绑定到传给bind()函数的值
-    
+
 f.bind(obj)，实际上可以理解为obj.f()
 
 从第二个参数起，会依次传递给原始函数
@@ -504,29 +504,29 @@ function deepClone(obj) {
 
 防抖:触发事件后在 n 秒内函数只能执行一次，如果在 n 秒内又触发了事件，则会重新计算函数执行时间。
 ```js
-    function debounce(fn, wait, immediate, ...args) {
+function debounce(fn, wait, immediate) {
     let timer = null;
     let one = immediate;
-    return function () {
-        if (one) {
-            one = false;
-            fn(...args);
-        } else {
-            if (timer !== null) {
-                clearTimeout(timer);
-            }
-            timer = setTimeout(() => {
-                fn(...args);
-            }, wait);
+    return function (...args) {
+    if (one) {
+        one = false;
+        fn(...args);
+    } else {
+        if (timer !== null) {
+        clearTimeout(timer);
         }
+        timer = setTimeout(() => {
+        fn(...args);
+        }, wait);
+    }
     };
 }
-
-function handle(...a) {
-    console.log(a, Math.random());
+var handle = debounce(function (val) {
+    console.log("搜索了" + val);
+}, 1000,true)
+window.onclick = function () {
+    handle(Math.random())
 }
-
-window.addEventListener("click", debounce(handle, 1000, true, 1,2,3));
 ```
 
 节流:连续触发事件但是在 n 秒中只执行一次函数。节流会稀释函数的执行频率。

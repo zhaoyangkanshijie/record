@@ -1168,29 +1168,29 @@
      触发事件后在 n 秒内函数只能执行一次，如果在 n 秒内又触发了事件，则会重新计算函数执行时间。
 
      ```js
-     function debounce(fn, wait, immediate, ...args) {
-        let timer = null;
-        let one = immediate;
-        return function () {
-            if (one) {
-                one = false;
-                fn(...args);
-            } else {
-                if (timer !== null) {
-                    clearTimeout(timer);
-                }
-                timer = setTimeout(() => {
-                    fn(...args);
-                }, wait);
-            }
-        };
+     function debounce(fn, wait, immediate) {
+      let timer = null;
+      let one = immediate;
+      return function (...args) {
+        if (one) {
+          one = false;
+          fn(...args);
+        } else {
+          if (timer !== null) {
+            clearTimeout(timer);
+          }
+          timer = setTimeout(() => {
+            fn(...args);
+          }, wait);
+        }
+      };
     }
-
-    function handle(...a) {
-        console.log(a, Math.random());
+    var handle = debounce(function (val) {
+      console.log(val);
+    }, 1000,true)
+    window.onclick = function () {
+      handle(Math.random())
     }
-
-    window.addEventListener("click", debounce(handle, 1000, true, 1,2,3));
      ```
 
    - 节流（throttle）
@@ -1198,33 +1198,33 @@
      连续触发事件但是在 n 秒中只执行一次函数。节流会稀释函数的执行频率。
 
       ```js
-      function throttle(fn, wait, isDate, ...args) {
-          let previous = 0;
-          let timer = null;
+      function throttle(fn, wait, isDate) {
+        let previous = 0;
+        let timer = null;
 
-          return function () {
-              if (isDate) {
-                  let now = new Date().getTime();
-                  if (now - previous > wait) {
-                      previous = now;
-                      fn(...args);
-                  }
-              } else {
-              if (timer === null) {
-                  timer = setTimeout(() => {
-                      timer = null;
-                      fn(...args);
-                  }, wait);
-              }
-              }
-          };
+        return function (...args) {
+          if (isDate) {
+            let now = new Date().getTime();
+            if (now - previous > wait) {
+              previous = now;
+              fn(...args);
+            }
+          } else {
+            if (timer === null) {
+              timer = setTimeout(() => {
+                timer = null;
+                fn(...args);
+              }, wait);
+            }
+          }
+        };
       }
-
-      function handle(...a) {
-          console.log(a, Math.random());
+      var handle = throttle(function (val) {
+        console.log(val);
+      }, 1000, true)
+      window.onclick = function () {
+        handle(Math.random())
       }
-
-      window.addEventListener("click", throttle(handle, 1000, true, 1,2,3));
       ```
 
 
