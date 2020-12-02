@@ -8,6 +8,7 @@
 * [变量生命周期](#变量生命周期)
 * [this的指向](#this的指向)
 * [isNaN和Number.isNaN函数的区别](#isNaN和Number.isNaN函数的区别)
+* [隐式转换](#隐式转换)
 
 ---
 
@@ -355,4 +356,17 @@ sub() // 输出4
 ```js
 isNaN('a')//true
 Number.isNaN('a')//false
+```
+
+## 隐式转换
+
+```js
+console.log([] + [])->console.log("" + "")->""
+console.log({} + [])->console.log("[object Object]" + "")->"[object Object]"
+console.log([] == ![])->console.log(0 == !true)->console.log(0 == false)->true
+console.log(true + false)->console.log(1 + 0)->1
+```
+```txt
+[]==false,[]==![],[]==0,''==0,""=="" true
+{}==false,{}==!{},{}==0,NaN==0 false
 ```
