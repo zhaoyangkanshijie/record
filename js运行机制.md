@@ -185,6 +185,10 @@
 
    [12 道腾讯前端面试真题及答案整理](https://mp.weixin.qq.com/s/mouL2lrCvttHpMwP4iesKw)
 
+   [ECMAScript w3cschool](https://www.w3school.com.cn/js/pro_js_operators_equality.asp)
+
+   [JS类型转换规则详解](https://www.cnblogs.com/Renyi-Fan/p/9189441.html)
+
 2. 详解：
 
    - js 数据类型
@@ -246,12 +250,71 @@
      - [] + [] = "" + "" = ""
      - [] + {} = "" + "[object Object]" = "[object Object]"
 
+      * 加法运算操作符
+        * 两个操作值都是数值：
+          * 如果一个操作数为NaN，则结果为NaN
+          * 如果是Infinity+Infinity，结果是Infinity
+          * 如果是-Infinity+(-Infinity)，结果是-Infinity
+          * 如果是Infinity+(-Infinity)，结果是NaN
+          * 如果是+0+(+0)，结果为+0
+          * 如果是(-0)+(-0)，结果为-0
+          * 如果是(+0)+(-0)，结果为+0
+        * 如果有一个操作值为字符串类型，则将另一个操作值转换为字符串，最后连接起来。
+
+      * 乘法运算符
+        * 如果结果太大或太小，那么生成的结果是 Infinity 或 -Infinity。
+        * 如果某个运算数是 NaN，结果为 NaN。
+        * Infinity 乘以 0，结果为 NaN。
+        * Infinity 乘以 0 以外的任何数字，结果为 Infinity 或 -Infinity。
+        * Infinity 乘以 Infinity，结果为 Infinity。
+
+      * 除法运算符
+        * 如果结果太大或太小，那么生成的结果是 Infinity 或 -Infinity。
+        * 如果某个运算数是 NaN，结果为 NaN。
+        * Infinity 被 Infinity 除，结果为 NaN。
+        * Infinity 被任何数字除，结果为 Infinity。
+        * 0 除一个任何非无穷大的数字，结果为 NaN。
+        * Infinity 被 0 以外的任何数字除，结果为 Infinity 或 -Infinity。
+
+      * 取模运算符
+        * 如果被除数是 Infinity，或除数是 0，结果为 NaN。
+        * Infinity 被 Infinity 除，结果为 NaN。
+        * 如果除数是无穷大的数，结果为被除数。
+        * 如果被除数为 0，结果为 0。
+
      ```js
      console.log([] + [])->console.log("" + "")->""
      console.log({} + [])->console.log("[object Object]" + "")->"[object Object]"
      console.log([] == ![])->console.log(0 == !true)->console.log(0 == false)->true
      console.log(true + false)->console.log(1 + 0)->1
      ```
+
+   - 逻辑操作符（!、&&、||）
+
+      * 逻辑非（！）操作符首先通过Boolean()函数将它的操作值转换为布尔值，然后求反。
+      * 逻辑与（&&）操作符，如果一个操作值不是布尔值时，遵循以下规则进行转换：
+        * 如果第一个操作数经Boolean()转换后为true，则返回第二个操作值，否则返回第一个值（不是Boolean()转换后的值）
+          * 如果一个运算数是对象，另一个是 Boolean 值，返回该对象。
+          * 如果两个运算数都是对象，返回第二个对象
+        * 如果有一个操作值为null，返回null
+        * 如果有一个操作值为NaN，返回NaN
+        * 如果有一个操作值为undefined，返回undefined
+      * 逻辑或（||）操作符，如果一个操作值不是布尔值，遵循以下规则：
+        * 如果第一个操作值经Boolean()转换后为false，则返回第二个操作值，否则返回第一个操作值（不是Boolean()转换后的值）
+          * 如果一个运算数是对象，并且该对象左边的运算数值均为 false，则返回该对象。
+          * 如果两个运算数都是对象，返回第一个对象。
+        * 如果最后一个运算数是 null，并且其他运算数值均为 false，则返回 null。
+        * 如果最后一个运算数是 NaN，并且其他运算数值均为 false，则返回 NaN。
+        * 如果最后一个运算数是 undefined，并且其他运算数值均为 false，则返回 undefined。
+
+   - 关系操作符（<, >, <=, >=）
+
+      * 如果两个操作值都是数值，则进行数值比较
+      * 如果两个操作值都是字符串，则比较字符串对应的字符编码值
+      * 如果只有一个操作值是数值，则将另一个操作值转换为数值，进行数值比较
+      * 如果一个操作数是对象，则调用valueOf()方法（如果对象没有valueOf()方法则调用toString()方法），得到的结果按照前面的规则执行比较
+      * 如果一个操作值是布尔值，则将其转换为数值，再进行比较
+      * NaN是非常特殊的值，它与任何类型的值比较大小时都返回false。
 
    - 比较运算
 
@@ -273,6 +336,15 @@
      | undefined  | NaN      | "undefined"       | false     |
      | {}         | NaN      | "[object Object]" | true      |
      | function() | NaN      | "function"        | true      |
+
+      * 如果一个运算数是 Boolean 值，在检查相等性之前，把它转换成数字值。false 转换成 0，true 为 1。
+      * 如果一个运算数是字符串，另一个是数字，在检查相等性之前，要尝试把字符串转换成数字。
+      * 如果一个运算数是对象，另一个是字符串，在检查相等性之前，要尝试把对象转换成字符串。
+      * 如果一个运算数是对象，另一个是数字，在检查相等性之前，要尝试把对象转换成数字。
+      * 值 null 和 undefined 相等。
+      * 在检查相等性时，不能把 null 和 undefined 转换成其他值。
+      * 如果某个运算数是 NaN，等号将返回 false，非等号将返回 true。
+      * 如果两个运算数都是对象，那么比较的是它们的引用值。如果两个运算数指向同一对象，那么等号返回 true，否则两个运算数不等。
 
      ```txt
      []==false,[]==![],[]==0,''==0,""=="" true
