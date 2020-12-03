@@ -1994,259 +1994,281 @@
    - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
    - [“浅尝”JavaScript设计模式](https://juejin.im/post/5eb3be806fb9a043426818c7#heading-5)
    - [proxy-polyfill](https://github.com/linsk1998/proxy-polyfill/blob/master/proxy.js)
+   - [进阶必读：深入理解 JavaScript 原型](https://juejin.cn/post/6901494216074100750)
 
 2. 详解：
 
-   - 继承的实现
+    * 原型链
 
-     父类
-
-     ```js
-     function Father(name) {
-       // 属性
-       (this.name = name || "father"),
-         // 实例方法
-         (this.sleep = function () {
-           console.log(this.name + "正在睡觉");
-         });
-     }
-     // 原型方法
-     Father.prototype.look = function (book) {
-       console.log(this.name + "正在看:" + book);
-     };
-     ```
-
-     1. 原型链
+      * 定义
 
         原型对象上有一个 constructor 属性指向构造函数；实例对象上有一*proto* 属性指向原型对象，通过*proto*可以一直往上寻找原型对象，直到为 null，由*proto*串起来的路径就是原型链。
+
+      * 作用
+
+        在访问一个对象的属性时，实际上是在查询原型链。这个对象是原型链的第一个元素，先检查它是否包含属性名，如果包含则返回属性值，否则检查原型链上的第二个元素，以此类推。
+
+      * 关于prototype
 
         对象分 2 种：函数对象和普通对象，只有函数对象拥有原型对象（prototype），prototype 的本质是普通对象，new 操作得到的对象是普通对象。
 
 
-            ```js
-            function Son(){
-    
-            }
-            Son.prototype = new Father();  // 相当于重写了Son的原型
-            Son.prototype.constructor = Son; //  一定要把Son原型上的contructor重新指向Son
-    
-            var son = new Son();
-            console.log(son.sleep()); // father正在睡觉
-            console.log(son.look('TV')); // father正在看TV
-            ```
-    
-            缺点：无法向父构造函数传参，共享父类属性
-    
-        2. 借用构造函数
-    
-            ```js
-            function Son(name){
-                Father.call(this);
-                this.name = name;
-            }
-            var son = new Son('son')
-            console.log(son.sleep()) //son正在睡觉
-            console.log(son.look('TV')) // son正在看TV
-            ```
-            缺点：只继承构造函数属性，没继承构造父类原型属性，没法复用，新实例都调用父构造函数。
-    
-        3. 冒充对象继承
-    
-            ```js
-            function Son(){
-                var temp = new Father()
-                for(var k in temp){
-                    this[k] = temp[k]
-                }
-                temp = null
-            }
-    
-            var son = new Son()
-            console.log(son.sleep()) // father正在睡觉
-            console.log(son.look('TV')) // father正在看TV
-            ```
-            缺点：遍历繁琐，没解决向父构造函数传参问题
-    
-        4. 组合继承(原型链+call)
-    
-            ```js
-            function Son(){
-                Father.call(this)
-            }
-            Son.prototype = new Father();
-            Son.prototype.constructor = Son;
-    
-            var son = new Son()
-            console.log(son.sleep()) // father正在睡觉
-            console.log(son.look('TV')) // father正在看TV
-            ```
-            缺点：调用了两次父类构造函数（耗内存），子类的构造函数会代替原型上的那个父类构造函数。
-    
-        5. 原型式继承
-    
-            ```js
-            function createObject(o){
-                function fn(){}
-                fn.prototype = o;
-                return new fn();
-            }
-            var father = new Father();
-            var son = createObject(father);
-            console.log(son.sleep()) // father正在睡觉
-            console.log(son.look('TV')) // father正在看TV
-            ```
-            缺点：所有实例都会继承原型上的属性。无法实现复用。（新实例属性都是后面添加的）
-    
-        6. 寄生式继承
-    
-            ```js
-            function createObject(o){
-                function fn(){}
-                fn.prototype = o;
-                return new fn();
-            }
-            var father = new Father();
-            function Son(o){
-                var son = createObject(o);
-                son.name = 'son';
-                return son;
-            }
-            var son = Son(father);
-            console.log(son.sleep()) // son正在睡觉
-            console.log(son.look('TV')) // son正在看TV
-            ```
-            缺点：没用到原型，无法复用。
-    
-        7. 最佳：寄生组合继承
-    
-            ```js
-            function createObject(o){
-                function fn(){}
-                fn.prototype = o;
-                return new fn();
-            }
-            function Son(){
-                Father.call(this)
-            }
-            Son.prototype = createObject(Father.prototype)
-            Son.prototype.constructor = Son;
-            var son = new Son('son');
-            console.log(son.sleep()) // son正在睡觉
-            console.log(son.look('TV')) // son正在看TV
-            ```
-    
-        8. es6class继承
-    
-            ```js
-            let Point = class Point {
-                constructor(x, y) {
-                    this.x = x;
-                    this.y = y;
-                }
-    
-                toString() {
-                    return '(' + this.x + ', ' + this.y + ')';
-                }
-    
-                //属性名
-                [methodName]() {
-    
-                }
-    
-                //不可继承的静态方法
-                static classMethod() {
-                    return 'hello';
-                }
-    
-                get prop() {
-                    return 'getter';
-                }
-                set prop(value) {
-                    console.log('setter: '+value);
-                }
-            }
-    
-            let ColorPoint = class ColorPoint extends Point {
-                constructor(x, y, color) {
-                    super(x, y); // 调用父类的constructor(x, y),super后才能使用this
-                    this.color = color;
-                }
-    
-                toString() {
-                    return this.color + ' ' + super.toString(); // 调用父类的toString()
-                }
-            }
-    
-            let colorPoint = new ColorPoint(1,2,'red');
-            console.log(colorPoint.toString());
-            ```
-    
-            * class原理(使用babel理解)：组合寄生继承
-    
-            super() 等同于Parent.prototype.construtor()
-    
-            ```js
-            class Parent {
-                constructor(a){
-                    this.filed1 = a;
-                }
-                filed2 = 2;
-                func1 = function(){}
-            }
-            class Child extends Parent {
-                constructor(a,b) {
-                    super(a);
-                    this.filed3 = b;
-                }
-                filed4 = 1;
-                func2 = function(){}
-            }
-    
-            function _classCallCheck(instance, Constructor) {
-                // instanceof 检测构造函数的 prototype 属性是否出现在某个实例对象的原型链上。
-                if (!(instance instanceof Constructor)) {
-                    throw new TypeError("Cannot call a class as a function");
-                }
-            }
-            var Parent = function Parent(a) {
-                _classCallCheck(this, Parent);
-    
-                this.filed2 = 2;
-    
-                this.func1 = function () { };
-    
-                this.filed1 = a;
-            };
-            var Child = function (_Parent) {
-                _inherits(Child, _Parent);
-    
-                function Child(a, b) {
-                    _classCallCheck(this, Child);
-    
-                    var _this = _possibleConstructorReturn(this, (Child.__proto__ || Object.getPrototypeOf(Child)).call(this, a));
-    
-                    _this.filed4 = 1;
-    
-                    _this.func2 = function () {};
-    
-                    _this.filed3 = b;
-                    return _this;
-                }
-    
-                return Child;
-            }(Parent);
-            function _inherits(subClass, superClass) {
-                if (typeof superClass !== "function" && superClass !== null) {
-                    throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
-                }
-                subClass.prototype = Object.create(superClass && superClass.prototype, {
-                    constructor: { value: subClass, enumerable: false, writable: true, configurable: true }
-                });
-                if (superClass)
-                    Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
-                }
-            }
-            ```
+
+    * 继承的实现
+
+      父类
+
+      ```js
+      function Father(name) {
+        // 属性
+        (this.name = name || "father"),
+          // 实例方法
+          (this.sleep = function () {
+            console.log(this.name + "正在睡觉");
+          });
+      }
+      // 原型方法
+      Father.prototype.look = function (book) {
+        console.log(this.name + "正在看:" + book);
+      };
+      ```
+
+      1. 原型链
+
+        ```js
+        function Son(){
+
+        }
+        Son.prototype = new Father();  // 相当于重写了Son的原型
+        Son.prototype.constructor = Son; //  一定要把Son原型上的contructor重新指向Son
+
+        var son = new Son();
+        console.log(son.sleep()); // father正在睡觉
+        console.log(son.look('TV')); // father正在看TV
+        ```
+
+        缺点：无法向父构造函数传参，共享父类属性
+  
+      2. 借用构造函数
+  
+          ```js
+          function Son(name){
+              Father.call(this);
+              this.name = name;
+          }
+          var son = new Son('son')
+          console.log(son.sleep()) //son正在睡觉
+          console.log(son.look('TV')) // son正在看TV
+          ```
+          缺点：只继承构造函数属性，没继承构造父类原型属性，没法复用，新实例都调用父构造函数。
+  
+      3. 冒充对象继承
+  
+          ```js
+          function Son(){
+              var temp = new Father()
+              for(var k in temp){
+                  this[k] = temp[k]
+              }
+              temp = null
+          }
+  
+          var son = new Son()
+          console.log(son.sleep()) // father正在睡觉
+          console.log(son.look('TV')) // father正在看TV
+          ```
+          缺点：遍历繁琐，没解决向父构造函数传参问题
+  
+      4. 组合继承(原型链+call)
+  
+          ```js
+          function Son(){
+              Father.call(this)
+          }
+          Son.prototype = new Father();
+          Son.prototype.constructor = Son;
+  
+          var son = new Son()
+          console.log(son.sleep()) // father正在睡觉
+          console.log(son.look('TV')) // father正在看TV
+          ```
+          缺点：调用了两次父类构造函数（耗内存），子类的构造函数会代替原型上的那个父类构造函数。
+  
+      5. 原型式继承
+  
+          通过 Object.create 或者 Object.setPrototypeOf 显式继承另一个对象，将它设置为原型。
+
+          通过 constructor 构造函数，在使用 new 关键字实例化时，会自动继承 constructor 的 prototype 对象，作为实例的原型。
+
+          ```js
+          function createObject(o){
+              function fn(){}
+              fn.prototype = o;
+              return new fn();
+          }
+          var father = new Father();
+          var son = createObject(father);
+          console.log(son.sleep()) // father正在睡觉
+          console.log(son.look('TV')) // father正在看TV
+          ```
+          缺点：所有实例都会继承原型上的属性。无法实现复用。（新实例属性都是后面添加的）
+  
+      6. 寄生式继承
+  
+          ```js
+          function createObject(o){
+              function fn(){}
+              fn.prototype = o;
+              return new fn();
+          }
+          var father = new Father();
+          function Son(o){
+              var son = createObject(o);
+              son.name = 'son';
+              return son;
+          }
+          var son = Son(father);
+          console.log(son.sleep()) // son正在睡觉
+          console.log(son.look('TV')) // son正在看TV
+          ```
+          缺点：没用到原型，无法复用。
+  
+      7. 最佳：寄生组合继承
+
+          ConstructorB 如何继承 ConstructorA
+
+          编写新的 constructor，将两个 constructor 通过 call/apply 的方式，合并它们的属性初始化。按照超类优先的顺序进行。
+
+          取出超类和子类的原型对象，通过 Object.create/Object.setPrototypeOf 显式原型继承的方式，设置子类的原型为超类原型。
+  
+          ```js
+          function createObject(o){
+              function fn(){}
+              fn.prototype = o;
+              return new fn();
+          }
+          function Son(){
+              Father.call(this)
+          }
+          Son.prototype = createObject(Father.prototype)
+          Son.prototype.constructor = Son;
+          var son = new Son('son');
+          console.log(son.sleep()) // son正在睡觉
+          console.log(son.look('TV')) // son正在看TV
+          ```
+  
+      8. es6class继承
+  
+          ```js
+          let Point = class Point {
+              constructor(x, y) {
+                  this.x = x;
+                  this.y = y;
+              }
+  
+              toString() {
+                  return '(' + this.x + ', ' + this.y + ')';
+              }
+  
+              //属性名
+              [methodName]() {
+  
+              }
+  
+              //不可继承的静态方法
+              static classMethod() {
+                  return 'hello';
+              }
+  
+              get prop() {
+                  return 'getter';
+              }
+              set prop(value) {
+                  console.log('setter: '+value);
+              }
+          }
+  
+          let ColorPoint = class ColorPoint extends Point {
+              constructor(x, y, color) {
+                  super(x, y); // 调用父类的constructor(x, y),super后才能使用this
+                  this.color = color;
+              }
+  
+              toString() {
+                  return this.color + ' ' + super.toString(); // 调用父类的toString()
+              }
+          }
+  
+          let colorPoint = new ColorPoint(1,2,'red');
+          console.log(colorPoint.toString());
+          ```
+  
+          * class原理(使用babel理解)：组合寄生继承
+  
+          super() 等同于Parent.prototype.construtor()
+  
+          ```js
+          class Parent {
+              constructor(a){
+                  this.filed1 = a;
+              }
+              filed2 = 2;
+              func1 = function(){}
+          }
+          class Child extends Parent {
+              constructor(a,b) {
+                  super(a);
+                  this.filed3 = b;
+              }
+              filed4 = 1;
+              func2 = function(){}
+          }
+  
+          function _classCallCheck(instance, Constructor) {
+              // instanceof 检测构造函数的 prototype 属性是否出现在某个实例对象的原型链上。
+              if (!(instance instanceof Constructor)) {
+                  throw new TypeError("Cannot call a class as a function");
+              }
+          }
+          var Parent = function Parent(a) {
+              _classCallCheck(this, Parent);
+  
+              this.filed2 = 2;
+  
+              this.func1 = function () { };
+  
+              this.filed1 = a;
+          };
+          var Child = function (_Parent) {
+              _inherits(Child, _Parent);
+  
+              function Child(a, b) {
+                  _classCallCheck(this, Child);
+  
+                  var _this = _possibleConstructorReturn(this, (Child.__proto__ || Object.getPrototypeOf(Child)).call(this, a));
+  
+                  _this.filed4 = 1;
+  
+                  _this.func2 = function () {};
+  
+                  _this.filed3 = b;
+                  return _this;
+              }
+  
+              return Child;
+          }(Parent);
+          function _inherits(subClass, superClass) {
+              if (typeof superClass !== "function" && superClass !== null) {
+                  throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
+              }
+              subClass.prototype = Object.create(superClass && superClass.prototype, {
+                  constructor: { value: subClass, enumerable: false, writable: true, configurable: true }
+              });
+              if (superClass)
+                  Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass;
+              }
+          }
+          ```
     
     * 设计模式总览
         1. 创建型模式
