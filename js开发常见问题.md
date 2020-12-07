@@ -35,6 +35,7 @@
 - [全部替代一个子串为另一个子串](#全部替代一个子串为另一个子串)
 - [isNaN和Number.isNaN函数的区别](#isNaN和Number.isNaN函数的区别)
 - [three.js基本使用](#three.js基本使用)
+- [跨源通信](#跨源通信)
 
 ---
 
@@ -6978,3 +6979,98 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
   </body>
 </html>
 ```
+
+### 跨源通信
+
+1. 参考链接：
+
+  [window.postMessage](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/postMessage)
+
+2. 详解
+
+* 与app通信
+  ```js
+  isAndroid() {
+      return window.navigator.userAgent.indexOf('Android') > -1 || window.navigator.userAgent.indexOf('Adr') > -1;
+  }
+  isIOS() {
+      return !!window.navigator.userAgent.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+  }
+  try{
+      //myFunction为约定的函数名
+      if (this.isAndroid()) {
+          window.android.myFunction(this.state.data);
+      }
+      if (this.isIOS()) {
+          window.webkit.messageHandlers.myFunction.postMessage(this.state.data);
+      }
+  }
+  catch(e){
+      //console.log(e)
+  }
+  ```
+
+* 跨源通信
+
+  window.postMessage() 方法可以安全地实现跨源通信。
+
+  通常，对于两个不同页面的脚本，只有当执行它们同源时，这两个脚本才能相互通信。window.postMessage() 方法提供了一种受控机制来规避此限制，只要正确的使用，这种方法就很安全。
+
+  兼容性:IE10+
+
+  用法
+  ```js
+  otherWindow.postMessage(message, targetOrigin, [transfer]);
+  ```
+  * otherWindow:其他窗口的一个引用,如iframe.contentWindow或window.opener
+  * message:数据会自动序列化
+  * targetOrigin:"*"（表示无限制）或者一个URI,如果你明确的知道消息应该发送到哪个窗口，那么请始终提供一个有确切值的targetOrigin，而不是\*。不提供确切的目标将导致数据泄露到任何对数据感兴趣的恶意站点。
+  * transfer:可选,是一串和message 同时传递的 Transferable 对象. 这些对象的所有权将被转移给消息的接收方，而发送一方将不再保有所有权。
+
+  样例
+  ```js
+  /*
+  * A窗口的域名是<http://example.com:8080>，以下是A窗口的script标签下的代码：
+  */
+
+  var popup = window.open(...popup details...);
+
+  // 如果弹出框没有被阻止且加载完成
+
+  // 这行语句没有发送信息出去，即使假设当前页面没有改变location（因为targetOrigin设置不对）
+  popup.postMessage("The user is 'bob' and the password is 'secret'", "https://secure.example.net");
+
+  // 假设当前页面没有改变location，这条语句会成功添加message到发送队列中去（targetOrigin设置对了）
+  popup.postMessage("hello there!", "http://example.org");
+
+  function receiveMessage(event)
+  {
+    // 我们能相信信息的发送者吗?  (也许这个发送者和我们最初打开的不是同一个页面).
+    if (event.origin !== "http://example.org") return;
+
+    // event.source 是我们通过window.open打开的弹出页面 popup
+    // event.data 是 popup发送给当前页面的消息 "hi there yourself!  the secret response is: rheeeeet!"
+  }
+  window.addEventListener("message", receiveMessage, false);
+
+
+  /*
+  * 弹出页 popup 域名是<http://example.org>，以下是script标签中的代码:
+  */
+
+  //当A页面postMessage被调用后，这个function被addEventListener调用
+  function receiveMessage(event)
+  {
+    // 我们能信任信息来源吗？
+    if (event.origin !== "http://example.com:8080") return;
+
+    // event.source 就当前弹出页的来源页面
+    // event.data 是 "hello there!"
+
+    // 假设你已经验证了所受到信息的origin (任何时候你都应该这样做), 一个很方便的方式就是把event.source
+    // 作为回信的对象，并且把event.origin作为targetOrigin
+    event.source.postMessage("hi there yourself!  the secret response is: rheeeeet!", event.origin);
+  }
+
+  window.addEventListener("message", receiveMessage, false);
+  ```

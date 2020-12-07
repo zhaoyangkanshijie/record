@@ -58,6 +58,7 @@
 * [Vue3优化diff](#Vue3优化diff)
 * [Vue Composition API 和 React Hooks](#VueCompositionAPI和ReactHooks)
 * [vue常见问题解决方案](#vue常见问题解决方案)
+* [Vue3是如何变快的](#Vue3是如何变快的)
 
 ---
 
@@ -5232,3 +5233,117 @@ export function rewriteLog() {
 
 也可在配置中用terser-plugin消除console.log
 
+## Vue3是如何变快的
+
+参考链接：
+
+[Vue3.0学习](https://blog.csdn.net/zlj19980305/article/details/110501737)
+
+[Vue3教程：Vue 3.x 快在哪里？](https://juejin.cn/post/6903171037211557895)
+
+1. diff算法优化
+
+  见[Vue3优化diff](#Vue3优化diff)
+
+2. hoistStatic(静态提升)
+
+  非更新的元素在render函数中做静态提升，减少多次调用导致多次重新定义变量的问题
+
+  静态提升:在开发过程中写函数的时候，定义一些写死的变量时，都会将变量提升出去定义，不会每次调用都重新定义一次变量
+  ```js
+  const PAGE_SIZE = 10
+  function getData () {
+    $.get('/data', {
+      data: {
+        page: PAGE_SIZE
+      },
+      ...
+    })
+  }
+  ```
+
+  Vue2.x中无论元素是否参与更新，每次都会重新创建，然后再渲染
+
+  Vue3.0中对于不参与更新的元素，会做静态提升，只会被创建一次，在渲染时直接复用即可
+
+  ```html
+  <div>
+      <p>hello</p>
+      <p>hello</p>
+      <p>hello</p>
+      <p>{{msg}}}</p>
+  </div>
+  ```
+
+  没有静态提升时
+  ```js
+  export function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return (_openBlock(), _createBlock("div", null, [
+      _createVNode("p", null, "hello"),
+      _createVNode("p", null, "hello"),
+      _createVNode("p", null, "hello"),
+      _createVNode("p", null, _toDisplayString(_ctx.msg) + "}", 1 /* TEXT */)
+    ]))
+  }
+  ```
+
+  静态提升之后
+  ```js
+  const _hoisted_1 = /*#__PURE__*/_createVNode("p", null, "hello", -1 /* HOISTED */)
+  const _hoisted_2 = /*#__PURE__*/_createVNode("p", null, "hello", -1 /* HOISTED */)
+  const _hoisted_3 = /*#__PURE__*/_createVNode("p", null, "hello", -1 /* HOISTED */)
+  export function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return (_openBlock(), _createBlock("div", null, [
+      _hoisted_1,
+      _hoisted_2,
+      _hoisted_3,
+      _createVNode("p", null, _toDisplayString(_ctx.msg) + "}", 1 /* TEXT */)
+    ]))
+  }
+  ```
+
+3. cacheHandlers事件监听缓存
+
+  默认情况下 @click 事件被认为是动态变量，所以每次更新视图的时候都会追踪它的变化。但是正常情况下，我们的 @click 事件在视图渲染前和渲染后，都是同一个事件，基本上不需要去追踪它的变化
+
+  ```html
+  <div>
+    <button @click="onClick">按钮</button>
+  </div>
+  ```
+
+  没有开启事件监听缓存时,静态标记为8(动态属性，不包括类名和样式)，会被拉去做比较
+  ```js
+  export function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return (_openBlock(), _createBlock("div", null, [
+      _createVNode("button", { onClick: _ctx.onClick }, "按钮", 8 /* PROPS */, ["onClick"])
+    ]))
+  }
+  ```
+
+  开启事件监听缓存之后
+  ```js
+  export function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return (_openBlock(), _createBlock("div", null, [
+      _createVNode("button", {
+        onClick: _cache[1] || (_cache[1] = (...args) => (_ctx.onClick(...args)))
+      }, "按钮")
+    ]))
+  }
+  ```
+
+4. SSR 服务端渲染
+
+  使用 SSR 开发时，Vue 3.0 会将静态标签直接转化为文本，相比 React 先将 jsx 转化为虚拟 DOM，再将虚拟 DOM 转化为 HTML，Vue 3.0 已经赢了。
+
+5. StaticNode(静态节点)
+
+  在客户端渲染的时候，只要标签嵌套得足够多，除了会静态提升，还会在编译时将其转化为 HTML 字符串
+  ```js
+  const _hoisted_1 = /*#__PURE__*/_createStaticVNode("<p><span>a</span><span>a</span><span>a</span><span>a</span><span>a</span></p>")
+  export function render(_ctx, _cache, $props, $setup, $data, $options) {
+    return (_openBlock(), _createBlock("div", null, [
+      _hoisted_1
+    ]))
+  }
+  ```
