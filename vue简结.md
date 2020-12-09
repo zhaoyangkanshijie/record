@@ -59,6 +59,7 @@
 * [Vue Composition API 和 React Hooks](#VueCompositionAPI和ReactHooks)
 * [vue常见问题解决方案](#vue常见问题解决方案)
 * [Vue3是如何变快的](#Vue3是如何变快的)
+* [vue-router4](#vue-router4)
 
 ---
 
@@ -2665,6 +2666,8 @@ configeWebpack: (config) => {
 
   [快速使用Vue3最新的15个常用API](https://juejin.cn/post/6897030228867022856)
 
+  [万字长文带你全面掌握Vue3](https://juejin.cn/post/6903119693742080007)
+
   * 生命周期及nextTick
 
     ```js
@@ -3388,6 +3391,8 @@ configeWebpack: (config) => {
     6. provide/inject由对象改为函数
     7. vuex由Vue.use(Vuex)，Vuex.Store({})变为Vuex.createStore({})，由this.$store.~~~变为useStore().~~~
     8. 新增 Suspense 组件，处理动态引入的组件。defineAsyncComponent可以接受返回承诺的工厂函数
+
+    异步组件:提供了两个template 也就是两个插槽，一个是没请求回来的时候显示什么，一个是请求成功显示什么
     ```ts
     <template>
       <Suspense>
@@ -5347,3 +5352,70 @@ export function rewriteLog() {
     ]))
   }
   ```
+
+## vue-router4
+
+参考链接：
+
+[Vue Router 4.0 发布！焕然一新。](https://juejin.cn/post/6903717128373796871)
+
+1. 新增了有自动优先级排名的高级路径解析功能
+
+  越明确的路由排名越高，越模糊则反之，无关顺序
+
+  在旧版的 Vue Router 中需要通过路由声明的顺序来保证这个行为，而新版则无论你怎样放置，都会按照得分系统来计算该匹配哪个路由。
+
+  ```js
+  const routes = [
+    {
+      path: '/users',
+      Component: Users
+    },
+    {
+      path: '/:w+',
+      Component: NotFound
+    }
+  ]
+  ```
+
+  排名
+  ```js
+  it('works', () => {
+    checkPathOrder([
+      '/a/b/c',
+      '/a/b',
+      '/a/:b/c',
+      '/a/:b',
+      '/a',
+      '/a-:b-:c',
+      '/a-:b',
+      '/a-:w(.*)',
+      '/:a-:b-:c',
+      '/:a-:b',
+      '/:a-:b(.*)',
+      '/:a/-:b',
+      '/:a/:b',
+      '/:w',
+      '/:w+'
+    ])
+  })
+  ```
+
+2. 更强大的 Devtools
+
+  * 时间轴记录路由变化
+  * 完整 route 目录，轻松调试
+
+3. 更好的路由守卫
+
+  去除next，加入async await
+  ```js
+  router.beforeEach(async (to, from) => {
+    // canUserAccess() returns `true` or `false`
+    return await canUserAccess(to)
+  })
+  ```
+
+4. 一致的编码
+
+  作为参数传递给 router.push() 时，不需要做任何编码，在你使用 $route 或 useRoute()去拿到参数的时候永远是解码（Decoded）的状态。
