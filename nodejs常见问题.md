@@ -18,6 +18,7 @@
 - [公钥加密私钥解密](#公钥加密私钥解密)
 - [koa1和koa2区别](#koa1和koa2区别)
 - [nodejs特点与应用场景](#nodejs特点与应用场景)
+- [child_process](#child_process)
 
 ---
 
@@ -945,3 +946,35 @@
     3. 基于web的多人实时聊天客户端、聊天室、图文直播
     4. 单页面浏览器应用程序
     5. 操作数据库、为前端和移动端提供基于json的API
+
+### child_process
+
+1. 参考链接：
+
+   [前端面试知识点汇总](https://juejin.cn/post/6905635299897032718)
+
+   [nodejs中 spawn 、fork、exec、execFile的区别](https://www.cnblogs.com/eret9616/p/11105840.html)
+
+2. 详解：
+
+* spawn、exec、execFile、fork
+
+这四个都可以用来创建子进程
+
+fork与spawn类似，spawn和fork都是返回一个基于流的子进程对象，不同在于fork创建子进程需要执行js文件，返回的子进程对象可以和父进程对象进行通信，通过send和on方法。
+
+exec和execFile可以在回调中拿到返回的buffer的内容（执行成功或失败的输出）
+
+exec是创建子shell去执行命令，用来直接执行shell命令  。execFile是去创建任意你指定的文件的进程
+
+spawn与exec和execFile不同的是，后两者创建时可以指定timeout属性设置超时时间，一旦进程超时就会被杀死；
+
+exec与execFile不同的是，exec执行的是已有命令，execFile执行的是文件。
+
+* pm2
+
+pm2常用命令：参考:koa2Example->生产环境pm2相关
+
+-i 参数，启动多线程；watch，-w，监听文件改变
+
+pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.connfig.js —only=one-app-name
