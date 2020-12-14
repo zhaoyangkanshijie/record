@@ -31,6 +31,7 @@
 * [错误边界](#错误边界)
 * [jsx到javascript的转换过程](#jsx到javascript的转换过程)
 * [react源码api](#react源码api)
+* [useEffect和componentDidMount有什么差异](#useEffect和componentDidMount有什么差异)
 
 ---
 
@@ -2529,6 +2530,8 @@
 
     [React Hook 不完全指南](https://segmentfault.com/a/1190000019223106)
 
+    [React 灵魂 23 问，你能答对几个？](https://mp.weixin.qq.com/s/uMZMcoN5Kxkp_DUHcF-_9g)
+
 2. 详解
 
     Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
@@ -2592,6 +2595,8 @@
         因为我们是根据调用hook的顺序依次将值存入数组中，如果在判断逻辑循环嵌套中，就有可能导致更新时不能获取到对应的值，从而导致取值混乱。
 
         同时useEffect第二个参数是数组，也是因为它就是以数组的形式存入的。
+
+        以 setState 为例，在 react 内部，每个组件(Fiber)的 hooks 都是以链表的形式存在 memoizeState 属性中,update 阶段，每次调用 setState，链表就会执行 next 向后移动一步。如果将 setState 写在条件判断中，假设条件判断不成立，没有执行里面的 setState 方法，会导致接下来所有的 setState 的取值出现偏移，从而导致异常发生。
 
     * 实现样例
 
@@ -3120,6 +3125,8 @@
     
     [React 架构的演变 - 从同步到异步](https://juejin.im/post/6875681311500025869#heading-2)
 
+    [React 灵魂 23 问，你能答对几个？](https://mp.weixin.qq.com/s/uMZMcoN5Kxkp_DUHcF-_9g)
+
 2. 详解
 
     1. setState为什么是异步的、什么时候是异步的？
@@ -3163,6 +3170,16 @@
         这些 tasks 中有些我们可控，有些不可控，比如 setTimeout 什么时候执行不好说，它总是不准时；资源加载时间不可控。但一些JS我们可以控制，让它们分派执行，tasks的时长不宜过长，这样浏览器就有时间优化 JS 代码与修正 reflow ！
 
         说明在 Concurrent 模式下，即使脱离了 React 的生命周期(在setTimeout中)，setState 依旧能够合并更新。主要原因是 Concurrent 模式下，真正的更新操作被移到了下一个事件队列中，类似于 Vue 的 nextTick。
+
+    * 调用 setState 之后发生了什么？
+
+        1. 在 setState 的时候，React 会为当前节点创建一个 updateQueue 的更新列队。
+        2. 然后会触发 reconciliation 过程，在这个过程中，会使用名为 Fiber 的调度算法，开始生成新的 Fiber 树， Fiber 算法的最大特点是可以做到异步可中断的执行。
+        3. 然后 React Scheduler 会根据优先级高低，先执行优先级高的节点，具体是执行 doWork 方法。
+        4. 在 doWork 方法中，React 会执行一遍 updateQueue 中的方法，以获得新的节点。然后对比新旧节点，为老节点打上 更新、插入、替换 等 Tag。
+        5. 当前节点 doWork 完成后，会执行 performUnitOfWork 方法获得新节点，然后再重复上面的过程。
+        6. 当所有节点都 doWork 完成后，会触发 commitRoot 方法，React 进入 commit 阶段。
+        7. 在 commit 阶段中，React 会根据前面为各个节点打的 Tag，一次性更新整个 dom 元素。
 
 ## react源码简述
 
@@ -4241,3 +4258,13 @@ class Switch extends React.Component {
   }
 }
 ```
+
+## useEffect和componentDidMount有什么差异
+
+1. 参考链接
+
+    [React 灵魂 23 问，你能答对几个？](https://mp.weixin.qq.com/s/uMZMcoN5Kxkp_DUHcF-_9g)
+
+2. 详解
+
+    useEffect 会捕获 props 和 state。所以即便在回调函数里，你拿到的还是初始的 props 和 state。如果想得到“最新”的值，可以使用 ref。
