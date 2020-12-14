@@ -189,6 +189,8 @@
 
    [JS类型转换规则详解](https://www.cnblogs.com/Renyi-Fan/p/9189441.html)
 
+   [昨天面试的6道面试题](https://juejin.cn/post/6904653808153362439)
+
 2. 详解：
 
    - js 数据类型
@@ -196,6 +198,24 @@
      原始值（primitives）：undefined， null， booleans， numbers，strings， symbol（es6）
 
      对象值（objects）：Object
+
+     对象键支持的类型：string,symbol
+
+   - symbol
+
+      ```js
+      const s = Symbol();
+      typeof s; // symbol
+      const s1 = Symbol('foo');
+      const s2 = Symbol('foo');
+      s1 === s2; // false
+      const s3 = Symbol.for('foo');
+      const s4 = Symbol.for('foo');
+      s3 === s4; // true
+      const s5 = Symbol.for('true');
+      const s6 = Symbol.for(true);
+      s5 === s6; // true
+      ```
 
    - 变量储存形式
 
