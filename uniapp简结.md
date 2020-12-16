@@ -48,6 +48,7 @@
     * [sass/scss插件安装失败](#sass/scss插件安装失败)
     * [微信小程序分享](#微信小程序分享)
     * [h5请求跨域解决方案](#h5请求跨域解决方案)
+    * [微信小程序转uniapp](#微信小程序转uniapp)
 ---
 
 ## 概述
@@ -3464,3 +3465,106 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
         }
     },
     ```
+
+### 微信小程序转uniapp
+
+1. 参考链接
+
+    [微信小程序转换uni-app详细指南、小程序转uni-app转换器、wepy转uni-app](https://ask.dcloud.net.cn/article/35786)
+
+    [miniprogram-to-uniapp](https://ext.dcloud.net.cn/plugin?id=2656)
+
+2. 详解
+
+    * 转换原理
+
+        1. app.js、app.wxss -> app.vue(script和style)
+        2. app.json -> pages.json，各页面json -> pages.json
+        3. 页面js/wxss/wxml -> vue文件
+            * data -> data
+            * function -> method
+            * hook -> hook
+            * wxss -> style
+            * setData -> =或重写到main.js
+                ```js
+                setData: function(obj, callback) {
+                    let that = this;
+                    const handleData = (tepData, tepKey, afterKey) => {
+                        tepKey = tepKey.split('.');
+                        tepKey.forEach(item => {
+                            if (tepData[item] === null || tepData[item] === undefined) {
+                                let reg = /^[0-9]+$/;
+                                tepData[item] = reg.test(afterKey) ? [] : {};
+                                tepData = tepData[item];
+                            } else {
+                                tepData = tepData[item];
+                            }
+                        });
+                        return tepData;
+                    };
+                    const isFn = function(value) {
+                        return typeof value == 'function' || false;
+                    };
+                    Object.keys(obj).forEach(function(key) {
+                        let val = obj[key];
+                        key = key.replace(/\]/g, '').replace(/\[/g, '.');
+                        let front, after;
+                        let index_after = key.lastIndexOf('.');
+                        if (index_after != -1) {
+                            after = key.slice(index_after + 1);
+                            front = handleData(that, key.slice(0, index_after), after);
+                        } else {
+                            after = key;
+                            front = that;
+                        }
+                        if (front.$data && front.$data[after] === undefined) {
+                            Object.defineProperty(front, after, {
+                                get() {
+                                    return front.$data[after];
+                                },
+                                set(newValue) {
+                                    front.$data[after] = newValue;
+                                    that.$forceUpdate();
+                                },
+                                enumerable: true,
+                                configurable: true
+                            });
+                            front[after] = val;
+                        } else {
+                            that.$set(front, after, val);
+                        }
+                    });
+                    // this.$forceUpdate();
+                    isFn(callback) && this.$nextTick(callback);
+                }
+                ```
+            * wxml -> template
+                * attr="{{ a }}" -> :attr="a"
+                * title="复选框{{ item }}" -> :title="'复选框' + item"
+                * bind:click="toggleActionSheet1" -> @click="toggleActionSheet1"
+                * catch:tap="xx" -> @tap.native.stop="xx"
+                * wx:if -> v-if
+                * wx:for="{{ list }}" wx:key="{{ index }}" -> v-for="(item,index) in list"
+            * 自定义组件 -> wxcomponents,在pages.json里注册,如果这里有js，并且被其他代码引入，要注意修改引用代码的路径指向，如果想用于支付宝百度头条，则需要新建swancomponents等，H5端不支持这些自定义组件
+
+    * 替换用的正则
+
+        ```js
+        str = str.replace(/bindtap/g, '@onclick');  
+        str = str.replace(/wx:if/g, 'v-show');  
+        str = str.replace(/src=\'\{\{/g, ":src='");  
+        str = str.replace(/wx\:key=\"\*this\"/g, ' ');  
+        str = str.replace(/wx\:key\=\"index\"/g, ' ');  
+        str = str.replace(/wx:for="{{/g, 'v-for= "(item,index) in ');  
+        str = str.replace(/bindinput/g, '@input'); 
+        ```
+
+    * wx.是否要替换为uni.?
+
+        关于js api中的wx.，不要全局替换为uni.。因为有的wx的api是微信独有的，替换为uni后，反而在微信下没法用了。
+
+        同时uni-app编译器提供了把wx.编译为不同平台的机制，所以直接使用wx.的api完全可以正常在各端运行。
+
+        所以对于老代码，替不替换不重要，不影响运行，只影响语法提示和转到定义。
+
+        但是新写的代码，还是要用uni.的api，在代码提示、转到定义方面更强大。
