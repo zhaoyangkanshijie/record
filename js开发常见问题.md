@@ -19,7 +19,7 @@
 - [delete 操作符](#delete操作符)
 - [js 设计模式](#js设计模式)
 - [变量的解构赋值](#变量的解构赋值)
-- [promise.all 实现](#promise.all实现)
+- [深入理解promise](#深入理解promise)
 - [可迭代对象](#可迭代对象)
 - [reflect](#reflect)
 - [深冻结](#深冻结)
@@ -3852,7 +3852,7 @@
 
 
 
-### promise.all 实现
+### 深入理解promise
 
 1. 参考链接：
 
@@ -3867,6 +3867,8 @@
    - [手写Promise核心原理，再也不怕面试官问我Promise原理](https://juejin.im/post/6856213486633304078#heading-0)
 
    - [Promise 中的三兄弟 .all(), .race(), .allSettled()](https://segmentfault.com/a/1190000020034361)
+
+   - [15道ES6 Promise实战练习题，助你快速理解Promise](https://mp.weixin.qq.com/s/ON4m0uNF6u-FjLHYih8JIA)
 
 2. 详解
 
@@ -4446,11 +4448,11 @@
        };
        ```
 
-     - promise.allSettled
+   - promise.allSettled
 
       - 功能
 
-       返回一个promise，该promise在所有给定的promise已被解析或被拒绝后解析，并且每个对象都描述每个promise的结果。
+      返回一个promise，该promise在所有给定的promise已被解析或被拒绝后解析，并且每个对象都描述每个promise的结果。
 
       - 实现
 
@@ -4480,6 +4482,405 @@
             })
         }
         ```
+
+   - promise事件循环执行顺序
+
+      Promise 构造函数是同步执行的，promise.then 中的函数是异步执行的。
+      ```js
+      const promise = new Promise((resolve, reject) => {
+          console.log(1)
+          resolve()
+          console.log(2)
+      })
+      promise.then(() => {
+          console.log(3)
+      })
+      console.log(4)
+      
+      // => 1
+      // => 2
+      // => 4
+      // => 3
+      ```
+
+      同步->异步(微任务(nexttick->promise)->宏任务(setTimeout,setInterval,setImmediate))
+      ```js
+      const first = () => (new Promise((resolve, reject) => {
+          console.log(3);
+          let p = new Promise((resolve, reject) => {
+              console.log(7);
+              setTimeout(() => {
+                  console.log(5);
+                  resolve(6);
+              }, 0)
+              resolve(1);
+          });
+          resolve(2);
+          p.then((arg) => {
+              console.log(arg);
+          });
+
+      }));
+
+      first().then((arg) => {
+          console.log(arg);
+      });
+      console.log(4);
+      
+      // => 3
+      // => 7
+      // => 4
+      // => 1
+      // => 2
+      // => 5
+      ```
+      ```js
+      process.nextTick(() => {
+        console.log('nextTick')
+      })
+      Promise.resolve()
+        .then(() => {
+          console.log('then')
+        })
+      setImmediate(() => {
+        console.log('setImmediate')
+      })
+      console.log('end')
+
+      //end
+      //nextTick
+      //then
+      //setImmediate
+      ```
+
+   - promise的3种状态
+
+      promise 有 3 种状态：pending、fulfilled 或 rejected。状态改变只能是 pending->fulfilled 或者 pending->rejected，状态一旦改变则不能再变，除非返回新promise
+      ```js
+      const promise1 = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          resolve('success')
+        }, 1000)
+      })
+      const promise2 = promise1.then(() => {
+        throw new Error('error!!!')
+      })
+
+      console.log('promise1', promise1)
+      console.log('promise2', promise2)
+
+      setTimeout(() => {
+        console.log('promise1', promise1)
+        console.log('promise2', promise2)
+      }, 2000)
+      
+      //promise1 Promise {<pending>}
+      //promise2 Promise {<pending>}
+      //Uncaught (in promise) Error: error!!!
+      //    at <anonymous>
+      //promise1 Promise {<resolved>: "success"}
+      //promise2 Promise {<rejected>: Error: error!!!
+      //    at <anonymous>}
+      ```
+
+      promise 内部状态一经改变，并且有了一个值，那么后续每次调用 .then 或者 .catch 都会直接拿到该值。
+      ```js
+      const promise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+          console.log('once')
+          resolve('success')
+        }, 1000)
+      })
+
+      const start = Date.now()
+      promise.then((res) => {
+        console.log(res, Date.now() - start)
+      })
+      promise.then((res) => {
+        console.log(res, Date.now() - start)
+      })
+      
+      //once
+      //success 1005
+      //success 1007
+      ```
+
+   - resolve和reject的单次有效性
+
+      构造函数中的 resolve 或 reject 只有第一次执行有效，多次调用没有任何作用
+      ```js
+      const promise = new Promise((resolve, reject) => {
+        resolve('success1')
+        reject('error')
+        resolve('success2')
+      })
+
+      promise
+        .then((res) => {
+          console.log('then: ', res)
+        })
+        .catch((err) => {
+          console.log('catch: ', err)
+        })
+
+      //then: success1
+      ```
+
+   - promise链式调用
+
+      promise 每次调用 .then 或者 .catch 都会返回一个新的 promise，从而实现了链式调用。
+      ```js
+      Promise.resolve(1)
+        .then((res) => {
+          console.log(res)
+          return 2
+        })
+        .catch((err) => {
+          return 3
+        })
+        .then((res) => {
+          console.log(res)
+        })
+       
+      //1
+      //2
+      ```
+
+   - promise抛出错误机制
+
+      .then 或者 .catch 中 return 一个 error 对象并不会抛出错误，所以不会被后续的 .catch 捕获
+      ```js
+      Promise.resolve()
+        .then(() => {
+          return new Error('error!!!')
+        })
+        .then((res) => {
+          console.log('then: ', res)
+        })
+        .catch((err) => {
+          console.log('catch: ', err)
+        })
+        
+      //then:  Error: error!!!
+      //    at <anonymous>
+
+      //需要改成其中一种，才能被后续的 .catch 捕获
+      //return Promise.reject(new Error('error!!!'))
+      //throw new Error('error!!!')
+      ```
+
+   - promise返回机制
+
+      .then 或 .catch 返回的值不能是 promise 本身，否则会造成死循环
+      ```js
+      const promise = Promise.resolve()
+        .then(() => {
+          return promise
+        })
+      promise.catch(console.error)
+
+      //TypeError: Chaining cycle detected for promise #<Promise>
+      ```
+
+      .then 或者 .catch 的参数期望是函数，传入非函数则会发生值穿透
+      ```js
+      Promise.resolve(1)
+        .then(2)
+        .then(Promise.resolve(3))
+        .then(console.log)
+
+      //1
+      ```
+
+      .then 可以接收两个参数，第一个是处理成功的函数，第二个是处理错误的函数。.then 的第二个处理错误的函数捕获不了第一个处理成功的函数抛出的错误，而后续的 .catch 可以捕获之前的错误。
+      ```js
+      Promise.resolve()
+        .then(function success (res) {
+          throw new Error('error')
+        }, function fail1 (e) {
+          console.error('fail1: ', e)
+        })
+        .catch(function fail2 (e) {
+          console.error('fail2: ', e)
+        })
+        
+      //fail2:  Error: error
+      //    at success (<anonymous>)
+      ```
+
+   - 题目
+
+      红灯3秒亮一次，绿灯1秒亮一次，黄灯2秒亮一次；如何使用Promise让三个灯不断交替重复亮灯？
+      ```js
+      function red() {
+        console.log('red');
+      }
+      function green() {
+        console.log('green');
+      }
+      function yellow() {
+        console.log('yellow');
+      }
+      let myLight = (timer, cb) => {
+        return new Promise((resolve) => {
+          setTimeout(() => {
+            cb();
+            resolve();
+          }, timer);
+        });
+      };
+      let myStep = () => {
+        Promise.resolve().then(() => {
+          return myLight(3000, red);
+        }).then(() => {
+          return myLight(2000, green);
+        }).then(()=>{
+          return myLight(1000, yellow);
+        }).then(()=>{
+          myStep();
+        })
+      };
+      myStep();
+
+      // output:
+      // => red
+      // => green
+      // => yellow
+      // => red
+      // => green
+      // => yellow
+      // => red
+      ```
+
+      实现一个mergePromise函数，把传进去的数组按顺序先后执行，并且把返回的数据先后放到数组data中
+      ```js
+      const timeout = ms => new Promise((resolve, reject) => {
+          setTimeout(() => {
+              resolve();
+          }, ms);
+      });
+      const ajax1 = () => timeout(2000).then(() => {
+          console.log('1');
+          return 1;
+      });
+      const ajax2 = () => timeout(1000).then(() => {
+          console.log('2');
+          return 2;
+      });
+      const ajax3 = () => timeout(2000).then(() => {
+          console.log('3');
+          return 3;
+      });
+      const mergePromise = ajaxArray => {
+        // 在这里实现你的代码
+        // 保存数组中的函数执行后的结果
+        var data = [];
+        // Promise.resolve方法调用时不带参数，直接返回一个resolved状态的 Promise 对象。
+        var sequence = Promise.resolve();
+        ajaxArray.forEach(item => {
+          // 第一次的 then 方法用来执行数组中的每个函数，
+          // 第二次的 then 方法接受数组中的函数执行后返回的结果，
+          // 并把结果添加到 data 中，然后把 data 返回。
+          sequence = sequence.then(item).then(res => {
+            data.push(res);
+            return data;
+          });
+        });
+      // 遍历结束后，返回一个 Promise，也就是 sequence， 他的 [[PromiseValue]] 值就是 data，
+      // 而 data（保存数组中的函数执行后的结果） 也会作为参数，传入下次调用的 then 方法中。
+        return sequence;
+      };
+      mergePromise([ajax1, ajax2, ajax3]).then(data => {
+          console.log('done');
+          console.log(data); // data 为 [1, 2, 3]
+      });
+      // 要求分别输出
+      // 1
+      // 2
+      // 3
+      // done
+      // [1, 2, 3]
+      ```
+
+      现有8个图片资源的url，已经存储在数组urls中，且已有一个函数function loading，输入一个url链接，返回一个Promise，该Promise在图片下载完成的时候resolve，下载失败则reject。要求：任何时刻同时下载的链接数量不可以超过3个。
+      ```js
+      var urls = ['https://www.kkkk1000.com/images/getImgData/getImgDatadata.jpg', 'https://www.kkkk1000.com/images/getImgData/gray.gif', 'https://www.kkkk1000.com/images/getImgData/Particle.gif', 'https://www.kkkk1000.com/images/getImgData/arithmetic.png', 'https://www.kkkk1000.com/images/getImgData/arithmetic2.gif', 'https://www.kkkk1000.com/images/getImgData/getImgDataError.jpg', 'https://www.kkkk1000.com/images/getImgData/arithmetic.gif', 'https://www.kkkk1000.com/images/wxQrCode2.png'];
+
+      function loadImg(url) {
+          return new Promise((resolve, reject) => {
+              const img = new Image()
+              img.onload = () => {
+                  console.log('一张图片加载完成');
+                  resolve();
+              }
+              img.onerror = reject;
+              img.src = url;
+          })
+      };
+
+      function limitLoad(urls, handler, limit) {
+        // 对数组做一个拷贝
+          const sequence = […urls];
+
+        let promises = [];
+
+        //并发请求到最大数
+        promises = sequence.splice(0, limit).map((url, index) => {
+          // 这里返回的 index 是任务在 promises 的脚标，用于在 Promise.race 之后找到完成的任务脚标
+          return handler(url).then(() => {
+            return index;
+          });
+        });
+
+        // 利用数组的 reduce 方法来以队列的形式执行
+        return sequence.reduce((last, url, currentIndex) => {
+          return last.then(() => {
+            // 返回最快改变状态的 Promise
+            return Promise.race(promises)
+          }).catch(err => {
+            // 这里的 catch 不仅用来捕获前面 then 方法抛出的错误
+            // 更重要的是防止中断整个链式调用
+            console.error(err)
+          }).then((res) => {
+            // 用新的 Promise 替换掉最快改变状态的 Promise
+            promises[res] = handler(sequence[currentIndex]).then(() => {
+              return res
+            });
+          })
+        }, Promise.resolve()).then(() => {
+          return Promise.all(promises)
+        })
+
+      }
+
+      limitLoad(urls, loadImg, 3);
+
+      /*
+      因为 limitLoad 函数也返回一个 Promise，所以当 所有图片加载完成后，可以继续链式调用
+
+      limitLoad(urls, loadImg, 3).then(() => {
+          console.log('所有图片加载完成');
+      }).catch(err => {
+          console.error(err);
+      })
+      */
+      ```
+
+      封装一个异步加载图片的方法
+      ```js
+      function loadImageAsync(url) {
+          return new Promise(function(resolve,reject) {
+              var image = new Image();
+              image.onload = function() {
+                  resolve(image) 
+              };
+              image.onerror = function() {
+                  reject(new Error('Could not load image at' + url));
+              };
+              image.src = url;
+          });
+      }
+      ```
 
 ### 可迭代对象
 
