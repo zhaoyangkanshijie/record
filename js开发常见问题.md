@@ -36,6 +36,7 @@
 - [isNaN和Number.isNaN函数的区别](#isNaN和Number.isNaN函数的区别)
 - [three.js基本使用](#three.js基本使用)
 - [跨源通信](#跨源通信)
+- [ChromeBug:FontBoosting](#ChromeBug:FontBoosting)
 
 ---
 
@@ -7475,3 +7476,59 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
 
   window.addEventListener("message", receiveMessage, false);
   ```
+
+### ChromeBug:FontBoosting
+
+1. 参考链接：
+
+  [Font Boosting](http://www.360doc.com/content/16/0224/12/19291760_536900294.shtml)
+
+  [flexible.js字体大小诡异现象解析及解决方案](https://www.cnblogs.com/axl234/p/5895347.html)
+
+2. 详解
+
+  * 情景
+
+    在dpr为2和3时，原本指定的字体大小是24px，但是最终计算出来的却是53px
+
+  * 原因
+
+    当页面中的标签数量或者文本数量大于某一个值，或者当CSS定义的字体大小落在某个区间时，这个问题才会被触发。而且字体变大后的值也随着原始定义的字体大小而改变。
+
+  * Font Boosting
+
+    Webkit 给移动端浏览器提供的一个特性：当我们在手机上浏览网页时，很可能因为原始页面宽度较大，在手机屏幕上缩小后就看不清其中的文字了。而 Font Boosting 特性在这时会自动将其中的文字字体变大，保证在即不需要左右滑动屏幕，也不需要双击放大屏幕内容的前提下，也可以让人们方便的阅读页面中的文本。
+
+    * 触发条件
+
+      1. viewport width设为默认值
+      2. 未给文本元素指定宽高，可通过加max-height解决，比如body * { max-height: 999999px; }
+      3. WebKit 中应该有判断如果initial-scale=1时，不触发Font Boosting，可设置如下代码
+
+        ```html
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <!-- 或 -->
+        <meta name ="viewport" content ="initial-scale=1, maximum-scale=1, minimum-scale=1">
+        ```
+
+    * 实现
+
+      ```C++
+      multiplier = Math.max(1, deviceScaleAdjustment * textScalingSlider * systemFontScale * clusterWidth / screenWidth);
+      if (originFontSize < 16) {
+          computedFontSize = originFontSize * multiplier;
+      }
+      else if (16 <= originFontSize <= (32 * multiplier - 16)) {
+          computedFontSize = (originFontSize / 2) + (16 * multiplier - 8);
+      }
+      else if (originFontSize > (32 * multiplier - 16)) {
+          computedFontSize = originFontSize;
+      }
+      ```
+
+    * 更多讨论
+
+    [Webkit Bug 84186](https://bugs.webkit.org/show_bug.cgi?id=FontBoosting) Webkit Bugs 上记录的这个问题，最早从 2012 年 4 月份就开始讨论这个问题了，但好像都没有引起我们的任何关注。
+    [Chromium's Text Autosizer](https://docs.google.com/document/d/1PPcEwAhXJJ1TQShor29KWB17KJJq7UJOM34oHwYP3Zg) 关于 Font Boosting 最重要的一篇文章，更确切的说是论文。
+    [Font boosting in mobile browsers](http://sysmagazine.com/posts/214559/)
+    [Font Boosting](http://www.patrickcatanzariti.com/2013/03/font-boosting/) 一个俄国人用英文写的文章。
