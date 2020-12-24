@@ -2188,7 +2188,7 @@ beforeRouteEnter(to,from,next){
 
   一般情况下，url 变更的时候，如 location.href、history.push、replace 等，页面就会刷新。
 
-  ue-router 利用 pushState，在页面前进的时候动态改变 history 的内容，添加一条记录，接着 location 跟着改变。同时根据 router 前往的路由获取对应的 js 资源文件并挂载到目标 dom 上实现页面内容的更新，但是页面本身并没有刷新。
+  vue-router 利用 pushState，在页面前进的时候动态改变 history 的内容，添加一条记录，接着 location 跟着改变。同时根据 router 前往的路由获取对应的 js 资源文件并挂载到目标 dom 上实现页面内容的更新，但是页面本身并没有刷新。
 
 ## 引入外部 js
 

