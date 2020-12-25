@@ -1,6 +1,7 @@
 # vue2新手详解
 
 ## 参考教程
+
 * [Vue.js 教程](https://cn.vuejs.org/v2/guide/)
 * [基于vue-cli快速构建](https://www.jianshu.com/p/2769efeaa10a)
 * [Vue2项目构建心得](https://www.jianshu.com/p/87a4fe7bf0b1)
@@ -9,20 +10,24 @@
 * [vue-cli#2.0项目结构分析](https://segmentfault.com/a/1190000007880723)
 
 ## 命令解析
+
 1. 初始化项目：vue init \<template-name> \<project-name>
 
-    template-name:
-* webpack-simple：一个简单webpack+vue-loader的模板，不包含其他功能。
-* browserify：一个全面的Browserify+vueify 的模板，功能包括热加载，linting,单元检测。
-* browserify-simple：一个简单Browserify+vueify的模板，不包含其他功能。
-* simple：一个最简单的单页应用模板。
+  template-name:
+
+    * webpack-simple：一个简单webpack+vue-loader的模板，不包含其他功能。
+    * browserify：一个全面的Browserify+vueify 的模板，功能包括热加载，linting,单元检测。
+    * browserify-simple：一个简单Browserify+vueify的模板，不包含其他功能。
+    * simple：一个最简单的单页应用模板。
 
 2. 自动打开浏览器
+
 在package.json中，修改："dev": "webpack-dev-server --inline --open --progress --config build/webpack.dev.conf.js"
 
 ## 知识点
 
 ### 项目架构
+
 ```txt
 |-- build                            // 项目构建(webpack)相关代码
 |   |-- build.js                     // 生产环境构建代码
