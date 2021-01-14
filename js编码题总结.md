@@ -2402,7 +2402,7 @@ const isEqualNode = (dom1, dom2) => dom1.isEqualNode(dom2)
 const formatSize = size => {
     if (typeof +size !== 'number') {
         throw new Error('Argument(s) is illegal !')
-}
+    }
     const unitsHash = 'B,KB,MB,GB'.split(',')
     let index = 0
     while (size > 1024 && index < unitsHash.length) {
@@ -2415,6 +2415,101 @@ formatSize('10240') // 10KB
 formatSize('10240000') // 9.77MB
 ```
 
+- 复杂类型数组去重
+
+1. 如传入的数组元素为 [123, "meili", "123", "mogu", 123] ，则输出： [123, "meili", "123", "mogu"]
+2. 如传入的数组元素为 [123, [1, 2, 3], [1, "2", 3], [1, 2, 3], "meili"] ，则输出： [123, [1, 2, 3], [1, "2", 3], "meili"]
+3. 如传入的数组元素为 [123, {a: 1}, {a: {b: 1}}, {a: "1"}, {a: {b: 1}}, "meili"] ，则输出： [123, {a: 1}, {a: {b: 1}}, {a: "1"}, "meili"]
+4. 如传入的数组元素为 [{a:1, b:2}, {b:2, a:1}] ，则输出： [{a: 1, b: 2}]
+
+* 解决思路：
+
+一个数组（包含对象等类型元素）去重函数，需要在基础类型判断相等条件下满足以下条件：
+
+如果元素是数组类型，则需要数组中的每一项相等
+如果元素是对象类型，则需要对象中的每个键值对相等
+去重本身就是遍历数组，然后比较数组中的每一项是否相等而已，所以关键步骤有两步：比较、去重
+
+* 比较：
+
+首先判断类型是否一致，类型不一致则返回认为两个数组元素是不同的，否则继续
+如果是数组类型，则递归比较数组中的每个元素是否相等
+如果是对象类型，则递归比较对象中的每个键值对是否相等
+否则，直接 === 比较
+
+* 去重：
+
+采用 reduce 去重，初始 accumulator 为 []
+采用 findIndex 找到 accumulator 是否包含相同元素，如果不包含则加入，否则不加入
+返回最终的 accumulator ，则为去重后的数组
+
+```js
+// 获取类型
+const getType = (function() {
+    const class2type = { '[object Boolean]': 'boolean', '[object Number]': 'number', '[object String]': 'string', '[object Function]': 'function', '[object Array]': 'array', '[object Date]': 'date', '[object RegExp]': 'regexp', '[object Object]': 'object', '[object Error]': 'error', '[object Symbol]': 'symbol' }
+
+    return function getType(obj) {
+        if (obj == null) {
+            return obj + ''
+        }
+        // javascript高级程序设计中提供了一种方法,可以通用的来判断原始数据类型和引用数据类型
+        const str = Object.prototype.toString.call(obj)
+        return typeof obj === 'object' || typeof obj === 'function' ? class2type[str] || 'object' : typeof obj
+    };
+})();
+
+/**
+* 判断两个元素是否相等
+* @param {any} o1 比较元素
+* @param {any} o2 其他元素
+* @returns {Boolean} 是否相等
+*/
+const isEqual = (o1, o2) => {
+    const t1 = getType(o1)
+    const t2 = getType(o2)
+
+    // 比较类型是否一致
+    if (t1 !== t2) return false
+    
+    // 类型一致
+    if (t1 === 'array') {
+        // 首先判断数组包含元素个数是否相等
+        if (o1.length !== o2.length) return false 
+        // 比较两个数组中的每个元素
+        return o1.every((item, i) => {
+            // return item === target
+            return isEqual(item, o2[i])
+        })
+    }
+
+    if (t2 === 'object') {
+        // object类型比较类似数组
+        const keysArr = Object.keys(o1)
+        if (keysArr.length !== Object.keys(o2).length) return false
+        // 比较每一个元素
+        return keysArr.every(k => {
+            return isEqual(o1[k], o2[k])
+        })
+    }
+
+    return o1 === o2
+}
+
+// 数组去重
+const removeDuplicates = (arr) => {
+    return arr.reduce((accumulator, current) => {
+        const hasIndex = accumulator.findIndex(item => isEqual(current, item))
+        if (hasIndex === -1) {
+            accumulator.push(current)
+        }
+        return accumulator
+    }, [])
+}
+
+// 测试
+removeDuplicates([123, {a: 1}, {a: {b: 1}}, {a: "1"}, {a: {b: 1}}, "meili", {a:1, b:2}, {b:2, a:1}])
+// [123, {a: 1}, a: {b: 1}, {a: "1"}, "meili", {a: 1, b: 2}]
+```
 
 ## 图片懒加载
 
