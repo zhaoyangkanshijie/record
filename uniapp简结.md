@@ -2623,6 +2623,7 @@ rpx换算：
 
 当需要在 vue 组件中使用小程序组件时，注意在 pages.json 的 globalStyle 中配置 usingComponents，而不是页面级配置。
 
+如出现组件无渲染的情况，要注意组件名称是否大写
 
 ## 配置
 
@@ -3219,6 +3220,7 @@ module.exports = {
 * 在 HBuilderX 里面安装 scss 插件
 * 在 style 节点上加上 lang="scss"
 * pages.json不支持scss，原生导航栏和tabbar的动态修改只能使用js api
+* 普通页面或组件在style中@import相应路径的scss文件即可
 
 ### App.vue
 
