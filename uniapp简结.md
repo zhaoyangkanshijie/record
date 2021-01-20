@@ -8,6 +8,14 @@
 
     [微信小程序开发文档](https://developers.weixin.qq.com/miniprogram/dev/framework/)
 
+    [Some selectors are not allowed in component wxss](https://blog.csdn.net/noname666/article/details/84077080/)
+
+    [使用了scss，微信小程序编译.wxss文件错误，已正确安装scss模块](https://ask.dcloud.net.cn/question/76713)
+
+    [uni-app自定义底部tabbar](https://blog.csdn.net/yuanqi3131/article/details/105600047)
+
+    [uni-app如何获取当前页面路由（整个页面对象）？如何获取前一个甚至已经打开的页面路由？](https://blog.csdn.net/liuxin00020/article/details/104842217/)
+
 * [概述](#概述)
     * [架构](#架构)
     * [目录结构](#目录结构)
@@ -49,6 +57,7 @@
     * [微信小程序分享](#微信小程序分享)
     * [h5请求跨域解决方案](#h5请求跨域解决方案)
     * [微信小程序转uniapp](#微信小程序转uniapp)
+
 ---
 
 ## 概述
@@ -2496,6 +2505,21 @@ beforeCreate/created/beforeMount/mounted/beforeUpdate/updated/beforeDestroy/dest
 
 uni-app页面路由为框架统一管理，开发者需要在pages.json里配置每个路由页面的路径及页面样式。类似小程序在app.json中配置页面路由一样。所以 uni-app 的路由用法与 Vue Router 不同，如仍希望采用 Vue Router 方式管理路由，可在插件市场搜索 Vue-Router。
 
+* 获取当前路由
+
+    1. Pages对象
+
+        ```js
+        let routes = getCurrentPages(); // 获取当前打开过的页面路由数组
+        let curRoute = routes[routes.length - 1].route // 获取当前页面路由，也就是最后一个打开的页面路由
+        ```
+
+    2. $mp
+
+        ```js
+        let curRoute  = this.$mp.page.route; // 直接获取当前页面路由
+        ```
+
 ### 路由跳转
 
 * 初始化:uni-app 打开的第一个页面
@@ -3218,9 +3242,10 @@ module.exports = {
 使用scss的方法：
 
 * 在 HBuilderX 里面安装 scss 插件
-* 在 style 节点上加上 lang="scss"
+* 在 style 节点上加上 lang="scss"，如有组件或页面使用了scss但没写明语言，则编译错误
 * pages.json不支持scss，原生导航栏和tabbar的动态修改只能使用js api
 * 普通页面或组件在style中@import相应路径的scss文件即可
+* 微信小程序组件中只能使用class选择器
 
 ### App.vue
 
