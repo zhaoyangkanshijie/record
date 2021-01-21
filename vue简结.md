@@ -5168,38 +5168,34 @@ console.log(c.value); // 重新调用计算方法
 
     ```js
     let lis = (nums) => {
-       let len = nums.length;
-       if (len == 0) return 0;
-       let dp = new Array(len).fill(1);
-       let pos = [];
-       let res = 0;
-       //i表示最新的一位数
-       for (let i = 0; i < nums.length; i++) {
-         //j表示i前面的所有数
-         for (let j = 0; j < i; j++) {
-           //找出i前比i小的位置的最长递增子序列的最大值（找到以nums[i]结尾的最长递增子序列），虽然此处不一定是整个数组中的最大值
-           if (nums[j] < nums[i]) {
-             //改变运算符可变型为最长不减子序列，最长下降子序列等
-             dp[i] = Math.max(dp[i], dp[j] + 1); //状态转移方程
-           }
-         }
-         //找出整个数组中的最大值
-         //res = Math.max(res,dp[i]);
-         if (res < dp[i]) {
-           res = dp[i];
-           pos.push(nums[i]); //储存序列，用于输出
-         }
-       }
-       console.log(nums, dp, pos);
-       //[1, 2, 3, 4, 5, 3, 6, 4, 5]
-       //[1, 3, 6, 7, 9, 10]
-       return res;
-     };
+      let len = nums.length;
+      if (len == 0) return 0;
+      let dp = new Array(len).fill(1);
+      let pos = [];
+      let res = 0;
+      //i表示最新的一位数
+      for (let i = 0; i < nums.length; i++) {
+        //j表示i前面的所有数
+        for (let j = 0; j < i; j++) {
+          //找出i前比i小的位置的最长递增子序列的最大值（找到以nums[i]结尾的最长递增子序列），虽然此处不一定是整个数组中的最大值
+          if (nums[j] < nums[i]) {
+            //改变运算符可变型为最长不减子序列，最长下降子序列等
+            dp[i] = Math.max(dp[i], dp[j] + 1); //状态转移方程
+          }
+        }
+        //找出整个数组中的最大值
+        res = Math.max(res,dp[i]);
+      }
+      console.log(dp);
+      //[1, 1, 2, 3, 4, 5, 2, 3, 3, 4, 6, 5, 6, 7, 8, 5, 9, 10, 3]
+      //dp必然出现1~res的连续整数，从后向前找出res,res-1,res-2...所在位置代表的数即可
+      return res;//10
+    };
 
-     $(() => {
-       let numbers = [1, 3, 6, 7, 9, 4, 10, 5, 6];
-       console.log(lis(numbers)); //6
-     });
+    $(() => {
+      let numbers = [5, 1, 3, 6, 7, 9, 2, 4, 3, 4, 10, 5, 6, 7, 8, 5, 9, 10, 3];
+      console.log(lis(numbers)); //10
+    });
     ```
 
   2. 贪心+二分,时间复杂度：O(nlogn),空间复杂度：O(n)
@@ -5267,7 +5263,7 @@ console.log(c.value); // 重新调用计算方法
          top[left] = poker; // 把这张牌放到牌堆顶
          console.log("poker top", top);
        }
-       return piles; //最后牌堆数即为最长递增子序列长度
+       return piles; //最后牌堆数即为最长递增子序列长度，非空元素即为LIS序列
     };
     ```
 
