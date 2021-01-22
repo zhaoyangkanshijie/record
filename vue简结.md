@@ -60,6 +60,7 @@
 * [vue常见问题解决方案](#vue常见问题解决方案)
 * [Vue3是如何变快的](#Vue3是如何变快的)
 * [vue-router4](#vue-router4)
+* [循环条件动态class混合使用](#循环条件动态class混合使用)
 
 ---
 
@@ -5845,3 +5846,76 @@ export function rewriteLog() {
 4. 一致的编码
 
   作为参数传递给 router.push() 时，不需要做任何编码，在你使用 $route 或 useRoute()去拿到参数的时候永远是解码（Decoded）的状态。
+
+## 循环条件动态class混合使用
+
+参考链接：
+
+[vue如何动态绑定多个class](https://www.jianshu.com/p/e4248eb7c92a)
+
+[vue v-for与v-if组合使用](https://www.cnblogs.com/mengfangui/p/8931002.html)
+
+1. 动态绑定多个class
+
+  ```html
+  <!-- class 绑定 -->
+  <div :class="{ red: isRed }"></div>
+  <div :class="[classA, classB]"></div>
+  <div :class="[classA, { classB: isB, classC: isC }]">
+  <!-- classA 是固定不变的，classB与classC 是根据条件来判断是否加入 -->
+  <a :class="{ 'active': hash==='finish','nav-link':true}" href="#/finish">已完成</a>
+  <!-- style 同理 -->
+  ```
+
+2. 循环条件
+
+  v-for 比 v-if 有更高优先级，这意味着 v-if 将分别重复运行于每个 v-for 循环中
+
+  * 为仅有的一些项渲染节点时，这种优先级的机制会十分有用
+
+    不推荐
+    ```html
+    <li v-for="todo in todos" v-if="!todo.isComplete">
+      {{ todo }}
+    </li>
+    ```
+
+    可考虑用computed替代
+    ```html
+    computed: {
+      activeUsers: function () {
+        return this.users.filter(function (user) {
+          return user.isActive
+        })
+      }
+    }
+    <ul>
+      <li
+        v-for="user in activeUsers"
+        :key="user.id"
+      >
+      {{ user.name }}
+      </li>
+    </ul>
+    ```
+
+  * 有条件地跳过循环的执行，那么可以将 v-if 置于外层元素
+
+    ```html
+    <ul v-if="todos.length">
+      <li v-for="todo in todos">
+        {{ todo }}
+      </li>
+    </ul>
+    <p v-else>No todos left!</p>
+    ```
+
+3. 循环动态class
+
+  ```html
+  <view class="item" v-for="item in footerInfo" :key="item.calss">
+    <navigator class="link" :url="'/'+item.link">
+      <view :class="['image',item.class, { active: currentRoute == item.link }]"></view>
+    </navigator>
+  </view>
+  ```
