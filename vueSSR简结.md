@@ -5,6 +5,7 @@
 * [Vue SSR 指南](https://ssr.vuejs.org/zh/guide/build-config.html)
 * [Nuxt源码精读](https://juejin.cn/post/6917247127315808270)
 * [nuxt缓存实践](https://juejin.cn/post/6844903623483195399)
+* [异步数据](https://www.nuxtjs.cn/guide/async-data)
 
 ## 目录
 
@@ -22,6 +23,9 @@
 * [nuxt中间件](#nuxt中间件)
 * [nuxt路由生成策略](#nuxt路由生成策略)
 * [nuxt缓存](#nuxt缓存)
+* [nuxt请求到渲染](#nuxt请求到渲染)
+* [nuxt预渲染数据](#nuxt预渲染数据)
+* [nuxt的api属性和方法](#nuxt的api属性和方法)
 
 ## 什么是服务器端渲染SSR
 
@@ -828,3 +832,376 @@ router:{
     }
   }
   ```
+
+## nuxt请求到渲染
+
+  请求->服务器初始化->中间件运行(nuxt.config.js/匹配layout/匹配页面)->校验参数->异步数据处理(asyncData->beforeCreate->created->fetch)->客户端渲染->路由跳转nuxt-link回到中间件运行
+
+  客户端渲染->vue生命周期(beforeMount后续)
+
+## nuxt预渲染数据
+
+  1. asyncData:可以在服务端执行async Data获取数据
+
+    方法是在组件初始化前被调用的，并且是在服务端调用所以该方法是没有办法通过 this 来引用的，但可以传入第一个参数context来引用上下文
+
+    ```html
+    <template>
+      <div class="container">
+        <p>{{ result }}</p>
+      </div>
+    </template>
+    <script>
+    export default Vue.extend({
+      async asyncData ({ app }) {
+        // called every time before loading the component
+        const response = await app.$axios.get('***')
+        const result = response.data
+        return { result }
+      },
+      data () {
+        return {
+          result: ''
+        }
+      }
+    })
+    </script>
+    ```
+
+    使用回调函数
+    ```js
+    export default {
+      asyncData({ params }, callback) {
+        axios.get(`https://my-api/posts/${params.id}`).then(res => {
+          callback(null, { title: res.data.title })
+        })
+      }
+    }
+    ```
+
+    返回对象:如果组件的数据不需要异步获取或处理，可以直接返回指定的字面对象作为组件的数据。
+    ```js
+    export default {
+      data() {
+        return { foo: 'bar' }
+      }
+    }
+    ```
+
+    使用 req/res(request/response) 对象:在服务器端调用asyncData时，可以访问用户请求的req和res对象。
+    ```js
+    export default {
+      async asyncData({ req, res }) {
+        // 请检查您是否在服务器端
+        // 使用 req 和 res
+        if (process.server) {
+          return { host: req.headers.host }
+        }
+
+        return {}
+      }
+    }
+    ```
+
+    访问动态路由数据：如果你定义一个名为_slug.vue的文件，您可以通过context.params.slug来访问它。
+    ```js
+    export default {
+      async asyncData({ params }) {
+        const slug = params.slug // When calling /abc the slug will be "abc"
+        return { slug }
+      }
+    }
+    ```
+
+    错误处理
+    ```js
+    export default {
+      asyncData({ params, error }) {
+        return axios
+          .get(`https://my-api/posts/${params.id}`)
+          .then(res => {
+            return { title: res.data.title }
+          })
+          .catch(e => {
+            error({ statusCode: 404, message: 'Post not found' })
+          })
+      }
+    }
+    ```
+    ```js
+    export default {
+      asyncData({ params }, callback) {
+        axios
+          .get(`https://my-api/posts/${params.id}`)
+          .then(res => {
+            callback(null, { title: res.data.title })
+          })
+          .catch(e => {
+            callback({ statusCode: 404, message: 'Post not found' })
+          })
+      }
+    }
+    ```
+
+  2. fetch应对的是vuex
+
+    fetch 是在组件实例化之后被调用的，可以访问到 this
+
+    ```html
+    <template>
+      <h1>Stars: {{ $store.state.stars }}</h1>
+    </template>
+
+    <script>
+      export default {
+        fetch({ store, params }) {
+          return axios.get('http://my-api/stars').then(res => {
+            store.commit('setStars', res.data)
+          })
+        }
+      }
+    </script>
+
+    <template>
+      <h1>Stars: {{ $store.state.stars }}</h1>
+    </template>
+
+    <script>
+      export default {
+        async fetch({ store, params }) {
+          await store.dispatch('GET_STARS')
+        }
+      }
+    </script>
+
+    //store/index.js
+    export const actions = {
+      async GET_STARS({ commit }) {
+        const { data } = await axios.get('http://my-api/stars')
+        commit('SET_STARS', data)
+      }
+    }
+    ```
+
+    可直接修改本地数据
+    ```js
+    export default {
+      data() {
+        return {
+          todos: []
+        };
+      },
+      async fetch() {
+        const { data } = await axios.get(
+          `https://jsonplaceholder.typicode.com/todos`
+        );
+        // `todos` has to be declared in data()
+        this.todos = data;
+      }
+    };
+    ```
+
+    可以通过 methods 来调用
+    ```html
+    <button @click="$fetch">Refresh Data</button>
+    <script>
+    export default {
+      methods: {
+        refresh() {
+          this.$fetch();
+        }
+      }
+    };
+    </script>
+    ```
+
+## nuxt的api属性和方法
+
+1. 使用 head 方法设置当前页面的头部标签
+
+```html
+<template>
+  <h1>{{ title }}</h1>
+</template>
+
+<script>
+  export default {
+    data() {
+      return {
+        title: 'Hello World!'
+      }
+    },
+    head() {
+      return {
+        title: this.title,
+        meta: [
+          {
+            hid: 'description',
+            name: 'description',
+            content: 'My custom description'
+          }
+        ]
+      }
+    }
+  }
+</script>
+```
+
+2. 设置内部router-view组件的key属性
+
+```js
+export default {
+  key(route) {
+    return route.fullPath
+  }
+}
+```
+
+3. layouts 根目录下的所有文件都属于个性化布局文件，可以在页面组件中利用 layout 属性来引用。
+
+```js
+export default {
+  layout: 'blog',
+  // 或
+  layout(context) {
+    return 'blog'
+  }
+}
+```
+
+4. loading:loading 属性提供了禁用特定页面上的默认加载进度条的选项。
+
+默认情况下，Nuxt.js 使用自己的组件来显示路由跳转之间的进度条。
+
+```html
+<template>
+  <h1>My page</h1>
+</template>
+
+<script>
+  export default {
+    loading: false
+  }
+</script>
+```
+
+5. 在应用中的特定页面设置中间件
+
+pages/secret.vue
+```html
+<template>
+  <h1>Secret page</h1>
+</template>
+
+<script>
+  export default {
+    middleware: 'authenticated'
+  }
+</script>
+```
+
+middleware/authenticated.js
+```js
+export default function ({ store, redirect }) {
+  // If the user is not authenticated
+  if (!store.state.authenticated) {
+    return redirect('/login')
+  }
+}
+```
+
+6. scrollToTop 属性用于控制页面渲染前是否滚动至页面顶部
+
+默认情况下，从当前页面切换至目标页面时，Nuxt.js 会让目标页面滚动至顶部。但是在嵌套子路由的场景下，Nuxt.js 会保持当前页面的滚动位置，除非在子路由的页面组件中将 scrollToTop 设置为 true。
+
+```html
+<template>
+  <h1>子页面组件</h1>
+</template>
+
+<script>
+  export default {
+    scrollToTop: true
+  }
+</script>
+```
+
+7. 路由切换时的过渡动效
+
+更多配置参考：[API: transition 属性](https://www.nuxtjs.cn/api/pages-transition)
+```html
+<transition name="test"></transition>
+<transition name="test" mode="out-in"></transition>
+<script>
+export default {
+  // 可以是字符
+  transition: 'test'
+  // 或对象
+  transition: {
+    name: 'test',
+    mode: 'out-in'
+  }
+  // 或函数
+  transition(to, from) {
+    if (!from) {
+      return 'slide-left'
+    }
+    return +to.query.page < +from.query.page ? 'slide-right' : 'slide-left'
+  }
+}
+</script>
+```
+
+8. validate 方法可以在动态路由对应的页面组件中配置一个校验方法用于校验动态路由参数的有效性。
+
+```js
+validate({ params, query }) {
+  return true // 如果参数有效
+  return false // 参数无效，Nuxt.js 停止渲染当前页面并显示错误页面
+}
+```
+```js
+async validate({ params, query, store }) {
+  // await operations
+  return true // 如果参数有效
+  return false // 将停止Nuxt.js呈现页面并显示错误页面
+}
+```
+```js
+validate({ params, query, store }) {
+  return new Promise((resolve) => setTimeout(() => resolve()))
+}
+```
+```js
+export default {
+  validate({ params }) {
+    // Must be a number
+    return /^\d+$/.test(params.id)
+  }
+}
+```
+```js
+export default {
+  validate({ params, store }) {
+    // 校验 `params.id` 是否存在
+    return store.state.categories.some(category => category.id === params.id)
+  }
+}
+```
+```js
+export default {
+  async validate({ params, store }) {
+    // 使用自定义消息触发内部服务器500错误
+    throw new Error('Under Construction!')
+  }
+}
+```
+
+9. watchQuery属性,监听参数字符串更改并在更改时执行组件方法 (asyncData, fetch, validate, layout, ...)
+
+```js
+export default {
+  //要为所有参数字符串设置监听，设置：watchQuery: true
+  watchQuery: ['page']
+}
+```
