@@ -6,6 +6,7 @@
 * [Nuxt源码精读](https://juejin.cn/post/6917247127315808270)
 * [nuxt缓存实践](https://juejin.cn/post/6844903623483195399)
 * [异步数据](https://www.nuxtjs.cn/guide/async-data)
+* [SplitChunks & Lodash & Vuetify tree shaking](https://ithelp.ithome.com.tw/articles/10207669)
 
 ## 目录
 
@@ -26,6 +27,7 @@
 * [nuxt请求到渲染](#nuxt请求到渲染)
 * [nuxt预渲染数据](#nuxt预渲染数据)
 * [nuxt的api属性和方法](#nuxt的api属性和方法)
+* [nuxt优化](#nuxt优化)
 
 ## 什么是服务器端渲染SSR
 
@@ -1203,5 +1205,42 @@ export default {
 export default {
   //要为所有参数字符串设置监听，设置：watchQuery: true
   watchQuery: ['page']
+}
+```
+
+## nuxt优化
+
+1. splitChunks分包:chunk被切分，按需加载
+
+nuxt.config.js
+```js
+module.exports = {
+  build: {
+    optimization: {
+      splitChunks: {
+        minSize: 10000,
+        maxSize: 250000
+      }
+    }
+  }
+}
+```
+
+2. LodashModuleReplacementPlugin:lodash tree-shaking缩减大小
+
+npm i -D lodash-webpack-plugin
+
+nuxt.config.js
+```js
+const LodashModuleReplacementPlugin = require('lodash-webpack-plugin')
+
+module.exports = {
+  build: {
+    extend(config, ctx) {
+			config.plugins.unshift(new LodashModuleReplacementPlugin)
+			// rules[2].use[0] is babel-loader
+			config.module.rules[2].use[0].options.plugins = ['lodash']
+    }
+  }
 }
 ```
