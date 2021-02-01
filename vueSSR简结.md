@@ -5,8 +5,10 @@
 * [Vue SSR 指南](https://ssr.vuejs.org/zh/guide/build-config.html)
 * [Nuxt源码精读](https://juejin.cn/post/6917247127315808270)
 * [nuxt缓存实践](https://juejin.cn/post/6844903623483195399)
+* [Nuxt 性能优化-页面缓存](https://my.oschina.net/u/158675/blog/4304453)
 * [异步数据](https://www.nuxtjs.cn/guide/async-data)
 * [SplitChunks & Lodash & Vuetify tree shaking](https://ithelp.ithome.com.tw/articles/10207669)
+* [分享：nuxt中间件](https://blog.csdn.net/awseda/article/details/106227729)
 
 ## 目录
 
@@ -642,6 +644,20 @@ html渲染的过程从本质上看非常简洁，假设我们有一个模版+资
 
 nuxt中间件调用过程可以方便我们处理:代理、缓存、日志、监控、数据处理等等。
 
+middleware/stats.js
+```js
+export default function (context) {
+  context.userAgent = process.server ? context.req.headers['user-agent'] : navigator.userAgent
+}
+```
+
+pages/index.vue
+```js
+export default {
+  middleware: 'stats'
+}
+```
+
 ## nuxt路由生成策略
 
 @nuxt/builder
@@ -833,6 +849,73 @@ router:{
       }
     }
   }
+  ```
+
+  另一种写法：
+
+  1. 新建服务器端中间件处理缓存文件 ~/utils/server-middleware/pageCache.js(可结合上方代码修改)
+
+  ```js
+  const LRU = require('lru-cache');
+  export const cachePage = new LRU({
+    max: 100, // 缓存队列长度 最大缓存数量
+    maxAge: 1000 * 60 * 180, // 缓存时间 单位：毫秒
+  });
+  export default function(req, res, next) {
+    const url = req._parsedOriginalUrl;
+    const pathname = url.pathname;
+    // 本地开发环境不做页面缓存(也可开启开发环境进行调试)
+    if (process.env.NODE_ENV !== 'development') {
+      // 只有首页才进行缓存
+      if (['/'].indexOf(pathname) > -1) {
+        const existsHtml = cachePage.get('indexPage');
+        if (existsHtml) {
+          //  如果没有Content-Type:text/html 的 header，gtmetrix网站无法做测评
+          res.setHeader('Content-Type', ' text/html; charset=utf-8');
+          return res.end(existsHtml.html, 'utf-8');
+        } else {
+          res.original_end = res.end;
+          res.end = function(data) {
+            if (res.statusCode === 200) {
+              // 设置缓存
+              cachePage.set('indexPage', {
+                html: data,
+              });
+            }
+            res.original_end(data, 'utf-8');
+          };
+        }
+      }
+    }
+    next();
+  }
+  ```
+
+  2. nuxt.config.js
+  ```js
+  serverMiddleware: [
+    {
+      path: '/',
+      handler: '~/utils/server-middleware/pageCache.js',
+    },
+  ]
+  ```
+
+  3. 清理缓存
+
+  pageCahe.js
+  ```js
+  if (pathname === '/cleancache') {
+    cachePage.reset();
+    res.statusCode = 200;
+  }
+  ```
+  nuxt.config.js中
+  ```js
+  {
+    path: '/cleancache',
+    handler: '~/utils/server-middleware/pageCache.js',
+  },
   ```
 
 ## nuxt请求到渲染
