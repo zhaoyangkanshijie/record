@@ -682,12 +682,16 @@ class Builder {
 ```
 ```txt
 pages/
---| users/
------| _id.vue
+--| _slug/
+-----| comments.vue
+-----| index.vue
+--| user/
+-----| index.vue
+-----| one.vue
 --| index.vue
 ```
 ```js
-router:{
+router: {
   routes: [
     {
       name: 'index',
@@ -695,13 +699,30 @@ router:{
       component: 'pages/index.vue'
     },
     {
-      name: 'users-id',
-      path: '/users/:id?',
-      component: 'pages/users/_id.vue'
+      name: 'slug',
+      path: '/:slug',
+      component: 'pages/_slug/index.vue'
+    },
+    {
+      name: 'slug-comments',
+      path: '/:slug/comments',
+      component: 'pages/_slug/comments.vue'
+    },
+    {
+      name: 'user',
+      path: '/user',
+      component: 'pages/user/index.vue'
+    },
+    {
+      name: 'user-one',
+      path: '/user/one',
+      component: 'pages/user/one.vue'
     }
   ]
 }
 ```
+
+动态路由组件中定义参数校验方法，见[nuxt的api属性和方法](#nuxt的api属性和方法)第8点
 
 ## nuxt缓存
 
