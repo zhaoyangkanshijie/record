@@ -9,6 +9,7 @@
 * [异步数据](https://www.nuxtjs.cn/guide/async-data)
 * [SplitChunks & Lodash & Vuetify tree shaking](https://ithelp.ithome.com.tw/articles/10207669)
 * [分享：nuxt中间件](https://blog.csdn.net/awseda/article/details/106227729)
+* [官网文档webpack配置](https://zh.nuxtjs.org/docs/2.x/configuration-glossary/configuration-build)
 
 ## 目录
 
@@ -1345,6 +1346,41 @@ module.exports = {
 			// rules[2].use[0] is babel-loader
 			config.module.rules[2].use[0].options.plugins = ['lodash']
     }
+  }
+}
+```
+
+3. 缓存见[nuxt缓存](#nuxt缓存)
+
+4. 其它webpack配置
+
+由于有eslint检测，因此看不出优化后文件大小变化
+```js
+build: {
+  transpile: [/^element-ui/], // babel编译指定模块
+  // analyze: true,
+  optimization: {
+    minimize: true, // tree-shaking
+    splitChunks: {
+      chunks: 'all'
+    } // 分包
+  },
+  parallel: true, // 多线程build，实验属性
+  sourceMap: false, // 索源文件
+  collapseBooleanAttributes: true,
+  decodeEntities: true,
+  minifyCSS: true,
+  minifyJS: true,
+  processConditionalComments: true,
+  removeEmptyAttributes: true,
+  removeRedundantAttributes: true,
+  trimCustomFragments: true,
+  useShortDoctype: true,
+  /*
+  ** You can extend webpack config here
+  */
+  extend (config, ctx) {
+
   }
 }
 ```
