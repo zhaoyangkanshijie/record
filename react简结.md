@@ -1623,7 +1623,7 @@
     * react-redux实现
 
         1. connect 将store和dispatch分别映射成props属性对象，返回组件
-        2. context 上下文 导出Provider,,和 consumer
+        2. context 上下文 导出Provider 和 consumer
         3. Provider 一个接受store的组件，通过context api传递给所有子组件
 
     * 用法
@@ -2538,6 +2538,22 @@
 
     [React 灵魂 23 问，你能答对几个？](https://mp.weixin.qq.com/s/uMZMcoN5Kxkp_DUHcF-_9g)
 
+    [简单易懂的 React useState() Hook 指南（长文建议收藏）](https://blog.csdn.net/qq_36380426/article/details/103855801)
+
+    [浅谈 useEffect](https://www.jianshu.com/p/087507e72616)
+
+    [useEffect使用指南](https://www.jianshu.com/p/fd17ce2d7e46)
+
+    [useContext](https://www.jianshu.com/p/e0b8745340d7)
+
+    [useContext Hook 是如何工作的](https://blog.csdn.net/hsany330/article/details/106118421)
+
+    [useMemo、useCallback简单理解](http://www.mamicode.com/info-detail-2836057.html)
+
+    [useCallback 和 useMemo 及区别](https://blog.csdn.net/MFWSCQ/article/details/105136711)
+
+    [useRef使用总结](https://juejin.cn/post/6844904174417608712)
+
 2. 详解
 
     Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
@@ -2957,6 +2973,311 @@
             const handleClick = useMemo( () => throttle(() => { setCount(count + 1); }, 1000), [count] );
             ```
             这样又回到「消除依赖」 或 「使用ref」
+
+        7. 汇总
+
+            * useState
+
+                可用于在函数中声明响应式变量和更新状态函数
+
+                ```js
+                const [state, setState] = useState(initialState);
+                // 将状态更改为 'newState' 并触发重新渲染
+                setState(newState);
+                // 重新渲染`state`后的值为`newState`
+
+                const [count, setCount] = useState(0);
+                return (
+                    <div>
+                    <p>You clicked {count} times</p>
+                    <button onClick={() => setCount(count + 1)}>
+                        Click me
+                    </button>
+                    </div>
+                );
+
+                const stateArray = useState(false);
+                stateArray[0]; // => 状态值
+                return <div className={stateArray[0] ? 'bulb-on' : 'bulb-off'} />;
+                ```
+
+                实现代码见实现样例
+
+                原理：全局变量保存初始值，set函数赋新值并更新视图
+
+            * useEffect
+
+                可用于在会在每次渲染后都执行一些额外代码(副作用),可以把 useEffect Hook 看做 componentDidMount，componentDidUpdate 和 componentWillUnmount 这三个函数的组合。
+
+                ```js
+                function Example() {
+                    const [count, setCount] = useState(0);
+
+                    //每次渲染后都执行
+                    useEffect(() => {
+                        document.title = `You clicked ${count} times`;
+                    });
+                }
+                ```
+
+                class生命周期与useEffect转化关系
+                ```js
+                class FriendStatus extends React.Component {
+                    constructor(props) {
+                        super(props);
+                        this.state = { isOnline: null };
+                        this.handleStatusChange = this.handleStatusChange.bind(this);
+                    }
+
+                    componentDidMount() {
+                        ChatAPI.subscribeToFriendStatus(this.props.friend.id,this.handleStatusChange);
+                    }
+                    componentWillUnmount() {
+                        ChatAPI.unsubscribeFromFriendStatus(this.props.friend.id,this.handleStatusChange);
+                    }
+                    handleStatusChange(status) {
+                        this.setState({
+                            isOnline: status.isOnline
+                        });
+                    }
+
+                    render() {
+                        if (this.state.isOnline === null) {
+                            return 'Loading...';
+                        }
+                        return this.state.isOnline ? 'Online' : 'Offline';
+                    }
+                }
+
+                function FriendStatus(props) {
+                    const [isOnline, setIsOnline] = useState(null);
+
+                    useEffect(() => {
+                        function handleStatusChange(status) {
+                            setIsOnline(status.isOnline);
+                        }
+                        ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+                        // Specify how to clean up after this effect:
+                        return function cleanup() {
+                            ChatAPI.unsubscribeFromFriendStatus(props.friend.id, handleStatusChange);
+                        };
+                    });
+
+                    if (isOnline === null) {
+                        return 'Loading...';
+                    }
+                    return isOnline ? 'Online' : 'Offline';
+                }
+                ```
+
+                如果传递一个空数组 []作为第二参数，告诉 useEffect 不依赖于 state、props中的任意值， useEffect 就只会运行一次
+                ```js
+                useEffect(() => {
+                    document.title = `You clicked me`;
+                }, []); // 只执行1次
+                ```
+                
+                如果传递一个数组 [count,...]作为第二参数，则依赖项发生变化时执行
+                ```js
+                useEffect(() => {
+                    document.title = `You clicked ${count} times`;
+                }, [count]); // 仅在 count 更改时更新
+                ```
+
+                原理：记录全局监控数组，看第二个参数是否存在，存在的话看传入数组与全局监控数组是否有差异，有差异或第二个参数不存在，执行传入函数内容，更新全局监控数组
+
+            * useContext
+
+                用于跨层级共享state，获取 Provider 提供的数据
+
+                ```js
+                const PersonContext = React.createContext();
+                const { Provider } = PersonContext;
+                const Grandson = () => {
+                    const info = useContext(PersonContext); // 无论隔了多少层级，都可以通过useContext获取到顶层的state
+                    return (
+                        <>
+                        <span>My family name is {info.familyName}. I am grandson. My assets is : {info.income}</span>
+                        </>
+                    );
+                }
+                const Son = () => {
+                    return (
+                        <>
+                        <span>I am son</span>
+                        <br />
+                        <Grandson></Grandson>
+                        </>
+                    );
+                }
+                const App = () => {
+                    const [info, setInfo] = useState({
+                        income: 1000000,
+                        familyName: 'wang'
+                    });
+                    const onClickGrand = () => {
+                        setInfo(x => ({ 
+                            ...x,
+                            income: x.income + 1000
+                        }));
+                    }
+                    return (
+                        <Provider value={info}>
+                        <button onClick={onClickGrand}>grandfather</button>
+                        <br />
+                        <Son></Son>
+                        </Provider>
+                    );
+                }
+                ```
+
+                原理：useContext 接收一个 context 对象（React.createContext 的返回值）并返回该 context 的当前值。当前的 context 值由上层组件中距离当前组件最近的 CountContext.Provider 的 value prop 决定。当 CountContext.Provider 更新时，该 Hook 会触发重渲染，并使用最新传递给 CountContext provider 的 context value 值。
+
+            * useReducer
+
+                useState 的替代方案,原理类似redux
+                ```js
+                function init(initialCount) {
+                    return {count: initialCount};
+                }
+
+                function reducer(state, action) {
+                    switch (action.type) {
+                        case 'increment':
+                        return {count: state.count + 1};
+                        case 'decrement':
+                        return {count: state.count - 1};
+                        case 'reset':
+                        return init(action.payload);
+                        default:
+                        throw new Error();
+                    }
+                }
+
+                function Counter({initialCount}) {
+                    const [state, dispatch] = useReducer(reducer, initialCount, init);
+                    return (
+                        <>
+                        Count: {state.count}
+                        <button
+                            onClick={() => dispatch({type: 'reset', payload: initialCount})}>
+                            Reset
+                        </button>
+                        <button onClick={() => dispatch({type: 'decrement'})}>-</button>
+                        <button onClick={() => dispatch({type: 'increment'})}>+</button>
+                        </>
+                    );
+                }
+                ```
+
+            * useCallback和useMemo
+
+                把标签内联回调函数及依赖项数组作为参数传入 useCallback，它将返回该回调函数的 memoized 版本(相当于vue computed缓存)，该回调函数仅在指定的依赖项改变时才会更新。
+
+                人话：useMemo、useCallback都是使参数（函数）不会因为其他不相关的参数变化而重新渲染。与useEffect类似，[ ]内可以放入你改变数值就重新渲染参数（函数）的对象。如果[ ]为空就是只渲染一次，之后都不会渲染。
+
+                useCallback和useMemo关系：useCallback(fn, deps) 相当于 useMemo(() => fn, deps)。
+
+                主要区别： React.useMemo 将调用 fn 函数并返回其结果，而 React.useCallback 将返回 fn 函数而不调用它。
+
+                ```js
+                const memoDom = useMemo(() => {
+                    return <div>{memoValue}</div>
+                }, [])
+                const callbackTest = useCallback(() => setCount(c => c + 1), [])
+                ```
+
+                场景：
+
+                有一个父组件，其中包含子组件，子组件接收一个函数作为 props ；通常而言，如果父组件更新了，子组件也会执行更新；但是大多数场景下，更新是没有必要的，我们可以借助 useCallback 来返回函数，然后把这个函数作为 props 传递给子组件；这样，子组件就能避免不必要的更新。
+
+                不使用
+                ```js
+                function Example() {
+                    const [count, setCount] = useState(1);
+                    const [val, setValue] = useState('');
+                
+                    function getNum() {
+                        return Array.from({length: count * 100}, (v, i) => i).reduce((a, b) => a+b)
+                    }
+                
+                    return <div>
+                        <h4>总和：{getNum()}</h4>
+                        <div>
+                            <button onClick={() => setCount(count + 1)}>+1</button>
+                            <input value={val} onChange={event => setValue(event.target.value)}/>
+                        </div>
+                    </div>;
+                }
+                ```
+
+                useCallback
+                ```js
+                function Parent() {
+                    const [count, setCount] = useState(1);
+                    const [val, setValue] = useState('');
+                
+                    const getNum = useCallback(() => {
+                        return Array.from({length: count * 100}, (v, i) => i).reduce((a, b) => a+b)
+                    }, [count])
+                
+                    return <div>
+                        <Child getNum={getNum} />
+                        <div>
+                            <button onClick={() => setCount(count + 1)}>+1</button>
+                            <input value={val} onChange={event => setValue(event.target.value)}/>
+                        </div>
+                    </div>;
+                }
+                
+                const Child = React.memo(function ({ getNum }: any) {
+                    return <h4>总和：{getNum()}</h4>
+                })
+                ```
+
+                useMemo
+                ```js
+                function Example() {
+                    const [count, setCount] = useState(1);
+                    const [val, setValue] = useState('');
+                
+                    const getNum = useMemo(() => {
+                        return Array.from({length: count * 100}, (v, i) => i).reduce((a, b) => a+b)
+                    }, [count])
+                
+                    return <div>
+                        <h4>总和：{getNum()}</h4>
+                        <div>
+                            <button onClick={() => setCount(count + 1)}>+1</button>
+                            <input value={val} onChange={event => setValue(event.target.value)}/>
+                        </div>
+                    </div>;
+                }
+                ```
+
+            * useRef
+
+                useRef返回一个可变的ref对象,initialValue被赋值给其返回值的.current对象,可以保存任何类型的值:dom、对象等任何可变值
+
+                ref对象与自建一个{current：‘’}对象的区别是：useRef会在每次渲染时返回同一个ref对象，即返回的ref对象在组件的整个生命周期内保持不变。自建对象每次渲染时都建立一个新的。
+
+                ref对象的值发生改变之后，不会触发组件重新渲染。如有需要，把它的改变动作放到useState()之前。
+
+                ```js
+                function TextInputWithFocusButton() {
+                    const inputEl = useRef(null);
+                    const onButtonClick = () => {
+                        // `current` 指向已挂载到 DOM 上的文本输入元素
+                        inputEl.current.focus();
+                    };
+                    return (
+                        <>
+                        <input ref={inputEl} type="text" />
+                        <button onClick={onButtonClick}>Focus the input</button>
+                        </>
+                    );
+                }
+                ```
 
 ## react和vue的区别
 
