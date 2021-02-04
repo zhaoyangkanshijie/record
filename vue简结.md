@@ -61,6 +61,7 @@
 * [Vue3是如何变快的](#Vue3是如何变快的)
 * [vue-router4](#vue-router4)
 * [循环条件动态class混合使用](#循环条件动态class混合使用)
+* [typescript样例](#typescript样例)
 
 ---
 
@@ -5932,3 +5933,84 @@ export function rewriteLog() {
     </navigator>
   </view>
   ```
+
+## typescript样例
+
+参考链接：
+
+[vue-property-decorator的简单介绍,一看就会](https://blog.csdn.net/sllailcp/article/details/102542796/)
+
+npm i -D vue-proporty-decorator
+
+```ts
+<template>
+  <div class="mod-wel">
+    <span>index {{ msg }}</span> <span @click="change">hello</span>
+  </div>
+</template>
+<script lang="ts">
+import {
+  Component,
+  Emit,
+  Inject,
+  Model,
+  Prop,
+  Provide,
+  Vue,
+  Ref,
+  Watch
+} from 'vue-property-decorator'
+
+@Component({
+  layout: 'blog',
+  name: 'tsExample'
+})
+export default class App extends Vue {
+    // 初始化数据
+    private msg: number = 123;
+
+    @Prop({ type: Number, default: 0 })
+    private propA?: number;
+
+    @Prop({ default: 'default value' })
+    private propB?: string;
+
+    @Prop([String, Boolean])
+    private propC?: string | boolean;
+
+    @Watch('msg')
+    onChildChanged (val: string, oldVal: string) {
+      console.log(val, oldVal)
+    }
+
+    @Emit('delemit') private delEmitClick (event: MouseEvent) {}
+
+    @Ref('aButton') readonly ref!: HTMLButtonElement;
+
+    // 声明周期钩子
+    mounted () {
+      this.greet()
+    }
+
+    // 计算属性
+    get computedMsg () {
+      return 'computed ' + this.msg
+    }
+
+    // 方法
+    public greet () {
+      console.log('greeting: ' + this.msg)
+    }
+
+    public change () {
+      this.msg = 789
+    }
+}
+</script>
+<style scoped>
+.mod-wel {
+  padding: 100px;
+  text-align: center;
+}
+</style>
+```
