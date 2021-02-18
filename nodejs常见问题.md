@@ -19,6 +19,7 @@
 - [koa1和koa2区别](#koa1和koa2区别)
 - [nodejs特点与应用场景](#nodejs特点与应用场景)
 - [child_process](#child_process)
+- [Nodemailer发送邮件](#Nodemailer发送邮件)
 
 ---
 
@@ -978,3 +979,89 @@ pm2常用命令：参考:koa2Example->生产环境pm2相关
 -i 参数，启动多线程；watch，-w，监听文件改变
 
 pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.connfig.js —only=one-app-name
+
+### Nodemailer发送邮件
+
+1. 参考链接：
+
+   [NODEMAILER](https://nodemailer.com/about/)
+
+   [如何使用nodejs自动发送邮件?](https://juejin.cn/post/6930170631031881741)
+
+2. 详解：
+
+    * 版本要求
+
+        Node.js v6.0.0或更高版本
+
+    * 优点
+
+        * 具有零依赖关系的单一模块, 代码容易审核，没有死角
+        * Unicode支持使用任何字符，包括表情符号💪
+        * 邮件内容既支持普通文本, 还支持自定义html
+        * 支持自定义附件
+        * 支持安全可靠的SSL/STARTTLS邮件发送
+        * 支持自定义插件处理邮件消息
+
+    * 案例
+
+        ```js
+        "use strict";
+        const nodemailer = require("nodemailer");
+
+        // async..await is not allowed in global scope, must use a wrapper
+        async function main() {
+        // Generate test SMTP service account from ethereal.email
+        // Only needed if you don't have a real mail account for testing
+        // 如果你没有一个真实邮箱的话可以使用该方法创建一个测试邮箱
+        let testAccount = await nodemailer.createTestAccount();
+
+        // create reusable transporter object using the default SMTP transport
+        // 创建Nodemailer传输器 SMTP 或者 其他 运输机制
+        let transporter = nodemailer.createTransport({
+            host: "smtp.ethereal.email",
+            port: 587,
+            secure: false, // true for 465, false for other ports
+            auth: {
+                user: testAccount.user, // generated ethereal user
+                pass: testAccount.pass, // generated ethereal password
+            },
+        });
+
+        // send mail with defined transport object
+        let info = await transporter.sendMail({
+            from: '"Fred Foo 👻" <foo@example.com>', // sender address
+            to: "bar@example.com, baz@example.com", // list of receivers
+            subject: "Hello ✔", // Subject line
+            text: "Hello world?", // plain text body
+            html: "<b>Hello world?</b>", // html body
+        });
+
+        console.log("Message sent: %s", info.messageId);
+        // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
+
+        // Preview only available when sending through an Ethereal account
+        console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+        // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
+        }
+
+        main().catch(console.error);
+        ```
+
+    * 邮箱配置
+
+        * 开启SMTP服务
+        * 授权管理：获取SMTP服务器和密码
+
+    * 消息配置
+
+        * from 发件人的电子邮件地址。所有电子邮件地址都可以是纯'sender@server.com“或格式化”‘发送者名称’sender@server.com'
+        * to 逗号分隔的列表或收件人的电子邮件地址的排列
+        * cc 逗号分隔的列表或将显示在“抄送”字段中的收件人电子邮件地址数组
+        * bcc 逗号分隔的列表或将显示在“密件抄送：”字段中的收件人电子邮件地址数组
+        * subject 电子邮件的主题
+        * text 消息的文本内容
+        * html 消息的html内容, 如果定义了html, 将忽略text
+        * attachments 附件内容
+
+        
