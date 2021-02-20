@@ -105,66 +105,66 @@ function Lazyman(name) {
     return new _Lazyman(name);
 }
 class _Lazyman {
-constructor(name) {
-    this.tasks = []; //设置任务队列
-    let self = this;
-    let task = (function (name) {
-        return function () {
-            console.log("Hello I'm " + name);
-            self.next(); //因为没法for循环执行，所以只能console完就调用next来执行下一个
-        };
-    })(name); //闭包传参能缓存参数，最终返回函数，否则无法在next中向function传参
-    this.tasks.push(task);
-    //此时首次进入构造函数，tasks为[f]，调用方式为tasks[0]()
-    //通过settimeout的方法，先执行链式调用和传参，最后才执行next()
-    setTimeout(function () {
-    self.next();
-    }, 0);
-}
-next() {
-    //取出一个任务并执行
-    let task = this.tasks.shift();
-    if (task) {
-        task();
+    constructor(name) {
+        this.tasks = []; //设置任务队列
+        let self = this;
+        let task = (function (name) {
+            return function () {
+                console.log("Hello I'm " + name);
+                self.next(); //因为没法for循环执行，所以只能console完就调用next来执行下一个
+            };
+        })(name); //闭包传参能缓存参数，最终返回函数，否则无法在next中向function传参
+        this.tasks.push(task);
+        //此时首次进入构造函数，tasks为[f]，调用方式为tasks[0]()
+        //通过settimeout的方法，先执行链式调用和传参，最后才执行next()
+        setTimeout(function () {
+        self.next();
+        }, 0);
     }
-}
-eat(food) {
-    let self = this;
-    let task = (function (food) {
-        return function () {
-            console.log("Eat " + food);
-            self.next();
-        };
-    })(food);
-    this.tasks.push(task);
-    return this; //链式调用
-}
-sleep(time) {
-    let self = this;
-    let task = (function (time) {
-        return function () {
-            setTimeout(function () {
-            console.log("Wake up after " + time + " s!");
-            self.next(); //setTimeout执行完才能执行下一个
-            }, time * 1000);
-        };
-    })(time);
-    this.tasks.push(task);
-    return this;
-}
-sleepFirst(time) {
-    let self = this;
-    let task = (function (time) {
-        return function () {
-            setTimeout(function () {
-            console.log("Wake up after " + time + " s!");
-            self.next();
-            }, time * 1000);
-        };
-    })(time);
-    this.tasks.unshift(task); //函数最先执行，向队列头部插入函数
-    return this;
-}
+    next() {
+        //取出一个任务并执行
+        let task = this.tasks.shift();
+        if (task) {
+            task();
+        }
+    }
+    eat(food) {
+        let self = this;
+        let task = (function (food) {
+            return function () {
+                console.log("Eat " + food);
+                self.next();
+            };
+        })(food);
+        this.tasks.push(task);
+        return this; //链式调用
+    }
+    sleep(time) {
+        let self = this;
+        let task = (function (time) {
+            return function () {
+                setTimeout(function () {
+                console.log("Wake up after " + time + " s!");
+                self.next(); //setTimeout执行完才能执行下一个
+                }, time * 1000);
+            };
+        })(time);
+        this.tasks.push(task);
+        return this;
+    }
+    sleepFirst(time) {
+        let self = this;
+        let task = (function (time) {
+            return function () {
+                setTimeout(function () {
+                console.log("Wake up after " + time + " s!");
+                self.next();
+                }, time * 1000);
+            };
+        })(time);
+        this.tasks.unshift(task); //函数最先执行，向队列头部插入函数
+        return this;
+    }
 }
 // Lazyman('Hank');
 // Lazyman('Hank').sleep(5).eat('dinner');
@@ -508,17 +508,17 @@ function debounce(fn, wait, immediate) {
     let timer = null;
     let one = immediate;
     return function (...args) {
-    if (one) {
-        one = false;
-        fn(...args);
-    } else {
-        if (timer !== null) {
-        clearTimeout(timer);
+        if (one) {
+            one = false;
+            fn(...args);
+        } else {
+            if (timer !== null) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => {
+                fn(...args);
+            }, wait);
         }
-        timer = setTimeout(() => {
-        fn(...args);
-        }, wait);
-    }
     };
 }
 var handle = debounce(function (val) {
@@ -543,12 +543,12 @@ function throttle(fn, wait, isDate, ...args) {
                 fn(...args);
             }
         } else {
-        if (timer === null) {
-            timer = setTimeout(() => {
-                timer = null;
-                fn(...args);
-            }, wait);
-        }
+            if (timer === null) {
+                timer = setTimeout(() => {
+                    timer = null;
+                    fn(...args);
+                }, wait);
+            }
         }
     };
 }
