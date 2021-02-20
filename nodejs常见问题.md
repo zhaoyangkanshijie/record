@@ -20,6 +20,7 @@
 - [nodejs特点与应用场景](#nodejs特点与应用场景)
 - [child_process](#child_process)
 - [Nodemailer发送邮件](#Nodemailer发送邮件)
+- [domain模块捕捉异常](#domain模块捕捉异常)
 
 ---
 
@@ -1064,4 +1065,126 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         * html 消息的html内容, 如果定义了html, 将忽略text
         * attachments 附件内容
 
+### domain模块捕捉异常
+
+1. 参考链接：
+
+   [Node.js 异常捕获的一些实践](http://www.alloyteam.com/2013/12/node-js-series-exception-caught/)
+
+   [Node.js 异步异常的处理与domain模块解析](http://deadhorse.me/nodejs/2013/04/13/exception_and_domain.html)
+
+2. 详解：
+
+    * try/catch的问题
+
+        * try/catch 无法捕捉异步回调里的异常
+        * Node.js 原生提供 uncaughtException 事件挂到 process 对象上，用于捕获所有未处理的异常，而不是 catch 块
+        * uncaughtException 虽然能够捕获异常，但是此时错误的上下文已经丢失，即使看到错误也不知道哪儿报的错
+        * 一旦 uncaughtException 事件触发，整个 node 进程将 crash 掉
+
+    * 使用 domain 模块捕捉异常
+
+        * Node.js v0.8 版本发布了一个 domain（域）模块，专门用于处理异步回调的异常
+        * 被 domain 捕获到的错误，uncaughtException 回调并不会执行
+
+    * 样例
+
+        ```js
+        process.on('uncaughtException', function(err) {
+            console.error('Error caught in uncaughtException event:', err);
+        });
         
+        var d = domain.create();
+        
+        //domain 没有绑定 error 事件的话，node 会直接抛出错误，即使 uncaughtException 绑定了也没有用
+        d.on('error', function(err) {
+            console.error('Error caught by domain:', err);
+        });
+        
+        d.run(function() {
+            process.nextTick(function() {
+                fs.readFile('non_existent.js', function(err, str) {
+                    if(err) throw err;
+                    else console.log(str);
+                });
+            });
+        });
+
+        fs.readFile('non_existent.js', d.bind(function(err, buf) {
+            if(err) throw err;
+            else res.end(buf.toString());
+        }));
+
+        fs.readFile('non_existent.js', d.intercept(function(buf) {
+            console.log(buf);
+        }));
+        ```
+
+        ```js
+        var domain = require('domain');
+
+        //引入一个domain的中间件，将每一个请求都包裹在一个独立的domain中
+        //domain来处理异常
+        app.use(function (req,res, next) {
+            var d = domain.create();
+            //监听domain的错误事件
+            d.on('error', function (err) {
+                logger.error(err);
+                res.statusCode = 500;
+                res.json({sucess:false, messag: '服务器异常'});
+                d.dispose();
+            });
+
+            d.add(req);
+            d.add(res);
+            d.run(next);
+        });
+
+        app.get('/index', function (req, res) {
+            //处理业务
+        });
+        ```
+
+        对于事件分发器，应该养成先绑定（on()或 addEventListener()）后触发（emit()）的习惯。在执行事件回调的时候，对于有可能抛异常的情况，应该把 emit 放到 domain 里去
+        ```js
+        var d = domain.create();
+        var e = new events.EventEmitter();
+        
+        d.on('error', function(err) {
+            console.error('Error caught by domain:', err);
+        });
+        
+        e.on('data', function(err) {
+            if(err) throw err;
+        });
+        
+        if(Math.random() > 0.5) {
+            d.run(function() {
+                e.emit('data', new Error('Error in domain runtime.'));
+            });
+        } else {
+            e.emit('data', new Error('Error without domain.'));
+        }
+        ```
+
+    * 测试
+
+        ```js
+        // domain was not exists by default
+        should.not.exist(process.domain);
+        
+        var d = domain.create();
+        
+        d.on('error', function(err) {
+            console.log(err);
+        });
+        
+        d.enter(); // makes d the current domain
+        
+        process.domain.should.be.an.Object;
+        process.domain.should.equal(domain.active);
+        
+        d.exit(); // makes d inactive
+        
+        should.not.exist(process.domain);
+        ```
