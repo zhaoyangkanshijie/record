@@ -481,6 +481,8 @@
 
    [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
 
+   [详细讲解new一个对象的过程，含详细constructor, __proto__, prototype 关系图](https://blog.csdn.net/qq_42817747/article/details/100916833)
+
 2. 详解：
 
    - arguments
@@ -805,6 +807,10 @@
     
     * new
     
+        constructor, __proto__, prototype 关系图:
+
+        ![jsObject.png](./jsObject.png)
+
         new运算符背后的步骤：
     
         * 创建一个空对象
