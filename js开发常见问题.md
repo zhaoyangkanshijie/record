@@ -4907,6 +4907,49 @@
       //    at success (<anonymous>)
       ```
 
+   - promise综合使用注意
+
+      1. then后的then如果想有值，就需要在第一个then返回Promise.resolve(value)
+
+        ```js
+        var promise = new Promise(function(resolve, reject) {
+            console.log("promise")
+            window.setTimeout(function(){
+            if (1){
+                resolve('success');
+            } else {
+                reject('error');
+            }
+            },1000)
+        }).then(function(v){
+            console.log(v);//success
+            //return Promise.resolve(v) 后面的then需要值则添加这行
+        }).then(function(v){
+            console.log(v);//undefined
+        });
+        ```
+
+      2. finally的回调函数不接受传参，因此只处理与状态无关的事情，后面的then不受影响
+
+        ```js
+        var promise = new Promise(function(resolve, reject) {
+            console.log("promise")
+            window.setTimeout(function(){
+            if (1){
+                resolve('success');
+            } else {
+                reject('error');
+            }
+            },1000)
+        }).finally(function(v){
+            console.log(v);//undefined
+        }).then(function(v){
+            console.log(v);//success
+        }).catch(function(v){
+            console.log(v,'catch');
+        });
+        ```
+
    - 题目
 
       红灯3秒亮一次，绿灯1秒亮一次，黄灯2秒亮一次；如何使用Promise让三个灯不断交替重复亮灯？
