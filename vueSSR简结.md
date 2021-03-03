@@ -32,6 +32,7 @@
 * [nuxt的api属性和方法](#nuxt的api属性和方法)
 * [nuxt优化](#nuxt优化)
 * [nuxt插件](#nuxt插件)
+* [nuxt后端restfulApi](#nuxt后端restfulApi)
 * [nuxt部署](#nuxt部署)
 
 ## 什么是服务器端渲染SSR
@@ -1442,6 +1443,89 @@ async asyncData (context) {
   })
   return { result }
 }
+```
+
+## nuxt后端restfulApi
+
+写法同koa2，在nuxt代码中穿插即可
+
+错误日志样例：
+
+/plugins/errorHandler.js
+```js
+import Vue from 'vue'
+import axios from 'axios'
+
+// 系统错误捕获
+const getErr = async (err, _this, info) => {
+  await axios.post('/api/getErr', { err: err.stack, hook: info })
+}
+
+const errorHandler = (error, vm, info) => {
+  getErr(error, vm, info)
+}
+
+Vue.config.errorHandler = errorHandler
+Vue.prototype.$throw = (error, vm, info) => errorHandler(error, vm, info)
+```
+
+nuxt.config.js
+```js
+plugins: [
+  { src: '@/plugins/errorHandler.js', ssr: false }
+],
+```
+
+index.vue
+```js
+created () {
+  console.log('created')
+  this.$axios.post('/api/getErr', { err: 'err.stack', hook: 'info' })
+},
+```
+
+服务端index.js
+```js
+const json = require('koa-json')
+const bodyparser = require('koa-bodyparser')
+const getErr = require('../utils/routes/api/getErr.js')
+async function start () {
+  ...
+  //必须加入bodyparser、json中间件，才能获取ctx.request.body
+  app.use(bodyparser())
+  app.use(json())
+  app.use(getErr.routes()).use(getErr.allowedMethods())
+  app.use((ctx) => {
+    ctx.status = 200
+    ctx.respond = false // Bypass Koa's built-in response handling
+    ctx.req.ctx = ctx // This might be useful later on, e.g. in nuxtServerInit or with nuxt-stash
+    nuxt.render(ctx.req, ctx.res)
+  })
+  ...
+}
+```
+
+路由逻辑：/utils/routes/api/getErr.js
+```js
+const fs = require('fs')
+const router = require('koa-router')()
+
+router.post('/api/getErr', async (ctx, next) => {
+  const time = new Date()
+  fs.writeFile(
+    './logs/' + time.getTime() + '.txt',
+    '报错内容:' + ctx.request.body.err + '\r\n' +
+    '所在钩子:' + ctx.request.body.hook + '\r\n' +
+    '报错时间:' + time.toLocaleString() + '\r\n',
+    (err) => {
+      if (err) { throw err }
+    })
+  ctx.body = {
+    e: ctx.request.body
+  }
+})
+
+module.exports = router
 ```
 
 ## nuxt部署
