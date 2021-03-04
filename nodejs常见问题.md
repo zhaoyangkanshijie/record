@@ -211,6 +211,8 @@
 
    [NodeJS性能调优之GC调优](https://www.jianshu.com/p/1edea2f6fd4d)
 
+   [通过【垃圾回收机制】的角度认识【Map与WeakMap】的区别](https://mp.weixin.qq.com/s/1ORX2Ftd5Eo_Oc3IEn2R2g)
+
 2. 详解：
 
     * 背景
@@ -298,6 +300,93 @@
         ```
 
         比较GC的CPU占比、3分钟内GC次数、Scavenge的次数、GC时间、GC平均暂停时间，指标相互影响，不一定空间越大越好
+
+    * nodejs相关api
+
+        * global.gc()手动调用一次垃圾回收。需要在运行js文件时候增加命令 --expose-gc，一般环境下不推荐使用
+        * process.memoryUsage()查看Node进程的内存占用情况。
+
+            返回值为对象其中包含五个属性 rss，heapTotal，heapUsed，external，arrayBuffers；
+
+            其中主要属性是 heapTotal和heapUsed对应的是V8的堆内存信息。
+
+            heapTotal是堆中总共申请的内存量，heapUsed表示目前堆中使用的内存量。单位都为字节。
+
+    * 通过gc了解map与weakmap区别
+
+        WeakMap
+        ```js
+        // index.js
+        // 第一次手动清理垃圾以确保为最新状态，观察内存情况
+        global.gc();
+        console.log(`第一次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB`);
+        const wm = new WeakMap();
+
+        let key = {};
+        // 给 WeakMap实例 赋值一个 占领内存足够大的 键值对
+        wm.set(key, new Array(114514 * 19));
+        // 手动清理一下垃圾 观察内存占用情况
+        global.gc();
+        console.log(`第二次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB`);
+
+        // 此时把 key键 的引用进行断开，并观察内存占用情况
+        key = null;
+        // key = new Array();  
+        // 这种改变引用地址写法也可以引起 弱映射，因为引用地址不再是同块内存地址 WeakMap内对应的value也会被垃圾回收
+
+        global.gc();
+        console.log(`第三次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB`);
+
+        $ node --expose-gc index.js
+
+        第一次垃圾回收，当前内存使用情况：1.66MB
+        第二次垃圾回收，当前内存使用情况：18.45MB
+        第三次垃圾回收，当前内存使用情况：1.84MB
+        ```
+
+        Map
+        ```js
+        // index.js
+        // 第一次手动清理垃圾以确保为最新状态，观察内存情况
+        global.gc();
+        console.log(
+        `第一次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB`
+        );
+        const m = new Map();
+
+        let key = {};
+        m.set(key, new Array(114514 * 19));
+        // 手动清理一下垃圾 观察内存占用情况
+        global.gc();
+        console.log(
+        `第二次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB，
+        当前Map的长度: ${m.size}`
+        );
+
+        // 此时把 key键 的引用进行断开，并观察内存占用情况
+        key = null;
+        global.gc();
+        console.log(
+        `第三次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB，
+        当前Map的长度: ${m.size}`
+        );
+
+        // 清除Map所有键值对
+        m.clear();
+
+        global.gc();
+        console.log(
+        `第四次垃圾回收，当前内存使用情况：${(process.memoryUsage().heapUsed / 1024 / 1024).toFixed(2)}MB，
+        当前Map的长度: ${m.size}`
+        );
+        $ node --expose-gc index.js
+        第一次垃圾回收，当前内存使用情况：1.66MB
+        第二次垃圾回收，当前内存使用情况：18.45MB，当前Map的长度: 1
+        第三次垃圾回收，当前内存使用情况：18.45MB，当前Map的长度: 1
+        第四次垃圾回收，当前内存使用情况：1.85MB，当前Map的长度: 0
+        ```
+
+        总结：Map所构建的实例是需要手动清理，才能被垃圾回收清除，而WeakMap只要外部的引用消失，所对应的键值对就会自动被垃圾回收清除。
 
 ### deno和nodejs区别
 
