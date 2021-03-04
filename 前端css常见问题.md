@@ -2380,15 +2380,40 @@
     </div>
     ```
 
-### scroll-snap-type滚动轮播
+### 滚动优化
 
 1. 参考链接
 
+  [前端优秀实践不完全指南](https://juejin.cn/post/6932647134944886797)
+
   [不可思议，纯 css 都能图片滚动](https://juejin.im/post/6895584191073927175)
+
+  [使用 sroll-snap-type 优化滚动](https://github.com/chokcoco/iCSS/issues/74)
 
 2. 详解
 
-  不兼容IE、safari，慎用，样例代码见文末github
+  scroll-snap-type不兼容IE、safari，慎用，样例代码见文末github
+
+  scroll-behavior: smooth 让超链接滚动丝滑
+  ```html
+  <div class="g-container">
+    <nav>
+      <a href="#1">1</a>
+      <a href="#2">2</a>
+      <a href="#3">3</a>
+    </nav>
+    <div class="scrolling-box">
+      <section id="1">First section</section>
+      <section id="2">Second section</section>
+      <section id="3">Third section</section>
+    </div>
+  </div>
+  <style>
+    .scrolling-box{
+      scroll-behavior: smooth;
+    }
+  </style>
+  ```
 
 ### 图片相关
 
@@ -2396,6 +2421,47 @@
 
   [前端优秀实践不完全指南](https://juejin.cn/post/6932647134944886797)
 
+  [前端基础知识概述 -- 移动端开发的屏幕、图像、字体与布局的兼容适配](https://github.com/chokcoco/cnblogsArticle/issues/25)
+
 2. 详解
 
-  
+  * 图片适应，类似background
+
+    ```css
+    ul li img {
+        width: 150px;
+        height: 100px;
+        object-fit: cover;
+        object-position: 50% 100%;
+    }
+    ```
+
+  * 屏幕 dpr -- 响应式图片
+
+    ```html
+    <img src='photo@1x.png' srcset='photo@1x.png 1x,photo@2x.png 2x,photo@3x.png 3x' />
+    <img src="photo.png" sizes="(min-width: 600px) 600px, 300px" srcset="photo@1x.png 300w,photo@2x.png 600w,photo@3x.png 1200w" />
+    ```
+
+  * 图片丢失
+
+    ```html
+    <img src="test.png" alt="图片描述" onerror="this.classList.add('error');">
+    <style>
+    img.error {
+        position: relative;
+        display: inline-block;
+    }
+
+    img.error::before {
+        content: "";
+        /** 定位代码 **/
+        background: url(error-default.png);
+    }
+
+    img.error::after {
+        content: attr(alt);
+        /** 定位代码 **/
+    }
+    </style>
+    ```
