@@ -4,7 +4,7 @@
 - [nodejs垃圾回收gc机制](#nodejs垃圾回收gc机制)
 - [deno和nodejs区别](#deno和nodejs区别)
 - [获取命令行传来的参数](#获取命令行传来的参数)
-- [文件路径](#文件路径)
+- [文件路径与读写](#文件路径与读写)
 - [url模块](#url模块)
 - [express中app.get、app.use、app.all的区别](#express中app.get、app.use、app.all的区别)
 - [express中response常用方法](#express中response常用方法)
@@ -480,7 +480,7 @@
     process.argv[2] // ['arg1','arg2','arg3']
     ```
 
-### 文件路径
+### 文件路径与读写
 
 1. 参考链接：
 
@@ -502,6 +502,52 @@
         //join是直接拼接字段，resolve是解析路径并返回
         path.join("a","b")  // "a/b"
         path.resolve("a", "b") // "/Users/tree/Documents/infrastructure/KSDK/src/a/b"
+        ```
+
+    * 创建文件和读写
+
+        * fs.exists不稳定，已弃用，改用fs.stat/fs.access
+        * 不建议在调用 fs.open()、 fs.readFile() 或 fs.writeFile() 之前使用 fs.stat() 检查文件的存在性。 而是应该直接地打开、读取或写入文件，如果文件不可用，则处理引发的错误。
+        * 不要在调用 fs.open()、 fs.readFile() 或 fs.writeFile() 之前使用 fs.access() 检查文件的可访问性。 这样做会引入竞态条件，因为其他进程可能会在两个调用之间更改文件的状态。 而是，应该直接打开、读取或写入文件，并且当文件无法访问时处理引发的错误。
+        * fs.mkdir(dirname, callback)目录必须一级一级创建，否则报错
+
+        ```js
+        const fs = require('fs');
+        const path = require('path');
+
+        const file = './data/17/1017.txt';
+        const fileContent = '\n hello world';
+        writeFileByUser(file,fileContent);
+
+        function writeFileByUser(filePath,data){
+            if (fs.existsSync(filePath)) {
+                console.log('该路径已存在');
+            }else{
+                console.log('该路径不存在');
+                mkdir(filePath);
+            }
+            fs.appendFile(filePath,data,'utf8',function(err){  
+                if(err)  {  
+                    console.log(err);  
+                } else {
+                    console.log('appendFile 成功了')
+                }
+            })
+        }
+
+        function mkdir(filePath) {
+            const dirCache={};
+            const arr=filePath.split('/');
+            let dir=arr[0];
+            for(let i=1;i<arr.length;i++){
+                if(!dirCache[dir]&&!fs.existsSync(dir)){
+                    dirCache[dir]=true;
+                    fs.mkdirSync(dir);
+                }
+                dir=dir+'/'+arr[i];
+            }
+            fs.writeFileSync(filePath, '')
+        }
         ```
 
 ### url模块
