@@ -1537,3 +1537,12 @@ npm run build
 npm run start 成功后改用pm2
 
 pm2 start npm --name "nuxtExample" -- run start --watch
+
+如果更新后不生效，可能pm2程序没彻底关闭，可执行如下命令：
+
+lsof -i tcp:20001 查看pm2的pid，其中20001是我们配置的端口号，下面的PID为1037
+
+COMMAND  PID USER   FD   TYPE    DEVICE SIZE/OFF NODE NAME
+node    1037 
+
+kill -9 {pid} pid是上面看到的pid
