@@ -5408,6 +5408,8 @@
 
    [一份不可多得的 TS 学习指南（1.8W字）](https://juejin.im/post/6872111128135073806#heading-110)
 
+   [Typescript开发学习总结（附大量代码）](https://juejin.cn/post/6937155970199978014)
+
 2. 详解
 
    - tsconfig.json配置样例
@@ -5467,6 +5469,103 @@
           "emitDecoratorMetadata": true          // 为装饰器提供元数据的支持
         }
       }
+      ```
+
+   - 基础类型
+
+      ```ts
+      // 字符串类型声明，单引号/双引号不影响类型推断
+      let str: string = 'Hello World';
+
+      // 数字类型声明
+      let num: number = 120;
+      // 这些值也是合法的数字类型
+      let nan: number = NaN;
+      let max: number = Infinity;
+      let min: number = -Infinity;
+
+      // 布尔类型声明
+      let not: boolean = false;
+      // Typescript只对结果进行检查，!0最后得到true，因此不会报错
+      let yep: boolean = !0;
+
+      // symbol类型声明
+      let key: symbol = Symbol('key');
+
+      // never类型不能进行赋值
+      // 执行console.log(never === undefined)，执行结果为true
+      let never: never;
+      // 但即使never === undefined，赋值逻辑仍然会报错
+      never = undefined;
+
+      // 除了never，未开启strictNullChecks时，其他类型变量赋值为null/undefined/void 0不报错
+      let always: boolean = true;
+      let isNull: null =  null;
+      // 不会报错
+      always = null;
+      isNull = undefined;
+      ```
+
+   - 引用类型
+
+      ```ts
+      // 数组类型有Array<T>和T[]两种写法
+      let arr1: Array<number> = [1]
+      let arr2: number[] = [2]
+
+      // 未开启strictNullChecks时，赋值为null/undefined/void 0不报错
+      let arr3: number[] = null
+      // 编译时不会报错，运行时报错
+      arr3.push(1)
+
+      // 元组类型
+      // 坐标表示
+      let coordiate: [ number, number ] = [114.256429,22.724147]
+
+      // 其他引用数据类型
+      let date: Date = new Date()
+      let pattern: Regexp = /\w/gi
+
+      // 类型声明在函数中的简单运用
+      // 函数表达式的写法
+      function fullName(firstName: string, lastName: string): string {
+        return firstName + ' ' + lastName
+      }
+      // 函数声明式的写法
+      const sayHello = (fullName: string): void => alert(`Hello, ${ fullName }`)
+
+      // 当你不知道函数的返回值，但又不想用any/unknown的时候可以试试这种类型声明的写法，不过不推荐
+      const sayHey: Function = (fullName: string) => alert(`Hey, ${ fullName }`)
+
+      // 赋值给数字不会报错
+      let one: Object = 1
+      // 也赋值给数组,但无法使用数组的push方法
+      let arr: Object = []
+      // 会报错
+      arr.push(1)
+
+      // 赋值会报错
+      let two: object = 2
+
+      // object作为类型声明时，赋值给对象时不会报错
+      let obj1: object = {}
+      let obj2: object = { name: '王五' } 
+      let Obj3: Object = {}
+
+      // 会报错
+      obj1.name = '张三'
+      obj1.toString()
+      obj2.name
+
+      // 不会报错
+      Obj3.name = '李四'
+      Obj3.toString()
+
+      // {} 等同于匿名形式的type
+      type UserType = { name: string; }
+
+      let user: UserType = { name: '李四' }
+      let data: { name: string; } = { name: '张三' }
       ```
 
    - interface 与 type 区别
@@ -5668,6 +5767,34 @@
      let a:A&B;
      ```
 
+      ```ts
+      type Form1Type = { name: string; } & { gender: number; }
+      // 等于 type Form1Type = { name: string; gender: number; }
+      type Form2Type = { name: string; } | { gender: number; }
+      // 等于 type Form2Type = { name?: string; gender?: number; }
+
+      let form1: Form1Type = { name: '王五' } // 提示缺少gender参数
+      let form2: Form2Type = { name: '刘六' } // 验证通过
+
+
+      type Form3Type = { name: string; } & { name?: string; gender: number; }
+      // 等于 type Form3Type = { name: string; gender: number; }
+      type Form4Type = { name: string; } | { name?: string; gender: number; }
+      // 等于 type Form4Type = { name?: string; gender: number; }
+
+      let form3: Form3Type = { gender: 1 } // 提示缺少name参数
+      let form4: Form4Type = { gender: 1 } // 验证通过
+
+
+      type Form5Type = { name: string; } & { name?: number; gender: number; }
+      // 等于 type Form5Type = { name: never; gender: number; }
+      type Form6Type = { name: string; } | { name?: number; gender: number; }
+      // 等于 type Form6Type = { name?: string | number; gender: number; }
+
+      let form5: Form5Type = { name: '张三', gender: 1 } // 提示name的类型为never，不能进行赋值
+      let form6: Form6Type = { name: '张三', gender: 1 } // 验证通过
+      ```
+
    - keyof 是索引类型操作符,用来获取类型
 
      ```ts
@@ -5827,8 +5954,6 @@
      const resS = test("Hello World"); // resS 被推断出类型为 string；
      const resN = test(1234); // resN 被推断出类型为 number;
      ```
-
-
 
 ### MutationObserver
 
