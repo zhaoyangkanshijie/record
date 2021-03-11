@@ -2746,139 +2746,276 @@ configeWebpack: (config) => {
 
     * 引入 typescript 前后对比
 
-      前
+      * Vue2
 
-      ```js
-      export default {
-        data() {
-          return {
-            msg: 123,
-          };
-        },
+        前
 
-        // 声明周期钩子
-        mounted() {
-          this.greet();
-        },
+        [vue+typescript项目构建以及ts与js写法对比](https://blog.csdn.net/qq_42409134/article/details/93376506)
+        ```js
+        <template>
+          <div class="home">
+          </div>
+        </template>
+        <script lang="js">
+        import HelloWorld from '@/components/HelloWorld.vue';
 
-        // 计算属性
-        computed: {
-          computedMsg() {
-            return "computed " + this.msg;
+        const symbol = Symbol('baz');
+
+        export default {
+          components: {
+            HelloWorld,
           },
-        },
+          props: {
+            propA: {
+              type: Number,
+            },
+            propB: {
+              default: 'default value',
+            },
+            propC: {
+              type: [String, Boolean],
+            },
 
-        // 方法
-        methods: {
-          greet() {
-            alert("greeting: " + this.msg);
+            // @PropSync
+            name: {
+              type: String,
+            },
+
+            // @Model
+            checked: {
+              type: Boolean,
+            },
           },
-        },
 
-        props: {
-          checked: Boolean,
-          propA: Number,
-          propB: {
-            type: String,
-            default: "default value",
+          // @Model
+          model: {
+            prop: 'checked',
+            event: 'change',
           },
-          propC: [String, Boolean],
-          propD: { type: null },
-        },
 
-        watch: {
-          child: {
-            handler: "onChildChanged",
-            immediate: false,
-            deep: false,
+          inject: {
+            foo: 'foo',
+            bar: 'bar',
+            optional: { from: 'optional', default: 'default' },
+            [symbol]: symbol
           },
-        },
-      };
-      ```
+          data() {
+            return {
+              foo: 'foo',
+              baz: 'bar'
+            }
+          },
+          provide() {
+            return {
+              foo1: this.foo,
+              bar1: this.baz
+            }
+          },
 
-      后
+          computed: {
+            // @PropSync
+            syncedName: {
+              get() {
+                return this.name;
+              },
+              set(value) {
+                this.$emit('update:name', value);
+              }
+            },
 
-      ```html
-      <template>
-        <div>
-          <input v-model="msg" />
-          <p>msg: {{ msg }}</p>
-          <p>computed msg: {{ computedMsg }}</p>
-          <button @click="greet">Greet</button>
-        </div>
-      </template>
+            // @Ref
+            anotherComponent: {
+              cache: false,
+              get() {
+                return this.$refs.anotherComponent;
+              }
+            },
+            button: {
+              cache: false,
+              get() {
+                return this.$refs.aButton as HTMLButtonElement;
+              }
+            },
+          },
 
-      <script lang="ts">
-        import Vue from "vue";
-        import Component from "vue-class-component";
+          watch: {
+            child: [
+              {
+                handler: 'onChildChanged',
+                immediate: false,
+                deep: false
+              }
+            ],
+            person: [
+              {
+                handler: 'onPersonChanged1',
+                immediate: true,
+                deep: true
+              },
+              {
+                handler: 'onPersonChanged2',
+                immediate: false,
+                deep: false
+              }
+            ]
+          },
+          methods: {
+            // @Watch
+            onChildChanged(val, oldVal) {},
+            onPersonChanged1(val, oldVal) {},
+            onPersonChanged2(val, oldVal) {},
 
-        @Component
-        export default class App extends Vue {
-          // 初始化数据
-          msg = 123;
+            // @Emit
+            addToCount(n) {
+              this.count += n;
+              this.$emit('add-to-count', n)
+            },
+            resetCount() {
+              this.count = 0;
+              this.$emit('reset')
+            },
+            returnValue() {
+              this.$emit('return-value', 10)
+            },
+            onInputChange(e) {
+              this.$emit('on-input-change', e.target.value, e)
+            },
+            promise() {
+              const promise = new Promise(resolve => {
+                setTimeout(() => {
+                  resolve(20)
+                }, 0)
+              });
 
-          // 声明周期钩子
+              promise.then(value => {
+                this.$emit('promise', value)
+              })
+            }
+          },
+          
           mounted() {
-            this.greet();
+            console.log('mounted');
           }
+        }
+        </script>
+        ```
 
-          // 计算属性
-          get computedMsg() {
-            return "computed " + this.msg;
-          }
+        后
 
-          // 方法
-          greet() {
-            alert("greeting: " + this.msg);
-          }
+        [vue+typescript项目构建以及ts与js写法对比](https://blog.csdn.net/qq_42409134/article/details/93376506)
+        ```html
+        <template>
+          <div class="home">
+          </div>
+        </template>
 
-          @Prop()
-          propA: number = 1;
+        <script lang="ts">
+        import { Component, Vue, Prop, PropSync, Model, Watch, Provide, Inject, Emit, Ref } from 'vue-property-decorator';
+        import HelloWorld from '@/components/HelloWorld.vue'; // @ is an alias to /src
 
-          @Prop({ default: "default value" })
-          propB: string;
+        const symbol = Symbol('baz');
 
-          @Prop([String, Boolean])
-          propC: string | boolean;
+        @Component({
+          components: {
+            HelloWorld,
+          },
+        })
+        export default class Home extends Vue {
+          @Prop(Number) readonly propA: number | undefined;
+          @Prop({ default: 'default value' }) readonly propB!: string;
+          @Prop([String, Boolean]) readonly propC: string | boolean | undefined;
 
-          @Prop({ type: null })
-          propD: any;
+          @PropSync('name', { type: String }) syncedName!: string;
 
-          @Watch("child")
+          @Model('change', { type: Boolean }) readonly checked!: boolean;
+
+          @Watch('child')
           onChildChanged(val: string, oldVal: string) {}
+
+          @Watch('person', { immediate: true, deep: true })
+          onPersonChanged1(val, oldVal) {}
+
+          @Watch('person')
+          onPersonChanged2(val, oldVal) {}
+
+          @Inject() readonly foo!: string;
+          @Inject('bar') readonly bar!: string;
+          @Inject({ from: 'optional', default: 'default' }) readonly optional!: string;
+          @Inject(symbol) readonly baz!: string;
+
+          @Provide() foo1 = 'foo';
+          @Provide('bar') baz1 = 'bar';
+
+          count = 0;
+
+          @Emit()
+          addToCount(n: number) {
+            this.count += n;
+          }
+
+          @Emit('reset')
+          resetCount() {
+            this.count = 0;
+          }
+
+          @Emit()
+          returnValue() {
+            return 10;
+          }
+
+          @Emit()
+          onInputChange(e) {
+            return e.target.value;
+          }
+
+          @Emit()
+          promise() {
+            return new Promise(resolve => {
+              setTimeout(() => {
+                resolve(20)
+              }, 0)
+            })
+          }
+
+          @Ref() readonly anotherComponent;
+          @Ref('aButton') readonly button!: HTMLButtonElement;
+
+          mounted() {
+            console.log('mounted');
+          }
         }
-      </script>
-      ```
+        </script>
+        ```
 
-      app.vue
+        app.vue
 
-      ```html
-      <template>
-        <div id="app">
-          <img src="./assets/logo.png" />
-          <router-view />
-        </div>
-      </template>
+        ```html
+        <template>
+          <div id="app">
+            <img src="./assets/logo.png" />
+            <router-view />
+          </div>
+        </template>
 
-      <script lang="ts">
-        import Vue from "vue";
-        import Component from "vue-class-component";
+        <script lang="ts">
+          import Vue from "vue";
+          import Component from "vue-class-component";
 
-        @Component({})
-        export default class App extends Vue {}
-      </script>
+          @Component({})
+          export default class App extends Vue {}
+        </script>
 
-      <style>
-        #app {
-          font-family: "Avenir", Helvetica, Arial, sans-serif;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-          text-align: center;
-          color: #2c3e50;
-          margin-top: 60px;
-        }
-      </style>
-      ```
+        <style>
+          #app {
+            font-family: "Avenir", Helvetica, Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-align: center;
+            color: #2c3e50;
+            margin-top: 60px;
+          }
+        </style>
+        ```
 
   * 优秀实例参考
 
