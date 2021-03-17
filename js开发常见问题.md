@@ -38,6 +38,7 @@
 - [跨源通信](#跨源通信)
 - [ChromeBug:FontBoosting](#ChromeBug:FontBoosting)
 - [reduce用法](#reduce用法)
+- [获取图片原始宽高](#获取图片原始宽高)
 
 ---
 
@@ -8187,3 +8188,30 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
   console.log(result4);
   console.timeEnd("reduce");//2.806884765625ms
   ```
+
+### 获取图片原始宽高
+
+1. 参考链接：
+
+  [JavaScript获取图片的原始尺寸](https://www.cnblogs.com/snandy/p/3704218.html)
+
+2. 详解
+
+  HTML5提供了一个新属性naturalWidth/naturalHeight可以直接获取图片的原始宽高。这两个属性在Firefox/Chrome/Safari/Opera及IE9里已经实现。
+  ```js
+  function getImgNaturalDimensions(img, callback) {
+      var nWidth, nHeight
+      if (img.naturalWidth) { // 现代浏览器
+          nWidth = img.naturalWidth
+          nHeight = img.naturalHeight
+      } else { // IE6/7/8
+          var imgae = new Image()
+          image.src = img.src
+          image.onload = function() {
+              callback(image.width, image.height)
+          }
+      }
+      return [nWidth, nHeight]
+  }
+  ```
+  注意IE6/7/8的处理，创建了一个新的img，仅设置其src，这时需要让图片完全载入后才可以获取其宽高。因此这里是异步的，可以传一个回调，回调里把原始的宽高作为参数传入。
