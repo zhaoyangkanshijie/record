@@ -139,6 +139,8 @@ app和小程序中，为了提升体验，页面提供了原生的导航栏和�
 
 其实老的HTML标签也可以在uni-app里使用，uni-app编译器会在编译时把老标签转为新标签，比如把div编译成view。但不推荐这种用法，调试H5端时容易混乱。
 
+建议使用v-if代替v-show，因为小程序上display:block会与display:flex冲突
+
 ### 新增了一批手机端常用的新组件
 
 * scroll-view 可区域滚动视图容器
