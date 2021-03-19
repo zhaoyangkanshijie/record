@@ -1747,9 +1747,9 @@ this.$cookies.get(name);
 ```html
 <template>
   <div class="child">
-    <slot name="slot1"></slot
+    <slot name="slot1"></slot>
     ><!-* 具名插槽 -->
-    <slot></slot
+    <slot></slot>
     ><!-* 匿名插槽 -->
     <slot name="slot2"></slot>
   </div>
