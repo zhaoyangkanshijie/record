@@ -191,6 +191,8 @@
 
    [昨天面试的6道面试题](https://juejin.cn/post/6904653808153362439)
 
+   [JavaScript 数据类型之 Symbol、BigInt](https://blog.csdn.net/lx11573/article/details/107250033)
+
 2. 详解：
 
    - js 数据类型
@@ -202,6 +204,10 @@
      对象键支持的类型：string,symbol
 
    - symbol
+
+      它的静态方法会暴露全局的symbol注册，且类似于内建对象类，但作为构造函数来说它并不完整，因为它不支持语法：“new Symbol()”。
+
+      每个从Symbol()返回的symbol值都是唯一的。一个symbol值能作为对象属性的标识符；这是该数据类型仅有的目的。
 
       ```js
       const s = Symbol();
@@ -215,6 +221,34 @@
       const s5 = Symbol.for('true');
       const s6 = Symbol.for(true);
       s5 === s6; // true
+      ```
+
+   - BigInt
+
+      ES2020 引入了一种新的数据类型 BigInt，它可以表示任意精度格式的整数。为了与 Number 类型进行区分，BigInt 类型的数据必须添加后缀n。
+
+      ```js
+      12 	// 普通Number
+      12n // BigInt
+      
+      // BigInt 的运算
+      1n + 2n // 3n
+
+      // 与Number 类型进行运算
+      1 + 1n // Uncaught TypeError
+
+      12n === 12 // false
+
+      BigInt(number) // 将一个 Number 转换为 BigInt
+      Number(bigint) // 将一个 BigInt 转换为 Number
+
+      typeof 12n // 'bigint'
+
+      //不能使用 new BigInt() 的方式来构建实例
+      new BigInt() // Uncaught TypeError: BigInt is not a constructor at new BigInt
+
+      //创建一个 BigInt 的时候，参数必须为整数
+      BigInt(1.2) // Uncaught RangeError: The number 1.2 cannot be converted to a BigInt because it is not an integer
       ```
 
    - 变量储存形式

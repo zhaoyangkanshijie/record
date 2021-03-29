@@ -4546,6 +4546,38 @@ this.$emit('update:bar',newValue);
 
 ## 深层选择器
 
+参考链接：
+
+[Vue style 属性 scoped 原理详解](https://blog.csdn.net/u014168594/article/details/89211068)
+
+编译原理：
+
+编译前：
+```html
+<style scoped>
+	.example {
+ 		 color: red;
+	}
+</style>
+
+<template>
+  	<div class="example">hi</div>
+</template>
+```
+
+编译后：
+```html
+<style>
+	.example[data-v-7668812d] {
+  		color: red;
+	}
+</style>
+
+<template>
+  	<div class="example" data-v-7668812d>hi</div>
+</template>
+```
+
 有时，你需要修改第三方组件的CSS，这些都是 scoped 样式，移除 scope 或打开一个新的样式是不可能的。
 
 深层选择器 >>> /deep/ ::v-deep 可以帮助你。
@@ -4568,6 +4600,18 @@ this.$emit('update:bar',newValue);
   color: gray;
 }
 </style>
+```
+
+编译前：
+```html
+<style scoped>
+	.外层 >>> .第三方组件 { /* ... */ }
+</style>
+```
+
+编译后：
+```html
+.外层[data-v-7668812d] .第三方组件 { /* ... */ }
 ```
 
 ## 递归菜单
