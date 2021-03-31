@@ -32,6 +32,7 @@
 * [jsx到javascript的转换过程](#jsx到javascript的转换过程)
 * [react源码api](#react源码api)
 * [useEffect和componentDidMount有什么差异](#useEffect和componentDidMount有什么差异)
+* [Mobx](#Mobx)
 
 ---
 
@@ -4593,3 +4594,256 @@ class Switch extends React.Component {
 2. 详解
 
     useEffect 会捕获 props 和 state。所以即便在回调函数里，你拿到的还是初始的 props 和 state。如果想得到“最新”的值，可以使用 ref。
+
+## Mobx
+
+1. 参考链接
+
+    [带你走进Mobx的原理](https://blog.csdn.net/weixin_34292287/article/details/91425026)
+
+    [mobx系列(一)-mobx简介](https://blog.csdn.net/smk108/article/details/84777649)
+
+    [mobx系列(三)-在React中使用Mobx](https://blog.csdn.net/smk108/article/details/85053903)
+
+2. 详解
+
+    * 思想
+
+        单向数据流，action改变应用的state，state的改变触发相应ui的更新
+
+        Mobx整体是一个观察者模式，存储state的store是被观察者，使用store的组件是观察者。当action改变被观察的state之后，computed value和reactin会自动根据state的改变做最小化更新，需要注意的是computed value采用延迟更新的方式，只有待更新的computed value被使用时才会被重新计算，不然，computed value不仅不会被重新计算，还会被自动回收。
+
+    * 概念
+
+        * Action：动作，建议是唯一可以修改状态的方式
+        * State：状态，应该是应用依赖的最小状态集，没有任何多余的状态，也不需要通过其他状态计算而来的中间状态
+        * Computed value：计算值，是根据state推导计算出来的值
+        * Reaction：响应，受state影响，会对state的变化做出一些更新ui、打印日志等反应
+
+    * 使用
+
+        * Provider
+
+            store
+            ```js
+            import {observable, computed, action} from 'mobx';
+            class userStoreClass {
+                @observable user = {
+                    name: 'admin',
+                    role: '管理员'
+                };
+                count = 0;
+                @computed get userName(){
+                    return this.user.name;
+                }
+                @action changeUser(){
+                    if(this.count % 2 === 1){
+                        this.user = {
+                            name: 'admin',
+                            role: '管理员'
+                        };
+                    }else{
+                        this.user.name = 'guest';
+                        this.user.role = '访客';
+                        this.user.isGuest = 'true';
+                    }
+                    this.count ++;
+                }
+            }
+            const userStore = new userStoreClass();
+            export default userStore;
+            ```
+
+            使用Provider传递store
+            ```js
+            import React from 'react';
+            import ReactDOM from 'react-dom';
+            import {configure} from 'mobx';
+            import {Provider} from 'mobx-react';
+            import userStore from './models/userStore';
+            import App from './components/App';
+            // 状态始终需要通过动作来更新(实际上还包括创建)
+            configure({'enforceActions': 'always'});
+            ReactDOM.render((
+                <Provider store={userStore}}>
+                    <App />
+                </Provider>
+            ), document.getElementById('container'));
+            ```
+
+            多个store
+            ```js
+            const stores = {
+            mainStore, userStore, commonStore
+            };
+            ReactDOM.render((
+                <Provider {...stores}>
+                    <App />
+                </Provider>
+            ), document.getElementById('container'));
+            ```
+
+        * @inject
+
+            ```js
+            import React, {Component} from 'react';
+            import {inject, observer} from 'mobx-react';
+            import {Button} from 'antd';
+            import './style.css';
+            @inject( 'userStore')
+            @observer
+            export default class User extends Component{
+                constructor(props){
+                    super(props);
+                    this.state = {};
+                }
+                render(){
+                // 可以以this.props.userStore形式获取store内state
+                    const {user} = this.props.userStore;
+                // 以.形式使用对象的属性值
+                    return(
+                        <div className='user'>
+                            <div className='user_list'>name：{user.name}</div>
+                            <div className='user_list'>role：{user.name}</div>
+                            <div className='user_list'>{user.isGuest ? `isGuest：${user.isGuest}` : ''}</div>
+                            <Button type='primary' onClick={() => this.props.userStore.changeUser()}>Change User</Button>
+                        </div>
+                    );
+                }
+            }
+            ```
+
+        * 组件
+
+            Mobx允许在响应式React组件内使用自由地使用状态
+            ```js
+            import React, {Component} from 'react';
+            import {inject, observer} from 'mobx-react';
+            import {Button} from 'antd';
+            import Timer from '../Timer';
+            import './style.css';
+
+            @inject( 'userStore')
+            @observer
+            export default class User extends Component{
+                constructor(props){
+                    super(props);
+                    this.state = {
+                        userChangeTimes: 0
+                    };
+                }
+
+                handleChangeUser(){
+                    this.props.userStore.changeUser();
+                    let {userChangeTimes} = this.state;
+                    userChangeTimes ++ ;
+                    this.setState({userChangeTimes});
+                }
+
+                render(){
+                    const {user} = this.props.userStore;
+                    return(
+                        <div className='user'>
+                            <div className='user_list'>name：{user.name}</div>
+                            <div className='user_list'>role：{user.name}</div>
+                            <div className='user_list'>{user.isGuest ? `isGuest：${user.isGuest}` : ''}</div>
+                            <div>user change times: {this.state.userChangeTimes}</div>
+                            <Button type='primary' onClick={this.handleChangeUser.bind(this)}>Change User</Button>
+                            <Timer />
+                        </div>
+                    );
+                }
+            }
+            ```
+
+            可观察局部状态会被render提取调用；
+
+            可观察局部状态的修改会触发React的componentWillUpdate和componentDidUpdate生命周期，不会触发其它的生命周期；
+
+            如果你需要使用React的其它生命周期方法，请使用基于state的常规React API；
+            ```js
+            import React, {Component} from 'react';
+            import {inject, observer} from 'mobx-react';
+            import {observable, action} from "mobx";
+            import './style.css';
+            
+            @inject('commonStore')
+            @observer
+            export default class Timer extends Component{
+                constructor(props){
+                    super(props);
+                    this.state = {};
+                }
+                @observable secondsPassed = 0;
+            
+                componentWillMount(){
+                    this.props.commonStore.startTime();
+                    this.timer = setInterval(this.handleChangeSecondsPassed,1000);
+                }
+            
+                @action.bound handleChangeSecondsPassed(){
+                    this.secondsPassed ++;
+                }
+            
+                render(){
+                    const {time} = this.props.commonStore;
+                    return(
+                        <div className='time_content'>
+                            <div>{time}</div>
+                            <div>Seconds passed:{this.secondsPassed}</div>
+                        </div>
+                    );
+                }
+            }
+            ```
+
+        * 生命周期钩子
+
+            当使用mobx-react时可以定义一个新的生命周期钩子函数componentWillReact，当组件因为它观察的状态发生改变时，组件会重新渲染，这时componentWillReact会触发，可以帮助追溯渲染并找到导致渲染的动作（action）。
+            ```js
+            import React, {Component} from 'react';
+            import {inject, observer} from 'mobx-react';
+            import {Button} from 'antd';
+            import Timer from '../Timer';
+            import './style.css';
+
+            @inject( 'userStore')
+            @observer
+            export default class User extends Component{
+                constructor(props){
+                    super(props);
+                    this.state = {
+                        userChangeTimes: 0
+                    };
+                }
+
+                handleChangeUser(){
+                    this.props.userStore.changeUser();
+                    let {userChangeTimes} = this.state;
+                    userChangeTimes ++ ;
+                    this.setState({userChangeTimes});
+                }
+
+                componentWillReact() {
+                    console.log("I will re-render, since the user has changed!");
+                }
+
+                render(){
+                    const {user} = this.props.userStore;
+                    return(
+                        <div className='user'>
+                            <div className='user_list'>name：{user.name}</div>
+                            <div className='user_list'>role：{user.name}</div>
+                            <div className='user_list'>{user.isGuest ? `isGuest：${user.isGuest}` : ''}</div>
+                            <div>user change times: {this.state.userChangeTimes}</div>
+                            <Button type='primary' onClick={this.handleChangeUser.bind(this)}>Change User</Button>
+                            <Timer />
+                        </div>
+                    );
+                }
+            }
+            ```
+
+            componentWillReact 不接收参数;
+
+            componentWillReact 初始化渲染前不会触发 (使用 componentWillMount 替代);
