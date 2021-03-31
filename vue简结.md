@@ -63,6 +63,7 @@
 * [循环条件动态class混合使用](#循环条件动态class混合使用)
 * [typescript样例](#typescript样例)
 * [vue.use和vue.component](#vue.use和vue.component)
+* [路由懒加载原理](#路由懒加载原理)
 
 ---
 
@@ -6289,3 +6290,34 @@ module.exports = {
   //...
 }
 ```
+
+## 路由懒加载原理
+
+参考链接：
+
+[四年前端带你理解路由懒加载的原理](https://segmentfault.com/a/1190000022846552)
+
+路由懒加载也可以叫做路由组件懒加载，最常用的是通过import()来实现它。
+```js
+function load(component) {
+    return () => import(`views/${component}`)
+}
+```
+然后通过Webpack编译打包后，会把每个路由组件的代码分割成一一个js文件，初始化时不会加载这些js文件，只当激活路由组件才会去加载对应的js文件。
+
+利用webpackChunkName，使编译打包后的js文件名字能和路由组件一一对应,修改一下load函数。
+```js
+function load(component) {
+    return () => import(/* webpackChunkName: "[request]" */ `views/${component}`)
+}
+```
+
+\_\_webpack_require\_\_.e方法是实现懒加载的核心：
+
+* 使用JSONP模式加载路由对应的js文件，也可以称为chunk。
+* 设置chunk加载的三种状态并缓存在installedChunks中，防止chunk重复加载。
+  * installedChunks[chunkId]为0，代表该chunk已经加载完毕。
+  * installedChunks[chunkId]为undefined，代表该chunk加载失败、加载超时、从未加载过。
+  * installedChunks[chunkId]为Promise对象，代表该chunk正在加载。
+* 处理chunk加载超时和加载出错的场景。
+  * reject，抛出错误
