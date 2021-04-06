@@ -39,6 +39,7 @@
 - [ChromeBug:FontBoosting](#ChromeBug:FontBoosting)
 - [reduce用法](#reduce用法)
 - [获取图片原始宽高](#获取图片原始宽高)
+- [JSON](#JSON)
 
 ---
 
@@ -985,7 +986,6 @@
       lilei; // {}
       lilei.name; // "Lilei"
       ```
-
 
 ### 深复制的实现
 
@@ -4070,6 +4070,8 @@
 
    - [15道ES6 Promise实战练习题，助你快速理解Promise](https://mp.weixin.qq.com/s/ON4m0uNF6u-FjLHYih8JIA)
 
+   - [死磕 36 个 JS 手写题（搞懂后，提升真的大）](https://juejin.cn/post/6946022649768181774)
+
 2. 详解
 
    - promise
@@ -4507,6 +4509,30 @@
 
         7. 实现all、race、finally见下方
 
+   - Promise.resolve
+
+     - 可以将任何值转成值为 value 状态是 fulfilled 的 Promise，但如果传入的值本身是 Promise 则会原样返回它
+
+     ```js
+      Promise.resolve = function(value) {
+          // 如果是 Promsie，则直接输出它
+          if(value instanceof Promise){
+              return value
+          }
+          return new Promise(resolve => resolve(value))
+      }
+     ```
+
+   - Promise.reject
+
+     - 会实例化一个 rejected 状态的 Promise,传递一个 Promise 对象，则这个对象会成为新 Promise 的值
+
+      ```js
+      Promise.reject = function(reason) {
+          return new Promise((resolve, reject) => reject(reason))
+      }
+      ```
+
    - promise.all
 
      - 功能
@@ -4682,6 +4708,34 @@
             })
         }
         ```
+
+   - Promise.any
+
+     - 功能
+
+      - 空数组或者所有 Promise 都是 rejected，则返回状态是 rejected 的新 Promsie，且值为 AggregateError 的错误；
+      - 只要有一个是 fulfilled 状态的，则返回第一个是 fulfilled 的新实例；
+      - 其他情况都会返回一个 pending 的新实例；
+
+      ```js
+      Promise.any = function(promiseArr) {
+          let index = 0
+          return new Promise((resolve, reject) => {
+              if (promiseArr.length === 0) return 
+              promiseArr.forEach((p, i) => {
+                  Promise.resolve(p).then(val => {
+                      resolve(val)
+                      
+                  }, err => {
+                      index++
+                      if (index === promiseArr.length) {
+                        reject(new AggregateError('All promises were rejected'))
+                      }
+                  })
+              })
+          })
+      }
+      ```
 
    - promise事件循环执行顺序
 
@@ -8215,3 +8269,131 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
   }
   ```
   注意IE6/7/8的处理，创建了一个新的img，仅设置其src，这时需要让图片完全载入后才可以获取其宽高。因此这里是异步的，可以传一个回调，回调里把原始的宽高作为参数传入。
+
+### JSON
+
+1. 参考链接：
+
+  [死磕 36 个 JS 手写题（搞懂后，提升真的大）](https://juejin.cn/post/6946022649768181774)
+
+2. 详解
+
+  * JSON.stringify
+
+    * 功能
+
+      不考虑可选的第二个参数 replacer 和第三个参数 space
+
+      * 基本数据类型：
+
+        * undefined 转换之后仍是 undefined(类型也是 undefined)
+        * boolean 值转换之后是字符串 "false"/"true"
+        * number 类型(除了 NaN 和 Infinity)转换之后是字符串类型的数值
+        * symbol 转换之后是 undefined
+        * null 转换之后是字符串 "null"
+        * string 转换之后仍是string
+        * NaN 和 Infinity 转换之后是字符串 "null"
+        * 函数类型：转换之后是 undefined
+      
+      * 如果是对象类型(非函数)
+
+        * 如果是一个数组：如果属性值中出现了 undefined、任意的函数以及 symbol，转换成字符串 "null" ；
+        * 如果是 RegExp 对象：返回 {} (类型是 string)；
+        * 如果是 Date 对象，返回 Date 的 toJSON 字符串值；
+
+      * 如果是普通对象；
+
+        * 如果有 toJSON() 方法，那么序列化 toJSON() 的返回值。
+        * 如果属性值中出现了 undefined、任意的函数以及 symbol 值，忽略。
+        * 所有以 symbol 为属性键的属性都会被完全忽略掉。
+
+      * 对包含循环引用的对象（对象之间相互引用，形成无限循环）执行此方法，会抛出错误。
+
+    * 实现
+
+      ```js
+      function jsonStringify(data) {
+          let dataType = typeof data;
+          
+          if (dataType !== 'object') {
+              let result = data;
+              //data 可能是 string/number/null/undefined/boolean
+              if (Number.isNaN(data) || data === Infinity) {
+                  //NaN 和 Infinity 序列化返回 "null"
+                  result = "null";
+              } else if (dataType === 'function' || dataType === 'undefined' || dataType === 'symbol') {
+                  //function 、undefined 、symbol 序列化返回 undefined
+                  return undefined;
+              } else if (dataType === 'string') {
+                  result = '"' + data + '"';
+              }
+              //boolean 返回 String()
+              return String(result);
+          } else if (dataType === 'object') {
+              if (data === null) {
+                  return "null"
+              } else if (data.toJSON && typeof data.toJSON === 'function') {
+                  return jsonStringify(data.toJSON());
+              } else if (data instanceof Array) {
+                  let result = [];
+                  //如果是数组
+                  //toJSON 方法可以存在于原型链中
+                  data.forEach((item, index) => {
+                      if (typeof item === 'undefined' || typeof item === 'function' || typeof item === 'symbol') {
+                          result[index] = "null";
+                      } else {
+                          result[index] = jsonStringify(item);
+                      }
+                  });
+                  result = "[" + result + "]";
+                  return result.replace(/'/g, '"');
+                  
+              } else {
+                  //普通对象
+                  /**
+                  * 循环引用抛错(暂未检测，循环引用时，堆栈溢出)
+                  * symbol key 忽略
+                  * undefined、函数、symbol 为属性值，被忽略
+                  */
+                  let result = [];
+                  Object.keys(data).forEach((item, index) => {
+                      if (typeof item !== 'symbol') {
+                          //key 如果是symbol对象，忽略
+                          if (data[item] !== undefined && typeof data[item] !== 'function'
+                              && typeof data[item] !== 'symbol') {
+                              //键值如果是 undefined、函数、symbol 为属性值，忽略
+                              result.push('"' + item + '"' + ":" + jsonStringify(data[item]));
+                          }
+                      }
+                  });
+                  return ("{" + result + "}").replace(/'/g, '"');
+              }
+          }
+      }
+      ```
+
+  * JSON.parse
+
+    eval 实现
+    ```js
+    var rx_one = /^[\],:{}\s]*$/;
+    var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+    var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+    var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+
+    if (
+        rx_one.test(
+            json.replace(rx_two, "@")
+                .replace(rx_three, "]")
+                .replace(rx_four, "")
+        )
+    ) {
+        var obj = eval("(" +json + ")");
+    }
+    ```
+
+    new Function 实现
+    ```js
+    var json = '{"name":"小姐姐", "age":20}';
+    var obj = (new Function('return ' + json))();
+    ```

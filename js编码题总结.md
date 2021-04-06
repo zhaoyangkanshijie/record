@@ -18,10 +18,13 @@
 * [单例模式](#单例模式)
 * [发布订阅观察者](#发布订阅观察者)
 * [Promise](#Promise)
+* [Promise.resolve](#Promise.resolve)
+* [Promise.reject](#Promise.reject)
 * [promise.all](#promise.all)
 * [promise.race](#promise.race)
 * [promise.finally](#promise.finally)
 * [promise.allSettled](#promise.allSettled)
+* [Promise.any](#Promise.any)
 * [失败重试maxRequest次再reject](#失败重试maxRequest次再reject)
 * [链式调用](#链式调用)
 * [原生发送请求的几种方式](#原生发送请求的几种方式)
@@ -39,6 +42,9 @@
 * [活动倒计时](#活动倒计时)
 * [监听url变化](#监听url变化)
 * [koa2洋葱模型compose](#koa2洋葱模型compose)
+* [字符串模板](#字符串模板)
+* [JSON.stringify](#JSON.stringify)
+* [JSON.parse](#JSON.parse)
 
 ---
 
@@ -1079,6 +1085,26 @@ const resolvePromise = (promise2, x, resolve, reject) => {
 module.exports = Promise;
 ```
 
+## Promise.resolve
+
+```js
+Promise.resolve = function(value) {
+    // 如果是 Promsie，则直接输出它
+    if(value instanceof Promise){
+        return value
+    }
+    return new Promise(resolve => resolve(value))
+}
+```
+
+## Promise.reject
+
+```js
+Promise.reject = function(reason) {
+    return new Promise((resolve, reject) => reject(reason))
+}
+```
+
 ## promise.all
 
 promise.all
@@ -1238,6 +1264,35 @@ Promise.allSettled = function(promises) {
                 count++
                 if (count === promises.length) {
                     resolve(result)
+                }
+            })
+        })
+    })
+}
+```
+
+## promise.any
+
+- 功能
+
+    - 空数组或者所有 Promise 都是 rejected，则返回状态是 rejected 的新 Promsie，且值为 AggregateError 的错误；
+    - 只要有一个是 fulfilled 状态的，则返回第一个是 fulfilled 的新实例；
+    - 其他情况都会返回一个 pending 的新实例；
+
+- 实现
+```js
+Promise.any = function(promiseArr) {
+    let index = 0
+    return new Promise((resolve, reject) => {
+        if (promiseArr.length === 0) return 
+        promiseArr.forEach((p, i) => {
+            Promise.resolve(p).then(val => {
+                resolve(val)
+                
+            }, err => {
+                index++
+                if (index === promiseArr.length) {
+                reject(new AggregateError('All promises were rejected'))
                 }
             })
         })
@@ -2983,3 +3038,111 @@ const exec = compose(composes);
 //1->END
 ```
 
+## 字符串模板
+
+```js
+function render(template, data) {
+    const reg = /\{\{(\w+)\}\}/; // 模板字符串正则
+    if (reg.test(template)) { // 判断模板里是否有模板字符串
+        const name = reg.exec(template)[1]; // 查找当前模板里第一个模板字符串的字段
+        template = template.replace(reg, data[name]); // 将第一个模板字符串渲染
+        return render(template, data); // 递归的渲染并返回渲染后的结构
+    }
+    return template; // 如果模板没有模板字符串直接返回
+}
+let template = '我是{{name}}，年龄{{age}}，性别{{sex}}';
+let person = {
+    name: '布兰',
+    age: 12
+}
+render(template, person); // 我是布兰，年龄12，性别undefined
+```
+
+## JSON.stringify
+
+```js
+function jsonStringify(data) {
+    let dataType = typeof data;
+    
+    if (dataType !== 'object') {
+        let result = data;
+        //data 可能是 string/number/null/undefined/boolean
+        if (Number.isNaN(data) || data === Infinity) {
+            //NaN 和 Infinity 序列化返回 "null"
+            result = "null";
+        } else if (dataType === 'function' || dataType === 'undefined' || dataType === 'symbol') {
+            //function 、undefined 、symbol 序列化返回 undefined
+            return undefined;
+        } else if (dataType === 'string') {
+            result = '"' + data + '"';
+        }
+        //boolean 返回 String()
+        return String(result);
+    } else if (dataType === 'object') {
+        if (data === null) {
+            return "null"
+        } else if (data.toJSON && typeof data.toJSON === 'function') {
+            return jsonStringify(data.toJSON());
+        } else if (data instanceof Array) {
+            let result = [];
+            //如果是数组
+            //toJSON 方法可以存在于原型链中
+            data.forEach((item, index) => {
+                if (typeof item === 'undefined' || typeof item === 'function' || typeof item === 'symbol') {
+                    result[index] = "null";
+                } else {
+                    result[index] = jsonStringify(item);
+                }
+            });
+            result = "[" + result + "]";
+            return result.replace(/'/g, '"');
+            
+        } else {
+            //普通对象
+            /**
+            * 循环引用抛错(暂未检测，循环引用时，堆栈溢出)
+            * symbol key 忽略
+            * undefined、函数、symbol 为属性值，被忽略
+            */
+            let result = [];
+            Object.keys(data).forEach((item, index) => {
+                if (typeof item !== 'symbol') {
+                    //key 如果是symbol对象，忽略
+                    if (data[item] !== undefined && typeof data[item] !== 'function'
+                        && typeof data[item] !== 'symbol') {
+                        //键值如果是 undefined、函数、symbol 为属性值，忽略
+                        result.push('"' + item + '"' + ":" + jsonStringify(data[item]));
+                    }
+                }
+            });
+            return ("{" + result + "}").replace(/'/g, '"');
+        }
+    }
+}
+```
+
+## JSON.parse
+
+eval 实现
+```js
+var rx_one = /^[\],:{}\s]*$/;
+var rx_two = /\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g;
+var rx_three = /"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g;
+var rx_four = /(?:^|:|,)(?:\s*\[)+/g;
+
+if (
+    rx_one.test(
+        json.replace(rx_two, "@")
+            .replace(rx_three, "]")
+            .replace(rx_four, "")
+    )
+) {
+    var obj = eval("(" +json + ")");
+}
+```
+
+new Function 实现
+```js
+var json = '{"name":"小姐姐", "age":20}';
+var obj = (new Function('return ' + json))();
+```
