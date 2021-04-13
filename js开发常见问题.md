@@ -5465,6 +5465,8 @@
 
    [Typescript开发学习总结（附大量代码）](https://juejin.cn/post/6937155970199978014)
 
+   [TypeScript趁早学习提高职场竞争力](https://juejin.cn/post/6950052678927908901)
+
 2. 详解
 
    - tsconfig.json配置样例
@@ -5472,6 +5474,12 @@
       使用tsc --init生成
       ```json
       {
+        "include": ["./src/**/*"],               // 定义希望被编译文件所在的目录
+        // ** 任意目录
+        // * 任意文件
+        "exclude": ["./src/hello/**/*"],         // 定义需要排除在外的目录；默认值["node_modules","bower_components","jspm_package"]
+        "extends": "./configs/base",             // 定义被继承的配置文件
+        "files": ["type.ts","dada.ts"],          // 指定被编译的列表，只有需要编译的文件少时才会用到
         "compilerOptions": {
 
           /* 基本选项 */
@@ -5503,6 +5511,7 @@
           "noUnusedParameters": true,            // 有未使用的参数时，抛出错误
           "noImplicitReturns": true,             // 并不是所有函数里的代码都有返回值时，抛出错误
           "noFallthroughCasesInSwitch": true,    // 报告 switch 语句的 fallthrough 错误。（即，不允许 switch 的 case 语句贯穿）
+          "noEmitOnError": true,                 // 当有错误时不生成编译后的文件
 
           /* 模块解析选项 */
           "moduleResolution": "node",            // 选择模块解析策略： 'node' (Node.js) or 'classic' (TypeScript pre-1.6)
@@ -5553,12 +5562,24 @@
       // 但即使never === undefined，赋值逻辑仍然会报错
       never = undefined;
 
+      // unknown
+      let notSure: unknown = 4;
+      // void
+      let unusable: void = undefined;
+
       // 除了never，未开启strictNullChecks时，其他类型变量赋值为null/undefined/void 0不报错
       let always: boolean = true;
       let isNull: null =  null;
       // 不会报错
       always = null;
       isNull = undefined;
+
+      // 字面量
+      let color: 'red' | 'blue' | 'black';
+
+      // any
+      let d: any = 3;
+      d = 'jeskson';
       ```
 
    - 引用类型
@@ -5572,6 +5593,10 @@
       let arr3: number[] = null
       // 编译时不会报错，运行时报错
       arr3.push(1)
+
+      // tuple
+      let x: [string, number];
+      x = ["hello", 10];
 
       // 元组类型
       // 坐标表示
@@ -5621,6 +5646,272 @@
 
       let user: UserType = { name: '李四' }
       let data: { name: string; } = { name: '张三' }
+      ```
+
+   - 类型断言
+
+      变量的类型对于我们来说是很明确的，但是TS编译器却并不清楚，此时，可以通过类型断言来告诉编译器变量的类型
+      ```ts
+      let someValue: unknown = "jeskson 1024bibi.com";
+      let strlength: number = (someValue as string).length;
+      let someValue: unknown = "1024bibi.com";
+      ```
+
+   - 使用webpack打包代码
+
+      使用命令：npm init -y
+
+      使用：cnpm i -D webpack webpack-cli typescript ts-loader
+
+      ```js
+      // webpack.config.js
+      // 引入一个包
+      const path = require('path');
+
+      // webpack中的所有的配置信息都应该写在module.exports中
+      module.exports = {
+      // 指定入口文件
+      entry: "./src/index.ts",
+      // 指定打包文件所在目录
+      output: {
+        // 指定打包文件的目录
+        path: path.resolve(__dirname, 'dist'),
+        // 打包后文件
+        filename: "bundle.js"
+      },
+      
+      // 指定webpack打包时要使用模块
+      module: {
+        // 指定要加载的规则
+        rules: [
+        {
+          // test指定的是规则生效的文件
+          test: /\.ts$/,
+          // 要使用的Loader
+          use: 'ts-loader',
+          // 要排除的文件
+          exclude: /node-modules/
+        }
+        ]
+      }
+      };
+      ```
+      ```json
+      // tsconfig.json
+      {
+      "compilerOptions": {
+        "module": "ES2015",
+        "target": "ES2015",
+        "strict" true
+      }
+      }
+      ```
+      ```json
+      // package.json
+      "scripts": {
+      ...
+      "bulid": "webpack"
+      }
+      ```
+
+   - 结合构建工具
+
+      npm i -D webpack webpack-cli webpack-dev-server typescript ts-loader clean-webpack-plugin
+
+      * webpack：构建工具webpack
+      * webpack-cli: webpack的命令行工具
+      * webpack-dev-server: webpack 的开发服务器
+      * typescript: ts编译器
+
+      ```js
+      // webpack.config.js
+
+      // 引入html插件
+      const HTMLWebpackPlugiin = require('html-webpack-plugin');
+      const {CleanWebpackPlugin} = require('clean-webpack-plugin');
+
+      // 配置webpack插件
+      plugins: [
+      new CleanWebpackPlugin(),
+      new HTMLWebpackPlugin({
+        title: "这是一个自定义title"
+      }), // 自动的生成html文件
+      ]
+
+      // 用来设置引用模块
+      resolve: {
+      extensions: ['.ts', '.js']
+      }
+      ```
+      ```json
+      // package.json
+      "script": {
+      ...
+      "start": "webpack serve --open chrome.exe"
+      },
+      ```
+
+      cnpm i -D @babel/core @babel/preset-env babel-loader core-js
+      ```js
+      // 指定webpack打包时要使用模块
+      module: {
+        // 指定要加载的规则
+        rules: [
+        {
+          // test指定的是规则生效的文件
+          test: /\.ts$/,
+          // 要使用的Loader
+          use: [
+          {
+          loader: "babel-loader",
+          // 设置babel
+          options: {
+            presets: [
+            [
+              // 指定环境的插件
+              "@babel/preset-env",
+              // 配置信息
+              {
+              targets: {
+                "chrome":"88"
+              }
+              "corejs": "3",
+              // 使用corejs的方式 usage表示按需加载
+              "useBuiltIns":"usage"
+              }
+            ]
+            ]
+          }
+          }
+          
+          'ts-loader'
+          ]
+          // 要排除的文件
+          exclude: /node-modules/
+        }
+        ]
+      }
+      ```
+
+   - typescript打包
+
+      ```js
+      const path = require("path");
+      const HtmlWebpackPlugin = require("html-webpack-plugin");
+      const { CleanWebpackPlugin } = require("clean-webpack-plugin");
+
+      module.exports = {
+        optimization:{
+            minimize: false // 关闭代码压缩，可选
+        },
+
+        entry: "./src/index.ts",
+
+        devtool: "inline-source-map",
+
+        devServer: {
+            contentBase: './dist'
+        },
+
+        output: {
+            path: path.resolve(__dirname, "dist"),
+            filename: "bundle.js",
+            environment: {
+                arrowFunction: false // 关闭webpack的箭头函数，可选
+            }
+        },
+
+        resolve: {
+            extensions: [".ts", ".js"]
+        },
+
+        module: {
+            rules: [
+                {
+                    test: /\.ts$/,
+                    use: {
+                        loader: "ts-loader"     
+                    },
+                    exclude: /node_modules/
+                }
+            ]
+        },
+
+        plugins: [
+            new CleanWebpackPlugin(),
+            new HtmlWebpackPlugin({
+                title:'TS测试'
+            }),
+        ]
+      }
+      ```
+
+   - 对象书写
+
+      ```ts
+      class Dog {
+        name: string;
+        age: number;
+        
+        // constructor 被称为构造函数
+        // 构造函数会在对象创建时调用
+        constructor(name: string, age: number) {
+          // 在实例方法中，this就表示当前的实例
+          // 在构造函数中当前对象就是当前新建的那个对象
+          // 可以通过this向新建的对象中添加属性
+          this.name = name;
+          this.age = age;
+        }
+        bark() {
+          alert('1024bibi.com');
+          // 在方法中可以通过this来表示当前调用方法的对象
+          console.log(this.name);
+        }
+      }
+      class Dog extends Animal{
+        age: number,
+        constructor(name: string, age: number){
+          // 如果在子类中写了构造函数，在子类构造函数中必须对父类引用
+          super(name); // 调用父类的构造函数
+          this.age = age;
+        }
+        sayHello() {
+          // 在类的方法中 super 就表示当前类的父类
+          // super.sayHello();
+        }
+      }
+      abstract class Animal{
+        name: string;
+        
+        constructor(name: string) {
+          this.name = name;
+        }
+        
+        // 定义一个抽象方法
+        // 抽象方法使用abstract开头，没有方法体
+        // 抽象方法只能定义在抽象类中，子类必须对抽象方法进行重写
+        abstract sayHello():void;
+      }
+      ```
+
+   - 接口书写
+
+      ```js
+      interface myInter{
+        name: string;
+        sayHello(): void;
+      }
+      // 定义类时，可以使类去实现一个接口
+      // 实现接口就是使类满足接口的要求
+      class MyClass implements myInter {
+        name: string;
+        constructor(name: stirng) {
+          this.name = name;
+        }
+        sayHello(){
+          // 接口就是就类的限制，定义规范
+        }
+      }
       ```
 
    - interface 与 type 区别
