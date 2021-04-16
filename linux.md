@@ -177,16 +177,6 @@
     * -u ：若目标文件已经存在，且 来源 比较新，才会更新
     * 更名：mv mvtest mvtest2
 
-* cat [-AbEnTv] 文件
-
-    由第一行开始显示文件内容
-    * -A ：-vET 的整合选项，可列出一些特殊字符而不是空白；
-    * -b ：列出行号，仅针对非空白行做行号显示，空白行不标行号！
-    * -E ：将结尾的断行字节 $ 显示出来；
-    * -n ：列印出行号，连同空白行也会有行号，与 -b 的选项不同；
-    * -T ：将 [tab] 按键以 ^I 显示出来；
-    * -v ：列出一些看不出来的特殊字符
-
 * tac [-AbEnTv] 文件
 
     文件内容从最后一行开始显示
@@ -262,20 +252,25 @@
 
 * cat [-AbeEnstTuv] [--help] [--version] fileName
 
-    把文档串连接后传到基本输出
-    * -n 或 --number 由 1 开始对所有输出的行数编号
-    * -b 或 --number-nonblank 和 -n 相似，只不过对于空白行不编号
-    * -s 或 --squeeze-blank 当遇到有连续两行以上的空白行，就代换为一行的空白行
-    * -v 或 --show-nonprinting
+    由第一行开始显示文件内容
+    * -A ：-vET 的整合选项，可列出一些特殊字符而不是空白；
+    * -b ：列出行号，仅针对非空白行做行号显示，空白行不标行号！
+    * -E ：将结尾的断行字节 $ 显示出来；
+    * -n ：列印出行号，连同空白行也会有行号，与 -b 的选项不同；
+    * -T ：将 [tab] 按键以 ^I 显示出来；
+    * -v ：列出一些看不出来的特殊字符
 
     例子：
     * 显示整个文件：cat filename
     * 创建一个文件：cat > filename
     * 把textfile1的内容加上行号后输入到textfile2里：cat -n textfile1 > textfile2
     * 把textfile1和textfile2的内容加上行号（空白行不加）之后将内容加到textfile3：cat -b textfile1 textfile2 >> textfile3
-
-
-
+    
+    cat查找文件内容
+    * log.txt文件中，查找ERROR字符，并显示ERROR所在行的之后5行：cat log.txt | grep 'ERROR' -A 5
+    * cat log.txt | grep 'ERROR' -B 5  之前5行
+    * cat log.txt | grep 'ERROR' -C 5 前后5行
+    * cat log.txt | grep -v 'ERROR' 排除ERROR所在的行
 
 ## 文件传输
 
