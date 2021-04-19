@@ -104,9 +104,6 @@
         解压：unzip filename.zip
         压缩：zip filename.zip dirname
 
-
-
-
 ## 文件目录管理
 
 * 参考链接：[Linux 文件与目录管理](https://www.w3cschool.cn/linux/linux-file-content-manage.html)
@@ -340,11 +337,6 @@ rz
     * yum clean oldheaders: 清除缓存目录下旧的 headers
     * yum clean, yum clean all (= yum clean packages; yum clean oldheaders) :清除缓存目录下的软件包及旧的headers
 
-
-
-
-
-
 ## 网络管理
 
 * 参考链接：[Linux常用命令大全](https://blog.csdn.net/luansj/article/details/97272672)
@@ -385,3 +377,4 @@ rz
     TIME： 使用掉的 CPU 时间
     CMD：下达的指令
     ```
+
