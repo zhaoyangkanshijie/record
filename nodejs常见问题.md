@@ -4,7 +4,7 @@
 - [nodejs垃圾回收gc机制](#nodejs垃圾回收gc机制)
 - [deno和nodejs区别](#deno和nodejs区别)
 - [获取命令行传来的参数](#获取命令行传来的参数)
-- [文件路径与读写](#文件路径与读写)
+- [fs文件操作](#fs文件操作)
 - [url模块](#url模块)
 - [express中app.get、app.use、app.all的区别](#express中app.get、app.use、app.all的区别)
 - [express中response常用方法](#express中response常用方法)
@@ -480,11 +480,13 @@
     process.argv[2] // ['arg1','arg2','arg3']
     ```
 
-### 文件路径与读写
+### fs文件操作
 
 1. 参考链接：
 
    [面试官问你关于node的那些事（基础篇）](https://juejin.im/post/5eeec838e51d4574134ac467)
+
+   [fs（文件系统）](http://nodejs.cn/api/fs.html#fs_synchronous_example)
 
 2. 详解：
 
@@ -548,6 +550,203 @@
             }
             fs.writeFileSync(filePath, '')
         }
+        ```
+
+        如果文件已存在，则覆盖文件，不存在则创建
+        ```js
+        const fs = require('fs');
+        const data = new Uint8Array(Buffer.from('Node.js 中文网'));
+        fs.writeFile('文件.txt', data, (err) => {
+            if (err) throw err;
+            console.log('文件已被保存');
+        });
+        ```
+
+    * 文件重命名、查看文件属性
+
+        ```js
+        const fs = require('fs');
+        fs.rename('./tmp/hello', './tmp/world', (err) => {
+            if (err) throw err;
+            fs.stat('./tmp/world', (err, stats) => {
+                if (err) throw err;
+                console.log(`文件属性: ${JSON.stringify(stats)}`);
+            });
+        });
+        ```
+
+        ```js
+        const fs = require('fs/promises');
+        (async function (from, to) {
+            try {
+                await fs.rename(from, to);
+                const stats = await fs.stat(to);
+                console.log(`文件属性: ${JSON.stringify(stats)}`);
+            } catch (error) {
+                console.error('有一个错误：', error.message);
+            }
+        })('./tmp/world', './tmp/hello');
+        ```
+
+    * 打开关闭文件、查看文件属性
+
+        ```js
+        const fs = require('fs');
+        fs.open('./tmp/hello/file.txt', 'r', (err, fd) => {
+            if (err) throw err;
+            fs.fstat(fd, (err, stat) => {
+                if (err) throw err;
+                // 使用文件属性。
+                console.log(stat)
+                // 始终关闭文件描述符！
+                fs.close(fd, (err) => {
+                    if (err) throw err;
+                });
+            });
+        });
+        ```
+
+    * 文件目录
+    
+        打印目录下所有文件
+        ```js
+        const fs = require('fs');
+        async function print(path) {
+            const dir = await fs.promises.opendir(path);
+            for await (const dirent of dir) {
+                console.log(dirent.name);
+            }
+        }
+        print('./').catch(console.error);
+        ```
+
+        创建目录
+        ```js
+        // 创建 `/目录1/目录2/目录3`，不管 `/目录1` 和 `/目录1/目录2` 是否存在。
+        fs.mkdir('/目录1/目录2/目录3', { recursive: true }, (err) => {
+            if (err) throw err;
+        });
+        ```
+
+    * 监听文件变化
+
+        ```js
+        const fs = require('fs');
+        fs.watch('./tmp/hello/file.txt', { encoding: 'buffer' }, (eventType, filename) => {
+            if (filename) {
+                console.log(eventType,filename);
+                // 打印: <Buffer ...>
+            }
+        });
+        ```
+
+    * 追加文件内容(文件不存在自动创建)
+
+        ```js
+        const fs = require('fs');
+        fs.open('./tmp/hello/file.txt', 'a', (err, fd) => {
+            if (err) throw err;
+            fs.appendFile(fd, '追加的数据', 'utf8', (err) => {
+                fs.close(fd, (err) => {
+                    if (err) throw err;
+                });
+                if (err) throw err;
+            });
+        });
+        ```
+
+        ```js
+        const fs = require('fs');
+        let fd;
+        try {
+            fd = fs.openSync('./tmp/hello/file.txt', 'a');
+            fs.appendFileSync(fd, '追加的数据', 'utf8');
+        } catch (err) {
+            /* 处理错误 */
+        } finally {
+            if (fd !== undefined)
+                fs.closeSync(fd);
+        }
+        ```
+
+    * 修改文件权限
+
+        ```js
+        const fs = require('fs');
+        fs.chmod('./tmp/hello/file.txt', 0o775, (err) => {
+            if (err) throw err;
+            console.log('文件 “file.txt” 的权限已被更改');
+        });
+        ```
+
+        * 常量 八进制值 说明
+            * fs.constants.S_IRUSR 0o400    所有者可读
+            * fs.constants.S_IWUSR 0o200    所有者可写
+            * fs.constants.S_IXUSR 0o100    所有者可执行或搜索
+            * fs.constants.S_IRGRP 0o40     群组可读
+            * fs.constants.S_IWGRP 0o20     群组可写
+            * fs.constants.S_IXGRP 0o10     群组可执行或搜索
+            * fs.constants.S_IROTH 0o4      其他人可读
+            * fs.constants.S_IWOTH 0o2      其他人可写
+            * fs.constants.S_IXOTH 0o1      其他人可执行或搜索
+
+        * 更简单的方法是使用三个八进制数字的序列
+
+            最左边的数字（示例中的 7）指定文件所有者的权限。 中间的数字（示例中的 6）指定群组的权限。 最右边的数字（示例中的 5）指定其他人的权限
+
+            * 7 可读、可写、可执行
+            * 6 可读、可写
+            * 5 可读、可执行
+            * 4 只读
+            * 3 可写、可执行
+            * 2 只写
+            * 1 只可执行
+            * 0 没有权限
+
+    * 文件复制
+
+        ```js
+        const fs = require('fs');
+        const { COPYFILE_EXCL } = fs.constants;
+        function callback(err) {
+            if (err) throw err;
+            console.log('源文件已拷贝到目标文件');
+        }
+        // 默认情况下将创建或覆盖目标文件。
+        fs.copyFile('./tmp/hello/file.txt', 'file.txt', callback);
+        // 通过使用 COPYFILE_EXCL，如果目标文件存在，则操作将失败。
+        fs.copyFile('./tmp/hello/file.txt', 'file.txt', COPYFILE_EXCL, callback);
+        // 默认情况下将创建或覆盖目标文件。
+        fs.copyFileSync('源文件.txt', '目标文件.txt');
+        console.log('源文件已拷贝到目标文件');
+        // 通过使用 COPYFILE_EXCL，如果目标文件存在，则操作将失败。
+        fs.copyFileSync('源文件.txt', '目标文件.txt', COPYFILE_EXCL);
+        ```
+
+    * 文件截断、文件读取
+
+        ```js
+        const fs = require('fs');
+        console.log(fs.readFileSync('./tmp/hello/file.txt', 'utf8'));
+        // 获取要截断的文件的文件描述符。
+        const fd = fs.openSync('./tmp/hello/file.txt', 'r+');
+        // 将文件截断为前 4 个字节。
+        fs.ftruncate(fd, 4, (err) => {
+            console.log(fs.readFileSync('./tmp/hello/file.txt', 'utf8'));
+        });
+        fs.ftruncate(fd, 10, (err) => {
+            console.log(fs.readFileSync('./tmp/hello/file.txt'));
+        });
+        ```
+
+    * 文件删除
+
+        ```js
+        const fs = require('fs');
+        fs.unlink('./tmp/hello/file.txt', (err) => {
+            if (err) throw err;
+            console.log('文件已被删除');
+        });
         ```
 
 ### url模块
