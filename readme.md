@@ -21,6 +21,7 @@
 * [chartjsExample](https://github.com/zhaoyangkanshijie/chartjsExample)
 * [webpack](https://github.com/zhaoyangkanshijie/webpack4Example)
 * [canvas](https://github.com/zhaoyangkanshijie/canvasExample)
+* [Krpano WebVR](https://github.com/ningbonb/nodeKrpano)
 
 ## 后端
 
