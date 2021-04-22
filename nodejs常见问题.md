@@ -21,6 +21,7 @@
 - [child_process](#child_process)
 - [Nodemailer发送邮件](#Nodemailer发送邮件)
 - [domain模块捕捉异常](#domain模块捕捉异常)
+- [nodejs请求响应](#nodejs请求响应)
 
 ---
 
@@ -1522,3 +1523,492 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         
         should.not.exist(process.domain);
         ```
+
+### nodejs请求响应
+
+1. 参考链接：
+
+   [https](http://nodejs.cn/api/https.html)
+
+   [http2](http://nodejs.cn/api/http2.html)
+
+   [http](http://nodejs.cn/api/http.html)
+
+2. 详解：
+
+    * https
+
+        * 创建服务器
+
+            ```js
+            // curl -k https://localhost:8000/
+            const https = require('https');
+            const fs = require('fs');
+
+            const options = {
+                key: fs.readFileSync('test/fixtures/keys/agent2-key.pem'),
+                cert: fs.readFileSync('test/fixtures/keys/agent2-cert.pem');
+            };
+
+            https.createServer(options, (req, res) => {
+                res.writeHead(200);
+                res.end('你好，世界\n');
+            }).listen(8000);
+            ```
+
+            ```js
+            const https = require('https');
+            const fs = require('fs');
+
+            const options = {
+                pfx: fs.readFileSync('test/fixtures/test_cert.pfx'),
+                passphrase: '密码'
+            };
+
+            https.createServer(options, (req, res) => {
+                res.writeHead(200);
+                res.end('你好，世界\n');
+            }).listen(8000);
+            ```
+
+        * get请求
+
+            ```js
+            const https = require('https');
+
+            https.get('https://encrypted.google.com/', (res) => {
+                console.log('状态码:', res.statusCode);
+                console.log('请求头:', res.headers);
+
+                res.on('data', (d) => {
+                    process.stdout.write(d);
+                });
+
+            }).on('error', (e) => {
+                console.error(e);
+            });
+            ```
+
+        * 请求
+
+            tls.connect()
+            ```js
+            const https = require('https');
+
+            const options = {
+                hostname: 'encrypted.google.com',
+                port: 443,
+                path: '/',
+                method: 'GET'
+            };
+
+            const req = https.request(options, (res) => {
+                console.log('状态码:', res.statusCode);
+                console.log('请求头:', res.headers);
+
+                res.on('data', (d) => {
+                    process.stdout.write(d);
+                });
+            });
+
+            req.on('error', (e) => {
+                console.error(e);
+            });
+            req.end();
+            ```
+
+            ```js
+            const options = {
+                hostname: 'encrypted.google.com',
+                port: 443,
+                path: '/',
+                method: 'GET',
+                key: fs.readFileSync('test/fixtures/keys/agent2-key.pem'),
+                cert: fs.readFileSync('test/fixtures/keys/agent2-cert.pem')
+            };
+            options.agent = new https.Agent(options);
+
+            const req = https.request(options, (res) => {
+                // ...
+            });
+            ```
+
+            不使用agent
+            ```js
+            const options = {
+                hostname: 'encrypted.google.com',
+                port: 443,
+                path: '/',
+                method: 'GET',
+                key: fs.readFileSync('test/fixtures/keys/agent2-key.pem'),
+                cert: fs.readFileSync('test/fixtures/keys/agent2-cert.pem'),
+                agent: false
+            };
+
+            const req = https.request(options, (res) => {
+                // ...
+            });
+            ```
+
+            url作为option
+            ```js
+            const options = new URL('https://abc:xyz@example.com');
+
+            const req = https.request(options, (res) => {
+                // ...
+            });
+            ```
+
+            固定证书指纹或公钥
+            ```js
+            const tls = require('tls');
+            const https = require('https');
+            const crypto = require('crypto');
+
+            function sha256(s) {
+                return crypto.createHash('sha256').update(s).digest('base64');
+            }
+            const options = {
+                hostname: 'github.com',
+                port: 443,
+                path: '/',
+                method: 'GET',
+                checkServerIdentity: function (host, cert) {
+                    // 确保将证书颁发给所连接的主机。
+                    const err = tls.checkServerIdentity(host, cert);
+                    if (err) {
+                        return err;
+                    }
+
+                    // 固定公钥，类似于固定的 HPKP pin-sha25。
+                    const pubkey256 = 'pL1+qb9HTMRZJmuC/bB/ZI9d302BYrrqiVuRyW+DGrU=';
+                    if (sha256(cert.pubkey) !== pubkey256) {
+                        const msg = '证书验证错误: ' +
+                            `'${cert.subject.CN}' 的公钥` +
+                            '与固定的指纹不符';
+                        return new Error(msg);
+                    }
+
+                    // 固定确切的证书，而不是公钥。
+                    const cert256 = '25:FE:39:32:D9:63:8C:8A:FC:A1:9A:29:87:' +
+                        'D8:3E:4C:1D:98:DB:71:E4:1A:48:03:98:EA:22:6A:BD:8B:93:16';
+                    if (cert.fingerprint256 !== cert256) {
+                        const msg = '证书验证错误: ' +
+                            `'${cert.subject.CN}' 的证书` +
+                            '与固定的指纹不符';
+                        return new Error(msg);
+                    }
+
+                    // 此循环仅供参考。
+                    // 打印链条中所有证书的证书与公钥指纹。 
+                    // 通常，将发行人的公钥固定在公共互联网上，同时将服务的公钥固定在私密的环境中。
+                    do {
+                        console.log('主体的常用名称:', cert.subject.CN);
+                        console.log('  证书的 SHA256 指纹:', cert.fingerprint256);
+
+                        hash = crypto.createHash('sha256');
+                        console.log('  公钥的 ping-sha256:', sha256(cert.pubkey));
+
+                        lastprint256 = cert.fingerprint256;
+                        cert = cert.issuerCertificate;
+                    } while (cert.fingerprint256 !== lastprint256);
+
+                },
+            };
+
+            options.agent = new https.Agent(options);
+            const req = https.request(options, (res) => {
+                console.log('一切正常。服务器与固定的证书或公钥相匹配。');
+                console.log('状态码:', res.statusCode);
+                // 打印 HPKP 的值。
+                console.log('请求头:', res.headers['public-key-pins']);
+
+                res.on('data', (d) => { });
+            });
+
+            req.on('error', (e) => {
+                console.error(e.message);
+            });
+            req.end();
+            ```
+
+    * http2
+
+        * 服务器端,流
+
+            证书和密钥
+            ```cmd
+            openssl req -x509 -newkey rsa:2048 -nodes -sha256 -subj '/CN=localhost' \ -keyout 密钥.pem -out 证书.pem
+            ```
+
+            ```js
+            const http2 = require('http2');
+            const fs = require('fs');
+
+            const server = http2.createSecureServer({
+                key: fs.readFileSync('密钥.pem'),
+                cert: fs.readFileSync('证书.pem')
+            });
+            server.on('error', (err) => console.error(err));
+
+            server.on('stream', (stream, headers) => {
+                // 流是一个双工流。
+                stream.respond({
+                    'content-type': 'text/html; charset=utf-8',
+                    ':status': 200
+                });
+                stream.end('<h1>你好世界</h1>');
+            });
+
+            server.listen(8443);
+            ```
+
+        * 客户端
+
+            ```js
+            const http2 = require('http2');
+            const fs = require('fs');
+            const client = http2.connect('https://localhost:8443', {
+                ca: fs.readFileSync('证书.pem')
+            });
+            client.on('error', (err) => console.error(err));
+
+            const req = client.request({ ':path': '/' });
+
+            req.on('response', (headers, flags) => {
+                for (const name in headers) {
+                    console.log(`${name}: ${headers[name]}`);
+                }
+            });
+
+            req.setEncoding('utf8');
+            let data = '';
+            req.on('data', (chunk) => { data += chunk; });
+            req.on('end', () => {
+                console.log(`\n${data}`);
+                client.close();
+            });
+            req.end();
+            ```
+
+        * 指定备选服务器
+
+            ```js
+            const http2 = require('http2');
+            const options = getSecureOptionsSomehow();
+            const server = http2.createSecureServer(options);
+            server.on('stream', (stream) => {
+                stream.respond();
+                stream.end('ok');
+            });
+            server.on('session', (session) => {
+                session.origin('https://example.com', 'https://example.org');
+            });
+            ```
+
+            ```js
+            const http2 = require('http2');
+            const options = getSecureOptionsSomehow();
+            options.origins = ['https://example.com', 'https://example.org'];
+            const server = http2.createSecureServer(options);
+            server.on('stream', (stream) => {
+                stream.respond();
+                stream.end('ok');
+            });
+            ```
+
+        * 推送流到客户端
+
+            ```js
+            const http2 = require('http2');
+            const client = http2.connect('http://localhost');
+            client.on('stream', (pushedStream, requestHeaders) => {
+                pushedStream.on('push', (responseHeaders) => {
+                    // Process response headers
+                });
+                pushedStream.on('data', (chunk) => { /* handle pushed data */ });
+            });
+            const req = client.request({ ':path': '/' });
+            ```
+
+        * socket
+
+            ```js
+            const net = require('net');
+            const server = net.createServer((socket) => {
+                let name = '';
+                socket.setEncoding('utf8');
+                socket.on('data', (chunk) => name += chunk);
+                socket.on('end', () => socket.end(`hello ${name}`));
+            });
+            server.listen(8000);
+            ```
+
+            ```js
+            const http2 = require('http2');
+            const { NGHTTP2_REFUSED_STREAM } = http2.constants;
+            const net = require('net');
+            const proxy = http2.createServer();
+            proxy.on('stream', (stream, headers) => {
+                if (headers[':method'] !== 'CONNECT') {
+                    // Only accept CONNECT requests
+                    stream.close(NGHTTP2_REFUSED_STREAM);
+                    return;
+                }
+                const auth = new URL(`tcp://${headers[':authority']}`);
+                // It's a very good idea to verify that hostname and port are
+                // things this proxy should be connecting to.
+                const socket = net.connect(auth.port, auth.hostname, () => {
+                    stream.respond();
+                    socket.pipe(stream);
+                    stream.pipe(socket);
+                });
+                socket.on('error', (error) => {
+                    stream.close(http2.constants.NGHTTP2_CONNECT_ERROR);
+                });
+            });
+            proxy.listen(8001);
+            ```
+
+            ```js
+            const http2 = require('http2');
+            const client = http2.connect('http://localhost:8001');
+            // Must not specify the ':path' and ':scheme' headers
+            // for CONNECT requests or an error will be thrown.
+            const req = client.request({
+                ':method': 'CONNECT',
+                ':authority': `localhost:${port}`
+            });
+            req.on('response', (headers) => {
+                console.log(headers[http2.constants.HTTP2_HEADER_STATUS]);
+            });
+            let data = '';
+            req.setEncoding('utf8');
+            req.on('data', (chunk) => data += chunk);
+            req.on('end', () => {
+                console.log(`The server says: ${data}`);
+                client.close();
+            });
+            req.end('Jane');
+            ```
+
+        * 采集 HTTP/2 性能指标
+
+            ```js
+            const { PerformanceObserver } = require('perf_hooks');
+            const obs = new PerformanceObserver((items) => {
+                const entry = items.getEntries()[0];
+                console.log(entry.entryType);  // prints 'http2'
+                if (entry.name === 'Http2Session') {
+                    // Entry contains statistics about the Http2Session
+                } else if (entry.name === 'Http2Stream') {
+                    // Entry contains statistics about the Http2Stream
+                }
+            });
+            obs.observe({ entryTypes: ['http2'] });
+            ```
+
+    * http
+
+        * Agent 负责管理 HTTP 客户端的连接持久性和重用。 它为给定的主机和端口维护一个待处理请求队列，为每个请求重用单独的套接字连接，直到队列为空，此时套接字被销毁或放入连接池，以便再次用于请求到同一个主机和端口。
+
+            ```js
+            http.get(options, (res) => {
+                // 做些事情。
+            }).on('socket', (socket) => {
+                socket.emit('agentRemove');
+            });
+            ```
+
+            ```js
+            http.get({
+                hostname: 'localhost',
+                port: 80,
+                path: '/',
+                agent: false  // 仅为此一个请求创建一个新代理。
+            }, (res) => {
+                // 用响应做些事情。
+            });
+            ```
+
+        * 创建服务器
+
+            ```js
+            const http = require('http');
+            const net = require('net');
+            const { URL } = require('url');
+
+            // 创建 HTTP 隧道代理。
+            const proxy = http.createServer((req, res) => {
+                res.writeHead(200, { 'Content-Type': 'text/plain' });
+                res.end('响应内容');
+            });
+            proxy.on('connect', (req, clientSocket, head) => {
+                // 连接到原始服务器。
+                const { port, hostname } = new URL(`http://${req.url}`);
+                const serverSocket = net.connect(port || 80, hostname, () => {
+                    clientSocket.write('HTTP/1.1 200 Connection Established\r\n' +
+                        'Proxy-agent: Node.js-Proxy\r\n' +
+                        '\r\n');
+                    serverSocket.write(head);
+                    serverSocket.pipe(clientSocket);
+                    clientSocket.pipe(serverSocket);
+                });
+            });
+
+            // 代理正在运行。
+            proxy.listen(1337, '127.0.0.1', () => {
+
+                // 向隧道代理发出请求。
+                const options = {
+                    port: 1337,
+                    host: '127.0.0.1',
+                    method: 'CONNECT',
+                    path: 'nodejs.cn:80'
+                };
+
+                const req = http.request(options);
+                req.end();
+
+                req.on('information', (info) => {
+                    console.log(`获得主响应之前的信息: ${info.statusCode}`);
+                });
+
+                req.on('upgrade', (res, socket, upgradeHead) => {
+                    console.log('接收到响应');
+                    socket.end();
+                    process.exit(0);
+                });
+
+                req.on('connect', (res, socket, head) => {
+                    console.log('已连接');
+
+                    // 通过 HTTP 隧道发出请求。
+                    socket.write('GET / HTTP/1.1\r\n' +
+                        'Host: nodejs.cn:80\r\n' +
+                        'Connection: close\r\n' +
+                        '\r\n');
+                    socket.on('data', (chunk) => {
+                        console.log(chunk.toString());
+                    });
+                    socket.on('end', () => {
+                        proxy.close();
+                    });
+                });
+            });
+            ```
+
+        * 请求头
+
+            ```js
+            request.setHeader('content-type', 'text/html');
+            request.setHeader('Content-Length', Buffer.byteLength(body));
+            request.setHeader('Cookie', ['type=ninja', 'language=javascript']);
+            const contentType = request.getHeader('Content-Type');
+            // 'contentType' 是 'text/html'。
+            const contentLength = request.getHeader('Content-Length');
+            // 'contentLength' 的类型为数值。
+            const cookie = request.getHeader('Cookie');
+            // 'cookie' 的类型为字符串数组。
+            ```
+
