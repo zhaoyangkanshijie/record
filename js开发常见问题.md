@@ -5468,6 +5468,8 @@
 
    [TypeScript趁早学习提高职场竞争力](https://juejin.cn/post/6950052678927908901)
 
+   [TypeScript 进阶经验总结](https://juejin.cn/post/6953592990770298887)
+
 2. 详解
 
    - tsconfig.json配置样例
@@ -6070,6 +6072,12 @@
      type Point = ParticalPointX & {y:number};
      ```
 
+     类型别名
+
+     ```ts
+     type Props = TextProps
+     ```
+
    - 声明合并
 
      ```ts
@@ -6144,22 +6152,31 @@
 
    - keyof 是索引类型操作符,用来获取类型
 
-     ```ts
-     interface IQZQD {
-       cnName: string;
-       age: number;
-       author: string;
-     }
-     type ant = keyof IQZQD;
+      ```ts
+      interface IQZQD {
+        cnName: string;
+        age: number;
+        author: string;
+      }
+      type ant = keyof IQZQD;
 
-     interface Map<T> {
-       [key: string]: T;
-     }
+      interface Map<T> {
+        [key: string]: T;
+      }
 
-     //T[U]是索引访问操作符;U是一个属性名称。
-     let keys: keyof Map<number>; //string | number
-     let value: Map<number>["antzone"]; //number
-     ```
+      //T[U]是索引访问操作符;U是一个属性名称。
+      let keys: keyof Map<number>; //string | number
+      let value: Map<number>["antzone"]; //number
+      ```
+
+      ```ts
+      interface Person {
+        name: string
+        age: number
+      }
+
+      type PersonKey = keyof Person // "name" | "age"
+      ```
 
    - 泛型(不能应用于类的静态成员)不预先确定的数据类型，具体的类型在使用的时候再确定的一种类型约束规范
 
@@ -6219,42 +6236,129 @@
 
    - 属性相关
 
+     - typeof 是获取一个对象/实例的类型
+
+     - extends 主要作用是添加泛型约束
+
+     - Partial 将某个类型里的属性全部变为可选项
+
+      ```ts
+      // 实现：全部变可选
+      type Partial<T> = {
+        [P in keyof T]?: T[P]
+      }
+
+      interface Animal {
+        canFly: boolean
+        canSwim: boolean
+      }
+
+      // 变可选，可以只赋值部分属性
+      let animal: Partial<Animal> = {
+        canFly: false,
+      }
+      ```
+
      - Required 传入的属性变为必选项
+
+      ```ts
+      // 实现：全部变必选
+      type Required<T> = {
+        [P in keyof T]-?: T[P]
+      }
+      interface Person {
+        name?: string
+        age?: number
+      }
+
+      // Property 'age' is missing in type '{ name: string; }' but required in type 'Required<Person>'.
+      let person: Required<Person> = {
+        name: 'jacky',
+        // 没写 age 属性会提示错误
+      }
+      ```
 
      - Readonly 属性变为只读选项
 
+      ```ts
+      // 实现：全部变只读
+      type Readonly<T> = {
+        readonly [P in keyof T]: T[P]
+      }
+
+      interface Person {
+        name: string
+        age: number
+      }
+
+      let person: Readonly<Person> = {
+        name: 'jacky',
+        age: 24,
+      }
+      person.name = 'jack' // Cannot assign to 'name' because it is a read-only property.
+      ```
+
      - Record 将 K 中所有的属性的值转化为 T 类型
 
-     ```ts
-     /**
-      * Construct a type with a set of properties K of type T
-      */
-     type Record<K extends keyof any, T> = {
-       [P in K]: T;
-     };
-     type T11 = Record<"a" | "b" | "c", Person>; // -> { a: Person; b: Person; c: Person; }
-     ```
+      ```ts
+      // 实现：K 中所有属性值转化为 T 类型
+      type Record<K extends keyof any, T> = {
+        [P in K]: T
+      }
+
+      interface DatabaseInfo {
+        id: string
+      }
+
+      type DataSource = 'user' | 'detail' | 'list'
+
+      const x: Record<DataSource, DatabaseInfo> = {
+        user: { id: '1' },
+        detail: { id: '2' },
+        list: { id: '3' },
+      }
+      ```
 
      - Pick 从 T 中取出 一系列 K 的属性
 
-     ```ts
-     /**
-      * From T, pick a set of properties whose keys are in the union K
-      */
-     type Pick<T, K extends keyof T> = {
-       [P in K]: T[P];
-     };
-     ```
+      ```ts
+      // 实现：通过从Type中选择属性Keys的集合来构造类型
+      type Pick<T, K extends keyof T> = {
+        [P in K]: T[P]
+      }
+
+      interface Animal {
+        canFly: boolean
+        canSwim: boolean
+      }
+
+      let person: Pick<Animal, 'canSwim'> = {
+        canSwim: true,
+      }
+      ```
 
      - Exclude 将某个类型中属于另一个的类型移除掉
 
-     ```ts
-     /**
-      * Exclude from T those types that are assignable to U
-      */
-     type Exclude<T, U> = T extends U ? never : T;
-     type T00 = Exclude<"a" | "b" | "c" | "d", "a" | "c" | "f">; // -> 'b' | 'd'
-     ```
+      ```ts
+      // 实现：如果 T 中的类型在 U 不存在，则返回，否则不返回
+      type Exclude<T, U> = T extends U ? never : T
+
+      interface Programmer {
+        name: string
+        age: number
+        isWork: boolean
+        isStudy: boolean
+      }
+
+      interface Student {
+        name: string
+        age: number
+        isStudy: boolean
+      }
+
+      type ExcludeKeys = Exclude<keyof Programmer, keyof Student>
+      // type ExcludeKeys = "isWork"
+      ```
 
      - Extract 从 T 中提取出 U
 
@@ -6268,13 +6372,35 @@
 
      - Omit:Pick 和 Exclude 进行组合, 实现忽略对象某些属性功能
 
-     ```ts
-     /**
-      * Construct a type with the properties of T except for those in type K.
-      */
-     type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
-     type Foo = Omit<{ name: string; age: number }, "name">; // -> { age: number }
-     ```
+      ```ts
+      // 实现：去除类型 T 中包含 K 的键值对。
+      type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>
+
+      interface Animal {
+        canFly: boolean
+        canSwim: boolean
+      }
+
+      let person1: Pick<Animal, 'canSwim'> = {
+        canSwim: true,
+      }
+
+      let person2: Omit<Animal, 'canFly'> = {
+        canSwim: true,
+      }
+      ```
+
+     - ReturnType 获取函数返回值类型
+
+      ```ts
+      // 实现：获取 T 类型(函数)对应的返回值类型
+      type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any
+
+      function bar(x: string | number): string | number {
+        return 'hello'
+      }
+      type FooType = ReturnType<typeof bar> // string | number
+      ```
 
    - 类型断言:any 大法好
 
