@@ -22,6 +22,7 @@
 - [Nodemailer发送邮件](#Nodemailer发送邮件)
 - [domain模块捕捉异常](#domain模块捕捉异常)
 - [nodejs请求响应](#nodejs请求响应)
+- [事件触发器](#事件触发器)
 
 ---
 
@@ -2011,4 +2012,128 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
             const cookie = request.getHeader('Cookie');
             // 'cookie' 的类型为字符串数组。
             ```
+
+### 事件触发器
+
+1. 参考链接：
+
+   [事件触发器](http://nodejs.cn/api/events.html)
+
+2. 详解：
+
+    * 基本使用
+
+        ```js
+        const EventEmitter = require('events');
+        class MyEmitter extends EventEmitter { }
+        const myEmitter = new MyEmitter();
+        myEmitter.on('event', function (a, b) {
+            console.log(a, b, this, this === myEmitter);
+            // 打印:
+            //   a b MyEmitter {
+            //     domain: null,
+            //     _events: { event: [Function] },
+            //     _eventsCount: 1,
+            //     _maxListeners: undefined } true
+        });
+        myEmitter.emit('event', 'a', 'b');
+        ```
+
+    * 仅处理事件一次
+
+        ```js
+        const EventEmitter = require('events');
+        class MyEmitter extends EventEmitter { }
+        const myEmitter = new MyEmitter();
+        let m = 0;
+        myEmitter.on('event', () => {
+            console.log(++m);
+        });
+        myEmitter.emit('event');
+        // 打印: 1
+        myEmitter.emit('event');
+        // 打印: 2
+        ```
+
+    * 错误事件
+
+        ```js
+        const EventEmitter = require('events');
+        class MyEmitter extends EventEmitter { }
+        const myEmitter = new MyEmitter();
+        myEmitter.on('error', (err) => {
+            console.error('错误信息');
+        });
+        myEmitter.emit('error', new Error('错误'));
+        // 打印: 错误信息
+        ```
+
+    * 执行顺序
+
+        ```js
+        const EventEmitter = require('events');
+        const myEmitter = new EventEmitter();
+
+        // 第一个监听器。
+        myEmitter.on('event', function firstListener() {
+            console.log('第一个监听器');
+        });
+        // 第二个监听器。
+        myEmitter.on('event', function secondListener(arg1, arg2) {
+            console.log(`第二个监听器中的事件有参数 ${arg1}、${arg2}`);
+        });
+        // 第三个监听器
+        myEmitter.on('event', function thirdListener(...args) {
+            const parameters = args.join(', ');
+            console.log(`第三个监听器中的事件有参数 ${parameters}`);
+        });
+
+        console.log(myEmitter.listeners('event'));
+
+        myEmitter.emit('event', 1, 2, 3, 4, 5);
+
+        // Prints:
+        // [
+        //   [Function: firstListener],
+        //   [Function: secondListener],
+        //   [Function: thirdListener]
+        // ]
+        // 第一个监听器
+        // 第二个监听器中的事件有参数 1、2
+        // 第三个监听器中的事件有参数 1, 2, 3, 4, 5
+        ```
+
+    * 事件移除
+
+        ```js
+        const EventEmitter = require('events');
+        class MyEmitter extends EventEmitter { }
+        const myEmitter = new MyEmitter();
+
+        const callbackA = () => {
+            console.log('A');
+            myEmitter.removeListener('event', callbackB);
+        };
+
+        const callbackB = () => {
+            console.log('B');
+        };
+
+        myEmitter.on('event', callbackA);
+
+        myEmitter.on('event', callbackB);
+
+        // callbackA 移除了监听器 callbackB，但它依然会被调用。
+        // 触发时内部的监听器数组为 [callbackA, callbackB]
+        myEmitter.emit('event');
+        // 打印:
+        //   A
+        //   B
+
+        // callbackB 现已被移除。
+        // 内部的监听器数组为 [callbackA]
+        myEmitter.emit('event');
+        // 打印:
+        //   A
+        ```
 
