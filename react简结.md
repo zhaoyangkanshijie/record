@@ -441,6 +441,8 @@
 
     [怎么理解react的副作用，为什么ajax、修改dom是副作用？](https://segmentfault.com/q/1010000019475078/a-1020000019477192)
 
+    [React（17.0版本）生命周期概述](https://www.cnblogs.com/plBlog/p/14428928.html)
+
 2. 详解
 
     * 纯函数：固定输入，固定输出
@@ -708,6 +710,56 @@
                 在后代组件抛出错误后被调用，error抛出的错误。info带有 componentStack key 的对象，其中包含有关组件引发错误的栈信息。
 
                 如果发生错误，你可以通过调用 setState 使用 componentDidCatch() 渲染降级 UI，但在未来的版本中将不推荐这样做。可以使用静态 getDerivedStateFromError() 来处理降级渲染。
+
+    * react17生命周期示例
+
+        ```js
+        import * as React from "react";
+
+        export class Test extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = {
+                    count: 1
+                };
+                console.log("1. constructor");
+            }
+            static getDerivedStateFromProps(props, state) {
+                console.log("2. getDerivedStateFromProps");
+                return {
+                    count: props.count
+                };
+            }
+            componentDidMount() {
+                console.log("3. componentDidMount");
+            }
+            shouldComponentUpdate() {
+                console.log("4. shouldComponentUpdate");
+                return true;
+            }
+            getSnapshotBeforeUpdate(prevProps, prevState) {
+                console.log("5. getSnapshotBeforeUpdate");
+                return null;
+            }
+            componentDidUpdate(props, state, snapshot) {
+                console.log("6. componentDidUpdate");
+                console.log("snapshot:", snapshot);
+            }
+            componentWillUnmount() {
+                console.log("7. componentWillUnmount");
+            }
+            render() {
+                console.log("0. render");
+                const { count } = this.state;
+                return (
+                    <ul>
+                        <li>state: {count}</li>
+                        <li>props: {count}</li>
+                    </ul>
+                );
+            }
+        }
+        ```
 
 ## react数据绑定原理
 
@@ -1628,6 +1680,85 @@
         3. Provider 一个接受store的组件，通过context api传递给所有子组件
 
     * 用法
+
+        * 简单使用
+
+            /store/store.js
+            ```js
+            import { createStore } from 'redux'
+
+            // redux的初始值
+            const initialState = {
+                lastUpdate: 0,
+                light: false,
+                count: 0
+            };
+
+            // reducer纯函数
+            const reducer = (state = initialState, action) => {
+                switch (action.type) {
+                    case 'TICK':
+                        return {
+                            ...state,
+                            lastUpdate: action.lastUpdate,
+                            light: !!action.light
+                        };
+                    case 'INCREMENT':
+                        return {
+                            ...state,
+                            count: state.count + 1
+                        };
+                    case 'DECREMENT':
+                        return {
+                            ...state,
+                            count: state.count - 1
+                        };
+                    case 'RESET':
+                        return {
+                            ...state,
+                            count: initialState.count
+                        };
+                    default:
+                        return state
+                }
+            };
+
+            const store = createStore(reducer)
+
+            export default store
+            ```
+
+            页面
+            ```js
+            import React from 'react'
+            import store from '/store/store'
+
+            class Store extends React.Component {
+                
+                constructor(props) {
+                    super(props);
+                    this.state = {
+                        count: store.getState().count
+                    };
+                }
+                change(){
+                    store.dispatch({
+                        type: 'TICK',
+                        light: typeof window === 'object',
+                        lastUpdate: Date.now()
+                    });
+                }
+                render() {
+                    return (
+                        <>
+                            <span onClick={() => change()}>test redux,{this.state.count}</span>
+                        </>
+                    )
+                }
+            }
+
+            export default Store
+            ```
 
         * 基础配置
         ```js
