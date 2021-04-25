@@ -15,7 +15,7 @@
 - [两个node程序交互](#两个node程序交互)
 - [process](#process)
 - [获取本地IP](#获取本地IP)
-- [公钥加密私钥解密](#公钥加密私钥解密)
+- [crypto](#crypto)
 - [koa1和koa2区别](#koa1和koa2区别)
 - [nodejs特点与应用场景](#nodejs特点与应用场景)
 - [child_process](#child_process)
@@ -23,6 +23,7 @@
 - [domain模块捕捉异常](#domain模块捕捉异常)
 - [nodejs请求响应](#nodejs请求响应)
 - [事件触发器](#事件触发器)
+- [readline逐行读取](#readline逐行读取)
 
 ---
 
@@ -1069,47 +1070,503 @@
     }
     ```
 
-### 公钥加密私钥解密
+### crypto
 
 1. 参考链接：
 
    [一篇文章构建你的 NodeJS 知识体系](https://juejin.im/post/6844903767926636558#heading-13)
 
+   [crypto](http://nodejs.cn/api/crypto.html)
+
 2. 详解：
     
-    生成公钥私钥
-    ```txt
-    利用 openssl 生成公钥私钥 
-    生成公钥：openssl genrsa -out rsa_private_key.pem 1024 
-    生成私钥：openssl rsa -in rsa_private_key.pem -pubout -out rsa_public_key.pem
-    ```
+    * 公钥加密私钥解密
 
-    crypto 使用
-    ```js
-    const crypto = require('crypto');
-    const fs = require('fs');
+        生成公钥私钥
+        ```txt
+        利用 openssl 生成公钥私钥 
+        生成公钥：openssl genrsa -out rsa_private_key.pem 1024 
+        生成私钥：openssl rsa -in rsa_private_key.pem -pubout -out rsa_public_key.pem
+        ```
 
-    const publicKey = fs.readFileSync(`${__dirname}/rsa_public_key.pem`).toString('ascii');
-    const privateKey = fs.readFileSync(`${__dirname}/rsa_private_key.pem`).toString('ascii');
-    console.log(publicKey);
-    console.log(privateKey);
-    const data = 'Chenng';
-    console.log('content: ', data);
+        crypto 使用
+        ```js
+        const crypto = require('crypto');
+        const fs = require('fs');
 
-    //公钥加密
-    const encodeData = crypto.publicEncrypt(
-        publicKey,
-        Buffer.from(data),
-    ).toString('base64');
-    console.log('encode: ', encodeData);
+        const publicKey = fs.readFileSync(`${__dirname}/rsa_public_key.pem`).toString('ascii');
+        const privateKey = fs.readFileSync(`${__dirname}/rsa_private_key.pem`).toString('ascii');
+        console.log(publicKey);
+        console.log(privateKey);
+        const data = 'Chenng';
+        console.log('content: ', data);
 
-    //私钥解密
-    const decodeData = crypto.privateDecrypt(
-        privateKey,
-        Buffer.from(encodeData, 'base64'),
-    );
-    console.log('decode: ', decodeData.toString());
-    ```
+        //公钥加密
+        const encodeData = crypto.publicEncrypt(
+            publicKey,
+            Buffer.from(data),
+        ).toString('base64');
+        console.log('encode: ', encodeData);
+
+        //私钥解密
+        const decodeData = crypto.privateDecrypt(
+            privateKey,
+            Buffer.from(encodeData, 'base64'),
+        );
+        console.log('decode: ', decodeData.toString());
+        ```
+
+        生成公钥私钥
+        ```js
+        const { generateKeyPair } = require('crypto');
+        generateKeyPair('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: {
+                type: 'spki',
+                format: 'pem'
+            },
+            privateKeyEncoding: {
+                type: 'pkcs8',
+                format: 'pem',
+                cipher: 'aes-256-cbc',
+                passphrase: 'top secret'
+            }
+        }, (err, publicKey, privateKey) => {
+            // Handle errors and use the generated key pair.
+            console.log(publicKey, privateKey)
+        });
+        ```
+
+        ```js
+        const { generateKeyPairSync } = require('crypto');
+        const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+            modulusLength: 4096,
+            publicKeyEncoding: {
+                type: 'spki',
+                format: 'pem'
+            },
+            privateKeyEncoding: {
+                type: 'pkcs8',
+                format: 'pem',
+                cipher: 'aes-256-cbc',
+                passphrase: 'top secret'
+            }
+        });
+        ```
+
+        pbkdf2 伪随机函数以导出密钥
+        ```js
+        const crypto = require('crypto');
+        crypto.DEFAULT_ENCODING = 'hex';
+        crypto.pbkdf2('secret', 'salt', 100000, 512, 'sha512', (err, derivedKey) => {
+            if (err) throw err;
+            console.log(derivedKey);  // '3745e48...aa39b34'
+        });
+        ```
+
+        ```js
+        const crypto = require('crypto');
+        crypto.DEFAULT_ENCODING = 'hex';
+        const key = crypto.pbkdf2Sync('secret', 'salt', 100000, 512, 'sha512');
+        console.log(key);  // '3745e48...aa39b34'
+        ```
+
+    * Cipher加密
+
+        使用 Cipher 对象作为流
+        ```js
+        const crypto = require('crypto');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 密钥长度取决于算法。 
+        // 在此示例中，对于 aes192，它是 24 个字节（192 位）。
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // 使用 `crypto.randomBytes()` 生成随机的 iv 而不是此处显示的静态的 iv。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+
+        let encrypted = '';
+        cipher.on('readable', () => {
+            let chunk;
+            while (null !== (chunk = cipher.read())) {
+                encrypted += chunk.toString('hex');
+            }
+        });
+        cipher.on('end', () => {
+            console.log(encrypted);
+            // 9d47959b80d428936beef61216ef0b7653b5d23a670e082bd739f6cebcb6038f
+        });
+
+        cipher.write('要加密的数据');
+        cipher.end();
+        ```
+
+        使用 Cipher 和管道流
+        ```js
+        const crypto = require('crypto');
+        const fs = require('fs');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // 使用 `crypto.randomBytes()` 生成随机的 iv 而不是此处显示的静态的 iv。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+
+        const input = fs.createReadStream('要加密的数据.txt');
+        const output = fs.createWriteStream('加密后的数据.enc');
+
+        input.pipe(cipher).pipe(output);
+        ```
+
+        使用 cipher.update() 和 cipher.final()
+        ```js
+        const crypto = require('crypto');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // 使用 `crypto.randomBytes()` 生成随机的 iv 而不是此处显示的静态的 iv。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const cipher = crypto.createCipheriv(algorithm, key, iv);
+
+        let encrypted = cipher.update('要加密的数据', 'utf8', 'hex');
+        encrypted += cipher.final('hex');
+        console.log(encrypted);
+        // 9d47959b80d428936beef61216ef0b7653b5d23a670e082bd739f6cebcb6038f
+        ```
+
+    * Decipher 解密
+
+        使用 Decipher 对象作为流
+        ```js
+        const crypto = require('crypto');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 密钥长度取决于算法。 
+        // 在此示例中，对于 aes192，它是 24 个字节（192 位）。
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // IV 通常与密文一起传递。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const decipher = crypto.createDecipheriv(algorithm, key, iv);
+
+        let decrypted = '';
+        decipher.on('readable', () => {
+            while (null !== (chunk = decipher.read())) {
+                decrypted += chunk.toString('utf8');
+            }
+        });
+        decipher.on('end', () => {
+            console.log(decrypted);
+            // 要加密的数据
+        });
+
+        // 使用相同的算法、密钥和 iv 进行加密。
+        const encrypted = '9d47959b80d428936beef61216ef0b7653b5d23a670e082bd739f6cebcb6038f';
+        decipher.write(encrypted, 'hex');
+        decipher.end();
+        ```
+
+        使用 Decipher 和管道流
+        ```js
+        const crypto = require('crypto');
+        const fs = require('fs');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // IV 通常与密文一起传递。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const decipher = crypto.createDecipheriv(algorithm, key, iv);
+
+        const input = fs.createReadStream('要解密的数据.enc');
+        const output = fs.createWriteStream('解密后的数据.js');
+
+        input.pipe(decipher).pipe(output);
+        ```
+
+        使用 decipher.update() 和 decipher.final()
+        ```js
+        const crypto = require('crypto');
+
+        const algorithm = 'aes-192-cbc';
+        const password = '用于生成密钥的密码';
+        // 改为使用异步的 `crypto.scrypt()`。
+        const key = crypto.scryptSync(password, '盐值', 24);
+        // IV 通常与密文一起传递。
+        const iv = Buffer.alloc(16, 0); // 初始化向量。
+
+        const decipher = crypto.createDecipheriv(algorithm, key, iv);
+
+        // 使用相同的算法、密钥和 iv 进行加密。
+        const encrypted =
+        '9d47959b80d428936beef61216ef0b7653b5d23a670e082bd739f6cebcb6038f';
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+        decrypted += decipher.final('utf8');
+        console.log(decrypted);
+        // 打印: 要加密的数据
+        ```
+
+    * DiffieHellman 键交换
+
+        普通
+        ```js
+        const crypto = require('crypto');
+
+        // 生成 Alice 的密钥。
+        const alice = crypto.createDiffieHellman(2048);
+        const aliceKey = alice.generateKeys();
+
+        // 生成 Bob 的密钥。
+        const bob = crypto.createDiffieHellman(alice.getPrime(), alice.getGenerator());
+        const bobKey = bob.generateKeys();
+
+        // 交换并生成密钥。
+        const aliceSecret = alice.computeSecret(bobKey);
+        const bobSecret = bob.computeSecret(aliceKey);
+
+        // 完成。
+        console.log(aliceSecret.toString('hex')==bobSecret.toString('hex'));
+        ```
+
+        椭圆曲线 Elliptic Curve Diffie-Hellman（ECDH）键交换
+        ```js
+        const crypto = require('crypto');
+
+        // 生成 Alice 的密钥。
+        const alice = crypto.createECDH('secp521r1');
+        const aliceKey = alice.generateKeys();
+
+        // 生成 Bob 的密钥。
+        const bob = crypto.createECDH('secp521r1');
+        const bobKey = bob.generateKeys();
+
+        // 交换并生成密钥。
+        const aliceSecret = alice.computeSecret(bobKey);
+        const bobSecret = bob.computeSecret(aliceKey);
+
+        // 完成。
+        console.log(aliceSecret.toString('hex')==bobSecret.toString('hex'));
+        ```
+
+        解压
+        ```js
+        const { createECDH, ECDH } = require('crypto');
+
+        const ecdh = createECDH('secp256k1');
+        ecdh.generateKeys();
+
+        const compressedKey = ecdh.getPublicKey('hex', 'compressed');
+
+        const uncompressedKey = ECDH.convertKey(compressedKey, 'secp256k1', 'hex', 'hex', 'uncompressed');
+
+        // The converted key and the uncompressed public key should be the same
+        console.log(uncompressedKey,uncompressedKey === ecdh.getPublicKey('hex'));
+        ```
+
+    * Hash
+
+        用于创建数据的哈希摘要，不带key，可带salt
+
+        使用 Hash 对象作为流
+        ```js
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256');
+
+        hash.on('readable', () => {
+            // 哈希流只会生成一个元素。
+            const data = hash.read();
+            if (data) {
+                console.log(data.toString('hex'));
+                // 打印:
+                //   164345eba9bccbafb94b27b8299d49cc2d80627fc9995b03230965e6d8bcbf56
+            }
+        });
+
+        hash.write('要创建哈希摘要的数据');
+        hash.end();
+        ```
+
+        使用 Hash 和管道流
+        ```js
+        const crypto = require('crypto');
+        const fs = require('fs');
+        const hash = crypto.createHash('sha256');
+
+        const input = fs.createReadStream('要创建哈希摘要的数据.txt');
+        input.pipe(hash).setEncoding('hex').pipe(process.stdout);
+        ```
+
+        使用 hash.update() 和 hash.digest()
+        ```js
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256');
+
+        hash.update('要创建哈希摘要的数据');
+        console.log(hash.digest('hex'));
+        // 164345eba9bccbafb94b27b8299d49cc2d80627fc9995b03230965e6d8bcbf56
+        ```
+
+    * HMAC
+
+        用于创建加密的 HMAC 摘要，带key，更安全
+
+        使用 Hmac 对象作为流
+        ```js
+        const crypto = require('crypto');
+        const hmac = crypto.createHmac('sha256', '密钥');
+
+        hmac.on('readable', () => {
+            // 哈希流只会生成一个元素。
+            const data = hmac.read();
+            if (data) {
+                console.log(data.toString('hex'));
+                // 打印:
+                //   d0b5490ab4beb8e6545fe284f484d0d595e46086cb8e6ef2291af12ac684102f
+            }
+        });
+
+        hmac.write('要创建哈希的数据');
+        hmac.end();
+        ```
+
+        使用 Hmac 和管道流
+        ```js
+        const crypto = require('crypto');
+        const fs = require('fs');
+        const hmac = crypto.createHmac('sha256', '密钥');
+
+        const input = fs.createReadStream('要创建哈希的数据.txt');
+        input.pipe(hmac).pipe(process.stdout);
+        ```
+
+        使用 hmac.update() 和 hmac.digest()
+        ```js
+        const crypto = require('crypto');
+        const hmac = crypto.createHmac('sha256', '密钥');
+
+        hmac.update('要创建哈希的数据');
+        console.log(hmac.digest('hex'));
+        // d0b5490ab4beb8e6545fe284f484d0d595e46086cb8e6ef2291af12ac684102f
+        ```
+
+    * Sign 生成签名
+
+        使用 Sign 和 Verify 对象作为流
+        ```js
+        const crypto = require('crypto');
+
+        const { privateKey, publicKey } = crypto.generateKeyPairSync('ec', {
+            namedCurve: 'sect239k1'
+        });
+
+        const sign = crypto.createSign('SHA256');
+        sign.write('要生成签名的数据');
+        sign.end();
+        const signature = sign.sign(privateKey, 'hex');
+
+        const verify = crypto.createVerify('SHA256');
+        verify.write('要生成签名的数据');
+        verify.end();
+        console.log(verify.verify(publicKey, signature, 'hex'));
+        // 打印 true
+        ```
+
+        使用 sign.update() 和 verify.update()
+        ```js
+        const crypto = require('crypto');
+
+        const { privateKey, publicKey } = crypto.generateKeyPairSync('rsa', {
+            modulusLength: 2048,
+        });
+
+        const sign = crypto.createSign('SHA256');
+        sign.update('要生成签名的数据');
+        sign.end();
+        const signature = sign.sign(privateKey);
+
+        const verify = crypto.createVerify('SHA256');
+        verify.update('要生成签名的数据');
+        verify.end();
+        console.log(verify.verify(publicKey, signature));
+        // 打印: true
+        ```
+
+    * 生成加密强伪随机数据
+
+        ```js
+        // 异步的。
+        const crypto = require('crypto');
+        crypto.randomBytes(256, (err, buf) => {
+            if (err) throw err;
+            console.log(`${buf.length} 位的随机数据: ${buf.toString('hex')}`);
+        });
+        ```
+
+        ```js
+        // 同步的。
+        const buf = crypto.randomBytes(256);
+        console.log(`${buf.length} 位的随机数据: ${buf.toString('hex')}`);
+        ```
+
+        ```js
+        const a = new Uint32Array(10);
+        console.log(Buffer.from(crypto.randomFillSync(a).buffer, a.byteOffset, a.byteLength).toString('hex'));
+
+        const b = new Float64Array(10);
+        console.log(Buffer.from(crypto.randomFillSync(b).buffer, b.byteOffset, b.byteLength).toString('hex'));
+
+        const c = new DataView(new ArrayBuffer(10));
+        console.log(Buffer.from(crypto.randomFillSync(c).buffer, c.byteOffset, c.byteLength).toString('hex'));
+        ```
+
+        ```js
+        const a = new Uint32Array(10);
+        crypto.randomFill(a, (err, buf) => {
+            if (err) throw err;
+            console.log(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength).toString('hex'));
+        });
+
+        const b = new Float64Array(10);
+        crypto.randomFill(b, (err, buf) => {
+            if (err) throw err;
+            console.log(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength).toString('hex'));
+        });
+
+        const c = new DataView(new ArrayBuffer(10));
+        crypto.randomFill(c, (err, buf) => {
+            if (err) throw err;
+            console.log(Buffer.from(buf.buffer, buf.byteOffset, buf.byteLength).toString('hex'));
+        });
+        ```
+
+    * 随机整数
+
+        ```js
+        // Asynchronous
+        crypto.randomInt(3, (err, n) => {
+            if (err) throw err;
+            console.log(`Random number chosen from (0, 1, 2): ${n}`);
+        });
+        // Synchronous
+        const n = crypto.randomInt(3);
+        console.log(`Random number chosen from (0, 1, 2): ${n}`);
+        // With `min` argument
+        const n = crypto.randomInt(1, 7);
+        console.log(`The dice rolled: ${n}`);
+        ```
 
 ### koa1和koa2区别
 
@@ -2135,5 +2592,122 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         myEmitter.emit('event');
         // 打印:
         //   A
+        ```
+
+### readline逐行读取
+
+1. 参考链接：
+
+   [readline](http://nodejs.cn/api/readline.html)
+
+2. 详解：
+
+    * 基本用法
+
+        ```js
+        const readline = require('readline');
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        rl.question('你如何看待 Node.js 中文网？', (answer) => {
+            // TODO：将答案记录在数据库中。
+            console.log(`感谢您的宝贵意见：${answer}`);
+
+            rl.close();
+        });
+        ```
+
+    * 微型 CLI
+
+        ```js
+        const readline = require('readline');
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout,
+            prompt: '请输入> '
+        });
+
+        rl.prompt();
+
+        rl.on('line', (line) => {
+            switch (line.trim()) {
+                case 'hello':
+                    console.log('world!');
+                    break;
+                default:
+                    console.log(`你输入的是：'${line.trim()}'`);
+                    break;
+            }
+            rl.prompt();
+        }).on('close', () => {
+            console.log('再见!');
+            process.exit(0);
+        });
+        ```
+
+    * 逐行读取文件流
+
+        ```js
+        const fs = require('fs');
+        const readline = require('readline');
+
+        async function processLineByLine() {
+            const fileStream = fs.createReadStream('input.txt');
+
+            const rl = readline.createInterface({
+                input: fileStream,
+                crlfDelay: Infinity
+            });
+            // 注意：我们使用 crlfDelay 选项将 input.txt 中的所有 CR LF 实例（'\r\n'）识别为单个换行符。
+
+            for await (const line of rl) {
+                // input.txt 中的每一行在这里将会被连续地用作 `line`。
+                console.log(`Line from file: ${line}`);
+            }
+        }
+
+        processLineByLine();
+        ```
+
+        ```js
+        const fs = require('fs');
+        const readline = require('readline');
+
+        const rl = readline.createInterface({
+            input: fs.createReadStream('sample.txt'),
+            crlfDelay: Infinity
+        });
+
+        rl.on('line', (line) => {
+            console.log(`文件中的每一行: ${line}`);
+        });
+        ```
+
+        ```js
+        const { once } = require('events');
+        const { createReadStream } = require('fs');
+        const { createInterface } = require('readline');
+
+        (async function processLineByLine() {
+            try {
+                const rl = createInterface({
+                    input: createReadStream('big-file.txt'),
+                    crlfDelay: Infinity
+                });
+
+                rl.on('line', (line) => {
+                    // 处理行。
+                });
+
+                await once(rl, 'close');
+
+                console.log('文件已处理');
+            } catch (err) {
+                console.error(err);
+            }
+        })();
         ```
 
