@@ -24,6 +24,8 @@
 - [nodejs请求响应](#nodejs请求响应)
 - [事件触发器](#事件触发器)
 - [readline逐行读取](#readline逐行读取)
+- [stream流](#stream流)
+- [zlib压缩](#zlib压缩)
 
 ---
 
@@ -2711,3 +2713,278 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         })();
         ```
 
+### stream流
+
+1. 参考链接：
+
+   [stream](http://nodejs.cn/api/stream.html)
+
+2. 详解：
+
+    * 可写流
+
+        ```js
+        // 先写入 'hello, '，结束前再写入 'world!'。
+        const fs = require('fs');
+        const file = fs.createWriteStream('例子.txt');
+        file.write('hello, ');
+        file.end('world!');
+        // 后面不允许再写入数据！
+        ```
+
+    * 可读流
+
+        ```js
+        const fs = require('fs');
+        const rr = fs.createReadStream('foo.txt');
+        rr.on('readable', () => {
+            console.log(`读取的数据: ${rr.read()}`);
+        });
+        rr.on('end', () => {
+            console.log('结束');
+        });
+        ```
+
+    * 双工流与转换流
+
+        ```js
+        const fs = require('fs');
+        const { finished } = require('stream');
+        const rs = fs.createReadStream('archive.tar');
+        finished(rs, (err) => {
+            if (err) {
+                console.error('流读取失败', err);
+            } else {
+                console.log('流已完成读取');
+            }
+        });
+        rs.resume(); // 排空流。
+        ```
+
+        ```js
+        const { pipeline } = require('stream');
+        const fs = require('fs');
+        const zlib = require('zlib');
+        // 使用 pipeline API 轻松地将一系列的流通过管道一起传送，并在管道完全地完成时获得通知。
+        // 使用 pipeline 可以有效地压缩一个可能很大的 tar 文件：
+        pipeline(
+            fs.createReadStream('archive.tar'),
+            zlib.createGzip(),
+            fs.createWriteStream('archive.tar.gz'),
+            (err) => {
+                if (err) {
+                    console.error('管道传送失败', err);
+                } else {
+                    console.log('管道传送成功');
+                }
+            }
+        );
+        ```
+
+### zlib压缩
+
+1. 参考链接：
+
+   [zlib](http://nodejs.cn/api/zlib.html)
+
+2. 详解：
+
+    * 压缩成gz
+
+        ```js
+        const { createGzip } = require('zlib');
+        const { pipeline } = require('stream');
+        const {
+            createReadStream,
+            createWriteStream
+        } = require('fs');
+
+        const gzip = createGzip();
+        const source = createReadStream('input.txt');
+        const destination = createWriteStream('input.txt.gz');
+
+        pipeline(source, gzip, destination, (err) => {
+            if (err) {
+                console.error('发生错误:', err);
+                process.exitCode = 1;
+            }
+        });
+
+        // 或 Promise 化：
+
+        const { promisify } = require('util');
+        const pipe = promisify(pipeline);
+
+        async function do_gzip(input, output) {
+            const gzip = createGzip();
+            const source = createReadStream(input);
+            const destination = createWriteStream(output);
+            await pipe(source, gzip, destination);
+        }
+
+        do_gzip('input.txt', 'input.txt.gz')
+            .catch((err) => {
+                console.error('发生错误:', err);
+                process.exitCode = 1;
+            });
+        ```
+
+    * 解压
+
+        ```js
+        const { deflate, unzip } = require('zlib');
+
+        const input = '.................................';
+        deflate(input, (err, buffer) => {
+            if (err) {
+                console.error('发生错误:', err);
+                process.exitCode = 1;
+            }
+            console.log(buffer.toString('base64'));
+        });
+
+        const buffer = Buffer.from('eJzT0yMAAGTvBe8=', 'base64');
+        unzip(buffer, (err, buffer) => {
+            if (err) {
+                console.error('发生错误:', err);
+                process.exitCode = 1;
+            }
+            console.log(buffer.toString());
+        });
+
+        // 或 Promise 化：
+
+        const { promisify } = require('util');
+        const do_unzip = promisify(unzip);
+
+        do_unzip(buffer)
+            .then((buf) => console.log(buf.toString()))
+            .catch((err) => {
+                console.error('发生错误:', err);
+                process.exitCode = 1;
+            });
+        ```
+
+    * 压缩 HTTP 的请求和响应
+
+        ```js
+        // 客户端请求示例。
+        const zlib = require('zlib');
+        const http = require('http');
+        const fs = require('fs');
+        const { pipeline } = require('stream');
+
+        const request = http.get({
+            host: 'example.com',
+            path: '/',
+            port: 80,
+            headers: { 'Accept-Encoding': 'br,gzip,deflate' }
+        });
+        request.on('response', (response) => {
+            const output = fs.createWriteStream('example.com_index.html');
+
+            const onError = (err) => {
+                if (err) {
+                    console.error('发生错误:', err);
+                    process.exitCode = 1;
+                }
+            };
+
+            switch (response.headers['content-encoding']) {
+                case 'br':
+                    pipeline(response, zlib.createBrotliDecompress(), output, onError);
+                    break;
+                // 或者, 只是使用 zlib.createUnzip() 方法去处理这两种情况：
+                case 'gzip':
+                    pipeline(response, zlib.createGunzip(), output, onError);
+                    break;
+                case 'deflate':
+                    pipeline(response, zlib.createInflate(), output, onError);
+                    break;
+                default:
+                    pipeline(response, output, onError);
+                    break;
+            }
+        });
+        ```
+
+        ```js
+        // 服务端示例。
+        // 对每一个请求运行 gzip 操作的成本是十分高昂的。
+        // 缓存已压缩的 buffer 是更加高效的方式。
+        const zlib = require('zlib');
+        const http = require('http');
+        const fs = require('fs');
+        const { pipeline } = require('stream');
+
+        http.createServer((request, response) => {
+            const raw = fs.createReadStream('index.html');
+            // 存储资源的压缩版本和未压缩版本。
+            response.setHeader('Vary', 'Accept-Encoding');
+            let acceptEncoding = request.headers['accept-encoding'];
+            if (!acceptEncoding) {
+                acceptEncoding = '';
+            }
+
+            const onError = (err) => {
+                if (err) {
+                    // 如果发生错误，则我们将会无能为力，
+                    // 因为服务器已经发送了 200 响应码，
+                    // 并且已经向客户端发送了一些数据。 
+                    // 我们能做的最好就是立即终止响应并记录错误。
+                    response.end();
+                    console.error('发生错误:', err);
+                }
+            };
+
+            // 注意：这不是一个合适的 accept-encoding 解析器。
+            // 查阅 https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.3
+            if (/\bdeflate\b/.test(acceptEncoding)) {
+                response.writeHead(200, { 'Content-Encoding': 'deflate' });
+                pipeline(raw, zlib.createDeflate(), response, onError);
+            } else if (/\bgzip\b/.test(acceptEncoding)) {
+                response.writeHead(200, { 'Content-Encoding': 'gzip' });
+                pipeline(raw, zlib.createGzip(), response, onError);
+            } else if (/\bbr\b/.test(acceptEncoding)) {
+                response.writeHead(200, { 'Content-Encoding': 'br' });
+                pipeline(raw, zlib.createBrotliCompress(), response, onError);
+            } else {
+                response.writeHead(200, {});
+                pipeline(raw, response, onError);
+            }
+        }).listen(1337);
+        ```
+
+        flush()刷新
+        ```js
+        const zlib = require('zlib');
+        const http = require('http');
+        const { pipeline } = require('stream');
+
+        http.createServer((request, response) => {
+            // 为了简单起见，省略了对 Accept-Encoding 的检测。
+            response.writeHead(200, { 'content-encoding': 'gzip' });
+            const output = zlib.createGzip();
+            let i;
+
+            pipeline(output, response, (err) => {
+                if (err) {
+                    // 如果发生错误，则我们将会无能为力，
+                    // 因为服务器已经发送了 200 响应码，
+                    // 并且已经向客户端发送了一些数据。 
+                    // 我们能做的最好就是立即终止响应并记录错误。
+                    clearInterval(i);
+                    response.end();
+                    console.error('发生错误:', err);
+                }
+            });
+
+            i = setInterval(() => {
+                output.write(`The current time is ${Date()}\n`, () => {
+                    // 数据已经传递给了 zlib，但压缩算法看能已经决定缓存数据以便得到更高的压缩效率。
+                    // 一旦客户端准备接收数据，调用 .flush() 将会使数据可用。
+                    output.flush();
+                });
+            }, 1000);
+        }).listen(1337);
+        ```
