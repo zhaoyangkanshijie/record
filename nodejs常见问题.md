@@ -5,6 +5,7 @@
 - [deno和nodejs区别](#deno和nodejs区别)
 - [获取命令行传来的参数](#获取命令行传来的参数)
 - [fs文件操作](#fs文件操作)
+- [path文件路径](#path文件路径)
 - [url模块](#url模块)
 - [express中app.get、app.use、app.all的区别](#express中app.get、app.use、app.all的区别)
 - [express中response常用方法](#express中response常用方法)
@@ -26,6 +27,9 @@
 - [readline逐行读取](#readline逐行读取)
 - [stream流](#stream流)
 - [zlib压缩](#zlib压缩)
+- [获取操作系统信息](#获取操作系统信息)
+- [性能钩子](#性能钩子)
+- [inspect调试器](#inspect调试器)
 
 ---
 
@@ -752,6 +756,212 @@
             if (err) throw err;
             console.log('文件已被删除');
         });
+        ```
+
+### path文件路径
+
+1. 参考链接：
+
+   [path](http://nodejs.cn/api/path.html)
+
+2. 详解：
+
+    * 返回路径最后一部分
+
+        ```js
+        const path = require('path');
+
+        // 在 POSIX 上:
+        path.basename('C:\\temp\\myfile.html');
+        // 返回: 'C:\\temp\\myfile.html'
+
+        // 在 Windows 上:
+        path.basename('C:\\temp\\myfile.html');
+        // 返回: 'myfile.html'
+
+        // 在 POSIX 和 Windows 上:
+        path.win32.basename('C:\\temp\\myfile.html');
+        // 返回: 'myfile.html'
+
+        path.basename('/目录1/目录2/文件.html');
+        // 返回: '文件.html'
+
+        path.basename('/目录1/目录2/文件.html', '.html');
+        // 返回: '文件'
+
+        path.win32.basename('C:\\文件.html', '.html');
+        // 返回: '文件'
+
+        path.win32.basename('C:\\文件.HTML', '.html');
+        // 返回: '文件.HTML'
+        ```
+
+    * 路径定界符
+
+        POSIX冒号
+        ```js
+        console.log(process.env.PATH);
+        // 打印: '/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin'
+
+        process.env.PATH.split(path.delimiter);
+        // 返回: ['/usr/bin', '/bin', '/usr/sbin', '/sbin', '/usr/local/bin']
+        ```
+
+        Windows分号
+        ```js
+        console.log(process.env.PATH);
+        // 打印: 'C:\Windows\system32;C:\Windows;C:\Program Files\node\'
+
+        process.env.PATH.split(path.delimiter);
+        // 返回: ['C:\\Windows\\system32', 'C:\\Windows', 'C:\\Program Files\\node\\']
+        ```
+
+    * 目录
+
+        ```js
+        path.dirname('/目录1/目录2/目录3');
+        // 返回: '/目录1/目录2'
+        ```
+
+    * 扩展名
+
+        ```js
+        path.extname('index.html');
+        // 返回: '.html'
+
+        path.extname('index.coffee.md');
+        // 返回: '.md'
+
+        path.extname('index.');
+        // 返回: '.'
+
+        path.extname('index');
+        // 返回: ''
+
+        path.extname('.index');
+        // 返回: ''
+
+        path.extname('.index.md');
+        // 返回: '.md'
+        ```
+
+    * 路径格式化
+
+        POSIX
+        ```js
+        // 如果提供了 `dir`、 `root` 和 `base`，
+        // 则返回 `${dir}${path.sep}${base}`。
+        // `root` 会被忽略。
+        path.format({
+            root: '/ignored',
+            dir: '/home/user/dir',
+            base: 'file.txt'
+        });
+        // 返回: '/home/user/dir/file.txt'
+
+        // 如果未指定 `dir`，则使用 `root`。 
+        // 如果只提供 `root`，或 'dir` 等于 `root`，则将不包括平台分隔符。 
+        // `ext` 将被忽略。
+        path.format({
+            root: '/',
+            base: 'file.txt',
+            ext: 'ignored'
+        });
+        // 返回: '/file.txt'
+
+        // 如果未指定 `base`，则使用 `name` + `ext`。
+        path.format({
+            root: '/',
+            name: 'file',
+            ext: '.txt'
+        });
+        // 返回: '/file.txt'
+        ```
+
+        Windows
+        ```js
+        path.format({
+            dir: 'C:\\path\\dir',
+            base: 'file.txt'
+        });
+        // 返回: 'C:\\path\\dir\\file.txt'
+        ```
+
+    * 路径连接
+
+        ```js
+        path.join('/目录1', '目录2', '目录3/目录4', '目录5', '..');
+        // 返回: '/目录1/目录2/目录3/目录4'
+
+        path.join('目录1', {}, '目录2');
+        // 抛出 'TypeError: Path must be a string. Received {}'
+        ```
+
+    * 路径规范化
+
+        ```js
+        path.normalize('/foo/bar//baz/asdf/quux/..');
+        // 返回: '/foo/bar/baz/asdf'
+        path.normalize('C:\\temp\\\\foo\\bar\\..\\');
+        // 返回: 'C:\\temp\\foo\\'
+        path.win32.normalize('C:////temp\\\\/\\/\\/foo/bar');
+        // 返回: 'C:\\temp\\foo\\bar'
+        ```
+
+    * 路径解析
+
+        ```js
+        path.parse('/目录1/目录2/文件.txt');
+        // 返回:
+        // { root: '/',
+        //   dir: '/目录1/目录2',
+        //   base: '文件.txt',
+        //   ext: '.txt',
+        //   name: '文件' }
+        path.parse('C:\\目录1\\目录2\\文件.txt');
+        // 返回:
+        // { root: 'C:\\',
+        //   dir: 'C:\\目录1\\目录2',
+        //   base: '文件.txt',
+        //   ext: '.txt',
+        //   name: '文件' }
+        ```
+
+    * from 到 to 的相对路径
+
+        ```js
+        path.relative('/data/orandea/test/aaa', '/data/orandea/impl/bbb');
+        // 返回: '../../impl/bbb'
+        path.relative('C:\\orandea\\test\\aaa', 'C:\\orandea\\impl\\bbb');
+        // 返回: '..\\..\\impl\\bbb'
+        ```
+
+    * 路径片段的序列解析为绝对路径
+
+        ```js
+        path.resolve('/目录1/目录2', './目录3');
+        // 返回: '/目录1/目录2/目录3'
+
+        path.resolve('/目录1/目录2', '/目录3/目录4/');
+        // 返回: '/目录3/目录4'
+
+        path.resolve('目录1', '目录2/目录3/', '../目录4/文件.gif');
+        // 如果当前工作目录是 /目录A/目录B，
+        // 则返回 '/目录A/目录B/目录1/目录2/目录4/文件.gif'
+        ```
+
+    * 路径片段分隔符
+
+        POSIX 上是 /
+        ```js
+        'foo/bar/baz'.split(path.sep);
+        // 返回: ['foo', 'bar', 'baz']
+        ```
+
+        Windows 上是 \
+        ```js
+        'foo\\bar\\baz'.split(path.sep);
+        // 返回: ['foo', 'bar', 'baz']
         ```
 
 ### url模块
@@ -2988,3 +3198,273 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
             }, 1000);
         }).listen(1337);
         ```
+
+### 获取操作系统信息
+
+1. 参考链接：
+
+   [os](http://nodejs.cn/api/os.html)
+
+2. 详解：
+
+    * cpu
+
+        ```js
+        const os = require('os');
+        console.log(os.cpus())
+        [
+            {
+                model: 'Intel(R) Core(TM) i7 CPU         860  @ 2.80GHz',
+                speed: 2926,//兆赫兹
+                times: {
+                    user: 252020,//用户模式下花费的毫秒数
+                    nice: 0,//良好模式下花费的毫秒数
+                    sys: 30340,//系统模式下花费的毫秒数
+                    idle: 1070356870,//空闲模式下花费的毫秒数
+                    irq: 0//中断请求模式下花费的毫秒数
+                }
+            },
+            {
+                model: 'Intel(R) Core(TM) i7 CPU         860  @ 2.80GHz',
+                speed: 2926,
+                times: {
+                    user: 306960,
+                    nice: 0,
+                    sys: 26980,
+                    idle: 1071569080,
+                    irq: 0
+                }
+            },
+            {
+                model: 'Intel(R) Core(TM) i7 CPU         860  @ 2.80GHz',
+                speed: 2926,
+                times: {
+                    user: 248450,
+                    nice: 0,
+                    sys: 21750,
+                    idle: 1070919370,
+                    irq: 0
+                }
+            },
+            {
+                model: 'Intel(R) Core(TM) i7 CPU         860  @ 2.80GHz',
+                speed: 2926,
+                times: {
+                    user: 256880,
+                    nice: 0,
+                    sys: 19430,
+                    idle: 1070905480,
+                    irq: 20
+                }
+            }
+        ]
+        ```
+
+    * 网络地址
+
+        ```js
+        const os = require('os');
+        console.log(os.networkInterfaces())
+        {
+            lo: [
+                {
+                    address: '127.0.0.1',// IPv4 或 IPv6 地址
+                    netmask: '255.0.0.0',// IPv4 或 IPv6 的子网掩码
+                    family: 'IPv4',// IPv4 或 IPv6
+                    mac: '00:00:00:00:00:00',// 网络接口的 MAC 地址
+                    internal: true,// 如果网络接口是不可远程访问的环回接口或类似接口，则为 true，否则为 false
+                    cidr: '127.0.0.1/8'// 以 CIDR 表示法分配的带有路由前缀的 IPv4 或 IPv6 地址。如果 netmask 无效，则此属性会被设为 null。
+                },
+                {
+                    address: '::1',
+                    netmask: 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff',
+                    family: 'IPv6',
+                    mac: '00:00:00:00:00:00',
+                    scopeid: 0,// 数值型的 IPv6 作用域 ID,仅当 family 为 IPv6 时指定
+                    internal: true,
+                    cidr: '::1/128'
+                }
+            ],
+            eth0: [
+                {
+                    address: '192.168.1.108',
+                    netmask: '255.255.255.0',
+                    family: 'IPv4',
+                    mac: '01:02:03:0a:0b:0c',
+                    internal: false,
+                    cidr: '192.168.1.108/24'
+                },
+                {
+                    address: 'fe80::a00:27ff:fe4e:66a1',
+                    netmask: 'ffff:ffff:ffff:ffff::',
+                    family: 'IPv6',
+                    mac: '01:02:03:0a:0b:0c',
+                    scopeid: 1,
+                    internal: false,
+                    cidr: 'fe80::a00:27ff:fe4e:66a1/64'
+                }
+            ]
+        }
+        ```
+
+### 性能钩子
+
+1. 参考链接：
+
+   [perf_hooks](http://nodejs.cn/api/perf_hooks.html)
+
+2. 详解：
+
+    * 测量异步操作的时长
+
+        ```js
+        const async_hooks = require('async_hooks');
+        const {
+            performance,
+            PerformanceObserver
+        } = require('perf_hooks');
+
+        const set = new Set();
+        const hook = async_hooks.createHook({
+            init(id, type) {
+                if (type === 'Timeout') {
+                    performance.mark(`Timeout-${id}-Init`);
+                    set.add(id);
+                }
+            },
+            destroy(id) {
+                if (set.has(id)) {
+                    set.delete(id);
+                    performance.mark(`Timeout-${id}-Destroy`);
+                    performance.measure(`Timeout-${id}`,
+                        `Timeout-${id}-Init`,
+                        `Timeout-${id}-Destroy`);
+                }
+            }
+        });
+        hook.enable();
+
+        const obs = new PerformanceObserver((list, observer) => {
+            console.log(list.getEntries()[0]);
+            performance.clearMarks();
+            observer.disconnect();
+        });
+        obs.observe({ entryTypes: ['measure'], buffered: true });
+
+        setTimeout(() => { }, 1000);
+        ```
+
+    * 测量加载依赖的耗时
+
+        ```js
+        const {
+            performance,
+            PerformanceObserver
+        } = require('perf_hooks');
+        const mod = require('module');
+
+        // Monkey patch the require function
+        mod.Module.prototype.require =
+            performance.timerify(mod.Module.prototype.require);
+        require = performance.timerify(require);
+
+        // Activate the observer
+        const obs = new PerformanceObserver((list) => {
+            const entries = list.getEntries();
+            entries.forEach((entry) => {
+                console.log(`require('${entry[0]}')`, entry.duration);
+            });
+            obs.disconnect();
+        });
+        obs.observe({ entryTypes: ['function'], buffered: true });
+
+        require('path');
+        ```
+
+### inspect调试器
+
+1. 参考链接：
+
+   [debugger](http://nodejs.cn/api/debugger.html)
+
+2. 详解：
+
+    要调试的代码
+    ```js
+    // myscript.js
+    global.x = 5;
+    setTimeout(() => {
+        debugger;
+        console.log('世界');
+    }, 1000);
+    console.log('你好');
+    ```
+
+    调试示例
+    ```js
+    $ node inspect myscript.js
+    < Debugger listening on ws://127.0.0.1:9229/80e7a814-7cd3-49fb-921a-2e02228cd5ba
+    < For help, see: https://nodejs.org/en/docs/inspector
+    < Debugger attached.
+    Break on start in myscript.js:1
+    > 1 (function (exports, require, module, __filename, __dirname) { global.x = 5;
+    2 setTimeout(() => {
+    3   debugger;
+    debug> cont
+    < 你好
+    break in myscript.js:3
+    1 (function (exports, require, module, __filename, __dirname) { global.x = 5;
+    2 setTimeout(() => {
+    > 3   debugger;
+    4   console.log('世界');
+    5 }, 1000);
+    debug> next
+    break in myscript.js:4
+    2 setTimeout(() => {
+    3   debugger;
+    > 4   console.log('世界');
+    5 }, 1000);
+    6 console.log('你好');
+    debug> repl
+    Press Ctrl + C to leave debug repl
+    > x
+    5
+    > 2 + 2
+    4
+    debug> next
+    < 世界
+    break in myscript.js:5
+    3   debugger;
+    4   console.log('世界');
+    > 5 }, 1000);
+    6 console.log('你好');
+    7
+    debug> .exit
+    ```
+
+    命令
+    ```txt
+    cont, c: 继续执行。
+    next, n: 单步执行下一行。
+    step, s: 单步进入。
+    out, o: 单步退出。
+    pause: 暂停运行中的代码。
+    setBreakpoint(), sb(): 在当前行上设置断点。
+    setBreakpoint(line), sb(line): 在指定行上设置断点。
+    setBreakpoint('fn()'), sb(...): 在函数体的第一个语句上设置断点。
+    setBreakpoint('script.js', 1)、 sb(...): 在 script.js 的第一行上设置断点。
+    setBreakpoint('script.js', 1, 'num < 4')、 sb(...): 在 script.js 的第一行上设置条件断点，仅当 num < 4 计算为 true 时才会中断。
+    clearBreakpoint('script.js', 1), cb(...): 清除 script.js 中第一行上的断点。
+    backtrace, bt: 打印当前执行帧的回溯。
+    list(5): 列出脚本源码的 5 行上下文（前后各 5 行）。
+    watch(expr): 将表达式添加到监视列表。
+    unwatch(expr): 从监视列表中移除表达式。
+    watchers: 列出所有的监视器和它们的值（在每个断点上自动地列出）。
+    repl: 打开调试器的 repl，用于调试脚本的上下文中的执行。
+    exec expr: 在调试脚本的上下文中执行一个表达式。
+    run: 运行脚本（在调试器启动时自动地运行）。
+    restart: 重启脚本。
+    kill: 杀死脚本。
+    scripts: 列出所有已加载的脚本。
+    version: 显示 V8 的版本。
+    ```
