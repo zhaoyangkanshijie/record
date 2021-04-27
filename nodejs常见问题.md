@@ -30,6 +30,7 @@
 - [获取操作系统信息](#获取操作系统信息)
 - [性能钩子](#性能钩子)
 - [inspect调试器](#inspect调试器)
+- [Buffer缓冲器](#Buffer缓冲器)
 
 ---
 
@@ -3468,3 +3469,517 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
     scripts: 列出所有已加载的脚本。
     version: 显示 V8 的版本。
     ```
+
+### Buffer缓冲器
+
+1. 参考链接：
+
+   [Buffer](http://nodejs.cn/api/buffer.html)
+
+2. 详解：
+
+    * Buffer 在全局作用域中,无需require
+
+        ```js
+        // 创建一个长度为 10、以零填充的 Buffer。
+        const buf1 = Buffer.alloc(10);
+
+        // 创建一个长度为 10 的 Buffer，
+        // 其中全部填充了值为 `1` 的字节。
+        const buf2 = Buffer.alloc(10, 1);
+
+        // 创建一个长度为 10、且未初始化的 buffer。
+        // 这个方法比调用 Buffer.alloc() 更快，
+        // 但返回的 Buffer 实例可能包含旧数据，
+        // 因此需要使用 fill()、write() 或其他能填充 Buffer 的内容的函数进行重写。
+        const buf3 = Buffer.allocUnsafe(10);
+
+        // 创建一个包含字节 [1, 2, 3] 的 Buffer。
+        const buf4 = Buffer.from([1, 2, 3]);
+
+        // 创建一个包含字节 [1, 1, 1, 1] 的 Buffer，
+        // 其中所有条目均使用 `(value & 255)` 进行截断以符合 0-255 的范围。
+        const buf5 = Buffer.from([257, 257.5, -255, '1']);
+
+        // 创建一个 Buffer，其中包含字符串 'tést' 的 UTF-8 编码字节：
+        // [0x74, 0xc3, 0xa9, 0x73, 0x74]（以十六进制表示）
+        // [116, 195, 169, 115, 116]（以十进制表示）
+        const buf6 = Buffer.from('tést');
+
+        // 创建一个包含 Latin-1 字节 [0x74, 0xe9, 0x73, 0x74] 的 Buffer。
+        const buf7 = Buffer.from('tést', 'latin1');
+
+        const b = Buffer.allocUnsafe(50).fill('h');
+        console.log(b.toString());
+        // 打印: hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+
+        // 使用在 UTF-8 中占用两个字节的字符来填充 `Buffer`。
+        console.log(Buffer.allocUnsafe(5).fill('\u0222'));
+        // 打印: <Buffer c8 a2 c8 a2 c8>
+
+        const buf = Buffer.allocUnsafe(5);
+        console.log(buf.fill('a'));
+        // 打印: <Buffer 61 61 61 61 61>
+        console.log(buf.fill('aazz', 'hex'));
+        // 打印: <Buffer aa aa aa aa aa>
+        console.log(buf.fill('zz', 'hex'));
+        // 抛出异常。
+        ```
+
+    * 字符编码
+
+        ```js
+        const buf = Buffer.from('hello world', 'utf8');
+
+        console.log(buf.toString('hex'));
+        // 打印: 68656c6c6f20776f726c64
+        console.log(buf.toString('base64'));
+        // 打印: aGVsbG8gd29ybGQ=
+
+        console.log(Buffer.from('fhqwhgads', 'utf8'));
+        // 打印: <Buffer 66 68 71 77 68 67 61 64 73>
+        console.log(Buffer.from('fhqwhgads', 'utf16le'));
+        // 打印: <Buffer 66 00 68 00 71 00 77 00 68 00 67 00 61 00 64 00 73 00>
+
+        Buffer.from('1ag', 'hex');
+        // 打印 <Buffer 1a>，当遇到第一个非十六进制的值（'g'）时，则数据会被截断。
+
+        Buffer.from('1a7g', 'hex');
+        // 打印 <Buffer 1a>，当数据以一个数字（'7'）结尾时，则数据会被截断。
+
+        Buffer.from('1634', 'hex');
+        // 打印 <Buffer 16 34>，所有数据均可用。
+        ```
+
+    * TypedArray
+
+        Uint32Array
+        ```js
+        const buf = Buffer.from([1, 2, 3, 4]);
+        const uint32array = new Uint32Array(buf);
+        console.log(uint32array);
+        // 打印: Uint32Array(4) [ 1, 2, 3, 4 ]
+        ```
+
+        Uint16Array
+        ```js
+        const buf = Buffer.from('hello', 'utf16le');
+        const uint16array = new Uint16Array(buf.buffer,buf.byteOffset,buf.length / Uint16Array.BYTES_PER_ELEMENT);
+        console.log(uint16array);
+        // 打印: Uint16Array(5) [ 104, 101, 108, 108, 111 ]
+        ```
+
+    * 迭代器
+
+        ```js
+        const buf = Buffer.from([1, 2, 3]);
+        for (const b of buf) {
+            console.log(b);
+        }
+        // 打印:
+        //   1
+        //   2
+        //   3
+        ```
+
+        ```js
+        const buf = Buffer.from('buffer');
+
+        for (const pair of buf.entries()) {
+            console.log(pair);
+        }
+        // 打印:
+        //   [0, 98]
+        //   [1, 117]
+        //   [2, 102]
+        //   [3, 102]
+        //   [4, 101]
+        //   [5, 114]
+        ```
+
+        ```js
+        const buf = Buffer.from('buffer');
+
+        for (const key of buf.keys()) {
+            console.log(key);
+        }
+        // 打印:
+        //   0
+        //   1
+        //   2
+        //   3
+        //   4
+        //   5
+        ```
+
+        ```js
+        const buf = Buffer.from('buffer');
+
+        for (const value of buf.values()) {
+        console.log(value);
+        }
+        // 打印:
+        //   98
+        //   117
+        //   102
+        //   102
+        //   101
+        //   114
+
+        for (const value of buf) {
+        console.log(value);
+        }
+        // 打印:
+        //   98
+        //   117
+        //   102
+        //   102
+        //   101
+        //   114
+        ```
+
+    * 字节长度
+
+        当 string 是一个 Buffer/DataView/TypedArray/ArrayBuffer/SharedArrayBuffer 时，返回 .byteLength 报告的字节长度。
+        ```js
+        const str = '\u00bd + \u00bc = \u00be';
+        console.log(`${str}: ${str.length} 个字符, ` + `${Buffer.byteLength(str, 'utf8')} 个字节`);
+        // 打印: ½ + ¼ = ¾: 9 个字符, 12 个字节
+        ```
+
+        ```js
+        const buf = Buffer.alloc(1234);
+
+        console.log(buf.length);
+        // 打印: 1234
+
+        buf.write('http://nodejs.cn/', 0, 'utf8');
+
+        console.log(buf.length);
+        // 打印: 1234
+        ```
+
+    * 比较排序
+
+        ```js
+        const buf1 = Buffer.from('1234');
+        const buf2 = Buffer.from('0123');
+        const arr = [buf1, buf2];
+        console.log(arr.sort(Buffer.compare));
+        // 打印: [ <Buffer 30 31 32 33>, <Buffer 31 32 33 34> ]
+        // (结果相当于: [buf2, buf1])
+        ```
+        ```js
+        const buf1 = Buffer.from('ABC');
+        const buf2 = Buffer.from('BCD');
+        const buf3 = Buffer.from('ABCD');
+
+        console.log(buf1.compare(buf1));
+        // 打印: 0
+        console.log(buf1.compare(buf2));
+        // 打印: -1
+        console.log(buf1.compare(buf3));
+        // 打印: -1
+        console.log(buf2.compare(buf1));
+        // 打印: 1
+        console.log(buf2.compare(buf3));
+        // 打印: 1
+        console.log([buf1, buf2, buf3].sort(Buffer.compare));
+        // 打印: [ <Buffer 41 42 43>, <Buffer 41 42 43 44>, <Buffer 42 43 44> ]
+        // (相当于: [buf1, buf3, buf2])
+        ```
+
+        ```js
+        const buf1 = Buffer.from('ABC');
+        const buf2 = Buffer.from('414243', 'hex');
+        const buf3 = Buffer.from('ABCD');
+
+        console.log(buf1.equals(buf2));
+        // 打印: true
+        console.log(buf1.equals(buf3));
+        // 打印: false
+        ```
+
+    * 合并
+
+        ```js
+        const buf1 = Buffer.alloc(10);
+        const buf2 = Buffer.alloc(14);
+        const buf3 = Buffer.alloc(18);
+        const totalLength = buf1.length + buf2.length + buf3.length;
+
+        console.log(totalLength);
+        // 打印: 42
+
+        const bufA = Buffer.concat([buf1, buf2, buf3], totalLength);
+
+        console.log(bufA);
+        // 打印: <Buffer 00 00 00 00 ...>
+        console.log(bufA.length);
+        // 打印: 42
+        ```
+
+    * 复制
+
+        ```js
+        const buf1 = Buffer.allocUnsafe(26);
+        const buf2 = Buffer.allocUnsafe(26).fill('!');
+
+        for (let i = 0; i < 26; i++) {
+            // 97 是 'a' 的十进制 ASCII 值。
+            buf1[i] = i + 97;
+        }
+
+        // 拷贝 `buf1` 中第 16 至 19 字节偏移量的数据到 `buf2` 第 8 字节偏移量开始。
+        buf1.copy(buf2, 8, 16, 20);
+        // 这等效于：
+        // buf2.set(buf1.subarray(16, 20), 8);
+
+        console.log(buf2.toString('ascii', 0, 25));
+        // 打印: !!!!!!!!qrst!!!!!!!!!!!!!
+        ```
+
+        ```js
+        const buf = Buffer.allocUnsafe(26);
+
+        for (let i = 0; i < 26; i++) {
+        // 97 是 'a' 的十进制 ASCII 值。
+        buf[i] = i + 97;
+        }
+
+        buf.copy(buf, 0, 4, 10);
+
+        console.log(buf.toString());
+        // 打印: efghijghijklmnopqrstuvwxyz
+        ```
+
+    * 搜索
+
+        ```js
+        const buf = Buffer.from('this is a buffer');
+
+        console.log(buf.includes('this'));
+        // 打印: true
+        console.log(buf.includes('is'));
+        // 打印: true
+        console.log(buf.includes(Buffer.from('a buffer')));
+        // 打印: true
+        console.log(buf.includes(97));
+        // 打印: true（97 是 'a' 的十进制 ASCII 值）
+        console.log(buf.includes(Buffer.from('a buffer example')));
+        // 打印: false
+        console.log(buf.includes(Buffer.from('a buffer example').slice(0, 8)));
+        // 打印: true
+        console.log(buf.includes('this', 4));
+        // 打印: false
+        ```
+
+        ```js
+        const buf = Buffer.from('this is a buffer');
+
+        console.log(buf.indexOf('this'));
+        // 打印: 0
+        console.log(buf.indexOf('is'));
+        // 打印: 2
+        console.log(buf.indexOf(Buffer.from('a buffer')));
+        // 打印: 8
+        console.log(buf.indexOf(97));
+        // 打印: 8（97 是 'a' 的十进制 ASCII 值）
+        console.log(buf.indexOf(Buffer.from('a buffer example')));
+        // 打印: -1
+        console.log(buf.indexOf(Buffer.from('a buffer example').slice(0, 8)));
+        // 打印: 8
+
+        const utf16Buffer = Buffer.from('\u039a\u0391\u03a3\u03a3\u0395', 'utf16le');
+
+        console.log(utf16Buffer.indexOf('\u03a3', 0, 'utf16le'));
+        // 打印: 4
+        console.log(utf16Buffer.indexOf('\u03a3', -4, 'utf16le'));
+        // 打印: 6
+        ```
+
+        ```js
+        const b = Buffer.from('abcdef');
+
+        // 传入一个数值，但不是有效的字节。
+        // 打印：2，相当于查找 99 或 'c'。
+        console.log(b.indexOf(99.9));
+        console.log(b.indexOf(256 + 99));
+
+        // 传入被转换成 NaN 或 0 的 byteOffset。
+        // 打印：1，查找整个 buffer。
+        console.log(b.indexOf('b', undefined));
+        console.log(b.indexOf('b', {}));
+        console.log(b.indexOf('b', null));
+        console.log(b.indexOf('b', []));
+        ```
+
+        ```js
+        const buf = Buffer.from('this buffer is a buffer');
+
+        console.log(buf.lastIndexOf('this'));
+        // 打印: 0
+        console.log(buf.lastIndexOf('buffer'));
+        // 打印: 17
+        console.log(buf.lastIndexOf(Buffer.from('buffer')));
+        // 打印: 17
+        console.log(buf.lastIndexOf(97));
+        // 打印: 15（97 是 'a' 的十进制 ASCII 值）
+        console.log(buf.lastIndexOf(Buffer.from('yolo')));
+        // 打印: -1
+        console.log(buf.lastIndexOf('buffer', 5));
+        // 打印: 5
+        console.log(buf.lastIndexOf('buffer', 4));
+        // 打印: -1
+
+        const utf16Buffer = Buffer.from('\u039a\u0391\u03a3\u03a3\u0395', 'utf16le');
+
+        console.log(utf16Buffer.lastIndexOf('\u03a3', undefined, 'utf16le'));
+        // 打印: 6
+        console.log(utf16Buffer.lastIndexOf('\u03a3', -5, 'utf16le'));
+        // 打印: 4
+        ```
+
+        ```js
+        const b = Buffer.from('abcdef');
+
+        // 传入一个数值，但不是一个有效的字节。
+        // 输出：2，相当于查找 99 或 'c'。
+        console.log(b.lastIndexOf(99.9));
+        console.log(b.lastIndexOf(256 + 99));
+
+        // 传入被转换成 NaN 的 byteOffset。
+        // 输出：1，查找整个 buffer。
+        console.log(b.lastIndexOf('b', undefined));
+        console.log(b.lastIndexOf('b', {}));
+
+        // 传入被转换成 0 的 byteOffset。
+        // 输出：-1，相当于传入 0。
+        console.log(b.lastIndexOf('b', null));
+        console.log(b.lastIndexOf('b', []));
+        ```
+
+    * 切片
+
+        ```js
+        const buf = Buffer.from('buffer');
+
+        const copiedBuf = Uint8Array.prototype.slice.call(buf);
+        copiedBuf[0]++;
+        console.log(copiedBuf.toString());
+        // 打印: cuffer
+
+        console.log(buf.toString());
+        // 打印: buffer
+        ```
+
+    * 类型转换
+
+        ```js
+        const buf1 = Buffer.from([0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]);
+
+        console.log(buf1);
+        // 打印: <Buffer 01 02 03 04 05 06 07 08>
+
+        buf1.swap16();
+
+        console.log(buf1);
+        // 打印: <Buffer 02 01 04 03 06 05 08 07>
+
+        const buf2 = Buffer.from([0x1, 0x2, 0x3]);
+
+        buf2.swap16();
+        // 抛出异常 ERR_INVALID_BUFFER_SIZE。
+        ```
+
+        ```js
+        const buf1 = Buffer.from([0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]);
+
+        console.log(buf1);
+        // 打印: <Buffer 01 02 03 04 05 06 07 08>
+
+        buf1.swap32();
+
+        console.log(buf1);
+        // 打印: <Buffer 04 03 02 01 08 07 06 05>
+
+        const buf2 = Buffer.from([0x1, 0x2, 0x3]);
+
+        buf2.swap32();
+        // 抛出异常 ERR_INVALID_BUFFER_SIZE。
+        ```
+
+        ```js
+        const buf1 = Buffer.from([0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8]);
+
+        console.log(buf1);
+        // 打印: <Buffer 01 02 03 04 05 06 07 08>
+
+        buf1.swap64();
+
+        console.log(buf1);
+        // 打印: <Buffer 08 07 06 05 04 03 02 01>
+
+        const buf2 = Buffer.from([0x1, 0x2, 0x3]);
+
+        buf2.swap64();
+        // 抛出异常 ERR_INVALID_BUFFER_SIZE。
+        ```
+
+        ```js
+        const buf = Buffer.from([0x1, 0x2, 0x3, 0x4, 0x5]);
+        const json = JSON.stringify(buf);
+
+        console.log(json);
+        // 打印: {"type":"Buffer","data":[1,2,3,4,5]}
+
+        const copy = JSON.parse(json, (key, value) => {
+            return value && value.type === 'Buffer' ?
+                Buffer.from(value) :
+                value;
+        });
+
+        console.log(copy);
+        // 打印: <Buffer 01 02 03 04 05>
+        ```
+
+        ```js
+        const buf1 = Buffer.allocUnsafe(26);
+
+        for (let i = 0; i < 26; i++) {
+            // 97 是 'a' 的十进制 ASCII 值。
+            buf1[i] = i + 97;
+        }
+
+        console.log(buf1.toString('utf8'));
+        // 打印: abcdefghijklmnopqrstuvwxyz
+        console.log(buf1.toString('utf8', 0, 5));
+        // 打印: abcde
+
+        const buf2 = Buffer.from('tést');
+
+        console.log(buf2.toString('hex'));
+        // 打印: 74c3a97374
+        console.log(buf2.toString('utf8', 0, 3));
+        // 打印: té
+        console.log(buf2.toString(undefined, 0, 3));
+        // 打印: té
+        ```
+
+    * 写入
+
+        ```js
+        const buf = Buffer.alloc(256);
+
+        const len = buf.write('\u00bd + \u00bc = \u00be', 0);
+
+        console.log(`${len} 个字节: ${buf.toString('utf8', 0, len)}`);
+        // 打印: 12 个字节: ½ + ¼ = ¾
+
+        const buffer = Buffer.alloc(10);
+
+        const length = buffer.write('abcd', 8);
+
+        console.log(`${length} bytes: ${buffer.toString('utf8', 8, 10)}`);
+        // 打印: 2 个字节 : ab
+        ```
