@@ -1880,6 +1880,8 @@
 
    [一文学会使用 CSS 中的 min(), max(), clamp() 以及它们的使用场景](https://juejin.im/post/6857662252816793607#heading-4)
 
+   [CSS3 vmax的用法](https://www.cnblogs.com/knuzy/p/10173753.html)
+
 2. 详解：
 
     * 兼容性
@@ -1909,6 +1911,14 @@
           width: max(50%, 500px);
       }
       ```
+
+    * vmin/vmax
+
+      在做移动端页面开发时，会使得文字大小在横竖屏下保持一致。
+
+      vmin：当前vw和vh中较小的一个值
+
+      vmax：当前vw和vh中较大的一个值
 
     * clamp
 
