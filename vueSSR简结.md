@@ -10,6 +10,7 @@
 * [SplitChunks & Lodash & Vuetify tree shaking](https://ithelp.ithome.com.tw/articles/10207669)
 * [分享：nuxt中间件](https://blog.csdn.net/awseda/article/details/106227729)
 * [官网文档webpack配置](https://zh.nuxtjs.org/docs/2.x/configuration-glossary/configuration-build)
+* [nuxtjs 全局变量添加 asyncData 也可访问](http://quanzhan.applemei.com/webStack/TXpnNE5RPT0=)
 
 ## 目录
 
@@ -19,7 +20,8 @@
 * [简单通过vue-server-renderer实现ssr](#简单通过vue-server-renderer实现ssr)
 * [ssr代码约束](#ssr代码约束)
 * [使用vue-router的路由](#使用vue-router的路由)
-* [数据预取和状态](数据预取和状态)
+* [数据预取和状态](#数据预取和状态)
+* [store](#store)
 * [客户端激活](#客户端激活)
 * [什么是nuxt？](#什么是nuxt？)
 * [nuxt源码架构](#nuxt源码架构)
@@ -32,6 +34,7 @@
 * [nuxt的api属性和方法](#nuxt的api属性和方法)
 * [nuxt优化](#nuxt优化)
 * [nuxt插件](#nuxt插件)
+* [nuxt全局变量](#nuxt全局变量)
 * [nuxt后端restfulApi](#nuxt后端restfulApi)
 * [nuxt部署](#nuxt部署)
 
@@ -550,6 +553,71 @@ router.onReady(() => {
   }
   </script>
   ```
+
+## store
+
+/store/index.js
+```js
+export const state = () => ({
+  list: []
+})
+
+export const mutations = {
+  add(state, text) {
+    state.list.push({
+      text,
+      done: false
+    })
+  },
+  remove(state, { todo }) {
+    state.list.splice(state.list.indexOf(todo), 1)
+  },
+  toggle(state, todo) {
+    todo.done = !todo.done
+  }
+}
+```
+
+会自动编译
+```js
+new Vuex.Store({
+  state: () => ({
+    counter: 0
+  }),
+  mutations: {
+    increment(state) {
+      state.counter++
+    }
+  },
+  modules: {
+    todos: {
+      namespaced: true,
+      state: () => ({
+        list: []
+      }),
+      mutations: {
+        add(state, { text }) {
+          state.list.push({
+            text,
+            done: false
+          })
+        },
+        remove(state, { todo }) {
+          state.list.splice(state.list.indexOf(todo), 1)
+        },
+        toggle(state, { todo }) {
+          todo.done = !todo.done
+        }
+      }
+    }
+  }
+})
+```
+
+页面直接使用
+```js
+this.$store.state.xxx
+```
 
 ## 客户端激活
 
@@ -1388,6 +1456,7 @@ build: {
 }
 ```
 
+
 ## nuxt插件
 
 /plugins/request-cache.js
@@ -1443,6 +1512,42 @@ async asyncData (context) {
   })
   return { result }
 }
+```
+
+## nuxt全局变量
+
+/plugins/webconfig.js
+```js
+import Vue from 'vue' // vue 文件引入 - 方便在vue方法内容直接 this 调取
+
+const urlPrefix = 'http://localhost:6666/'
+
+const main = {
+  install (Vue) {
+    Vue.prototype.urlPrefix = urlPrefix // 变量的内容 后期可以在vue中 this->$api.xxx 使用
+  }
+}
+
+Vue.use(main) // 这里不能丢
+
+// 这里是 为了在 asyncData 方法中使用
+export default ({ app }, inject) => {
+  // Set the function directly on the context.app object
+  app.$api = urlPrefix // 名称
+}
+```
+
+nuxt.config.js
+```js
+{ src: '@/plugins/webconfig.js', ssr: false },
+```
+
+页面
+```js
+mounted () {
+  console.log('mounted')
+  this.prefix = (this as any).urlPrefix
+},
 ```
 
 ## nuxt后端restfulApi
