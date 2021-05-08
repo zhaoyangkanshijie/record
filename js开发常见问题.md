@@ -6994,6 +6994,8 @@
 
   [Pointer_Lock_API](https://developer.mozilla.org/zh-CN/docs/Web/API/Pointer_Lock_API)
 
+  [全屏,HTML5全屏API,FullScreen功能方法](https://www.jq22.com/webqd2471)
+
 2. 详解
 
     web api 对 IE 完全不兼容，其它浏览器页需要较新版本
@@ -7088,7 +7090,7 @@
     </script>
     ```
 
-    * Fullscreen API
+    * HTML5 Fullscreen API
 
     全屏播放
 
@@ -7110,6 +7112,159 @@
             }
         }
     </script>
+    ```
+
+    全屏视频覆盖控件(div/img/canvas/video/button均可全屏)
+
+    ```html
+    <!DOCTYPE html>
+    <html>
+
+    <head>
+      <title>full screen example</title>
+      <style>
+        section {
+          float: left;
+          margin: 10px;
+          width: 260px;
+          height: 200px;
+          font-size: 24px;
+          text-align: center;
+          line-height: 36px;
+          border: 1px solid gray;
+          overflow: hidden;
+        }
+
+        section div,
+        img,
+        canvas,
+        video,
+        button {
+          display: block;
+          margin: auto;
+          width: 100%;
+          cursor: pointer;
+        }
+
+        div {
+          min-height: 156px;
+          line-height: 156px;
+          color: white;
+          font-weight: bold;
+          background-color: #FF00E3;
+        }
+
+        canvas {
+          background-color: blue;
+        }
+
+        video {
+          background-color: #666;
+        }
+
+        button {
+          min-height: 156px;
+          line-height: 156px;
+          color: white;
+          font-size: 24px;
+          font-weight: bold;
+          background-color: #0AAF00;
+        }
+      </style>
+    </head>
+
+    <body>
+      <section>
+        <div id="div">div 点我全屏给你看哦</div>DIV全屏
+      </section>
+
+      <section>
+        <img id="img" src="http://www.jq22.com/img/cs/500x300-1.png">图片全屏
+      </section>
+
+      <section>
+        <canvas id="canvas"></canvas>canvas全屏
+      </section>
+
+      <section>
+        <video id="video" src="http://jq22.qiniudn.com/jq22com.webm" controls=""></video>视频全屏
+      </section>
+
+      <section>
+        <button id="button">button点我全屏</button>按扭全屏
+      </section>
+
+      <script>
+        window.onload = function () {
+
+          //打开全屏方法
+          function openFullscreen(element) {
+            if (element.requestFullscreen) {
+              element.requestFullscreen();
+            } else if (element.mozRequestFullScreen) {
+              element.mozRequestFullScreen();
+            } else if (element.msRequestFullscreen) {
+              element.msRequestFullscreen();
+            } else if (element.webkitRequestFullscreen) {
+              element.webkitRequestFullScreen();
+            }
+          }
+
+          //退出全屏方法
+          function exitFullScreen() {
+            if (document.exitFullscreen) {
+              document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+              document.mozCancelFullScreen();
+            } else if (document.msExitFullscreen) {
+              document.msExiFullscreen();
+            } else if (document.webkitCancelFullScreen) {
+              document.webkitCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+              document.webkitExitFullscreen();
+            }
+          }
+
+          //div全屏(全屏方法1)
+          document.getElementById("div").addEventListener('click', function () {
+            openFullscreen(this); //调用上面全屏方法1
+          }, false);
+
+          //img全屏
+          document.getElementById("img").addEventListener('click', function () {
+            //全屏方法2
+            var RFSN = document.documentElement.requestFullScreen || document.documentElement.webkitRequestFullScreen || document.documentElement.mozRequestFullScreen || document.documentElement.msRequestFullScreen;
+            if (RFSN) {
+              RFSN.call(this);
+            } else if (typeof window.ActiveXObject != "undefined") {
+              var wscript = new ActiveXObject("WScript.Shell");
+              if (wscript != null) {
+                wscript.SendKeys("{F11}");
+              }
+            }
+          }, false);
+
+          //canvas全屏
+          document.getElementById("canvas").addEventListener('click', function () {
+            openFullscreen(this);
+          }, false);
+
+
+          //视频全屏
+          document.getElementById("video").addEventListener('click', function () {
+            openFullscreen(this);
+          }, false);
+
+          //按扭全屏
+          document.getElementById("button").addEventListener('click', function () {
+            openFullscreen(this);
+          }, false);
+
+        }
+      </script>
+    </body>
+
+    </html>
     ```
 
     * Web Speech API
