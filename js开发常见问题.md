@@ -1903,6 +1903,8 @@
 
    [js 窗口尺寸获取常用属性](https://blog.csdn.net/csdnxcn/article/details/77886499)
 
+   [mousedown和mousemove的时候，offsetX和offsetY坐标不准确](https://blog.csdn.net/qlingsu/article/details/109103944)
+
 2. 详解：
 
    外层蓝色父元素与包裹内层红色子元素，虚线与实线间为 margin，深色区为 border-width，内虚线到深色区为 padding，内层灰色区为滚动区。
@@ -1938,6 +1940,20 @@
      - offsetHeight:距离父元素顶部距离(包含边线)
      - offsetY:指针距离元素顶部距离(不含 border，旋转不变)
 
+        - mousedown和mousemove的时候，offsetX和offsetY坐标不准确问题
+
+          ```js
+          mousedownEvent(event){
+            let rect = event.currentTarget.getBoundingClientRect();
+            let offsetX = event.clientX - rect.left;
+            let offsetY = event.clientY - rect.top;
+          }
+          mousemoveEvent(event) {
+            let left = event.clientX - offsetX;
+            let top = event.clientY - offsetY;
+          }
+          ```
+
    - layer 相关
 
      - layerY:指针距离元素顶部距离(含 border，旋转不变)
@@ -1957,6 +1973,420 @@
      - screenY:指针距离屏幕顶部距离
 
    - y:指针相对于当前文档 y 坐标
+
+   - 实践(视频进度条与音量条)
+
+      ```html
+      <template>
+        <div class="my-video" ref="videoComponent">
+          <video class="video-content" :src="src" ref="videoContent"></video>
+          <p class="video-title">{{title}}</p>
+          <div class="video-control">
+              <div class="video-start" @click="play()" v-show="!playing">始</div>
+              <div class="video-stop" @click="pause()" v-show="playing">停</div>
+              <div class="video-next">下</div>
+              <div class="video-now">{{now}}</div>
+              <div class="video-progress" @mousedown.stop="mousedownProgress($event)" ref="progress">
+                  <div class="progress-bar" :style="{width:progress +'%'}">
+                      <div class="progress-button" @mousedown.stop="mousedownProgressButton($event)"></div>
+                  </div>
+              </div>
+              <div class="video-total">{{total}}</div>
+              <div class="video-voice" @click.stop="showVoice = !showVoice">
+                  <div class="voice-box" @click.stop="" v-if="showVoice">
+                      <p class="voice-number">{{voice}}</p>
+                      <div class="voice-bg" @mousedown.stop="mousedownVoice($event)" ref="voice">
+                          <div class="voice-bar" :style="{height:voice +'%'}">
+                              <div class="voice-botton" @mousedown.stop="mousedownVoiceButton($event)"></div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              <div class="video-full" @click="full()" v-show="!fullscreen">全</div>
+              <div class="video-exit" @click="exit()" v-show="fullscreen">退</div>
+          </div>
+        </div>
+      </template>
+
+      <script>
+      export default {
+        name: 'my-video',
+        props: {
+            title: [String],
+            src: [String]
+        },
+        data() {
+            return {
+                playing: false,
+                fullscreen: false,
+                nowTimer: null,
+                now: 0,
+                progress: 0,
+                total: 100,
+                voice: 0,
+                showVoice: false
+            };
+        },
+        methods: {
+            openFullscreen(element) {
+                if (element.requestFullscreen) {
+                    element.requestFullscreen();
+                } else if (element.mozRequestFullScreen) {
+                    element.mozRequestFullScreen();
+                } else if (element.msRequestFullscreen) {
+                    element.msRequestFullscreen();
+                } else if (element.webkitRequestFullscreen) {
+                    element.webkitRequestFullScreen();
+                }
+            },
+            exitFullScreen() {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExiFullscreen();
+                } else if (document.webkitCancelFullScreen) {
+                    document.webkitCancelFullScreen();
+
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            },
+            play() {
+                this.$refs.videoContent.play();
+                this.playing = true;
+                this.nowTimer = setInterval(() => {
+                    this.getCurrentTime();
+                    this.getProgress();
+                },1000);
+            },
+            pause() {
+                this.$refs.videoContent.pause();
+                this.playing = false;
+                clearInterval(this.nowTimer);
+            },
+            getDuration() {
+                let video = this.$refs.videoContent;
+                let getVideo = setInterval(()=>{
+                    if (!isNaN(video.duration)) {
+                        let total = parseInt(video.duration);
+                        let integer = parseInt(total / 60);
+                        let decimal = total - integer * 60;
+                        this.total = (integer < 10 ? "0" + integer : integer) + ":" + (decimal < 10 ? "0" + decimal : decimal);
+                        //console.log(video.duration);
+                        clearInterval(getVideo);
+                    } else {
+                        this.total = '正在获取时长...';
+                        console.log('正在获取时长...');
+                    }
+                }, 100);
+            },
+            getCurrentTime() {
+                let now = parseInt(this.$refs.videoContent.currentTime);
+                let integer = parseInt(now / 60);
+                let decimal = now - integer * 60;
+                this.now = (integer < 10 ? "0" + integer : integer) + ":" + (decimal < 10 ? "0" + decimal : decimal);
+            },
+            getProgress() {
+                this.progress = (this.$refs.videoContent.currentTime * 100 / this.$refs.videoContent.duration).toFixed(2);
+            },
+            setProgress(percent) {
+                this.progress = percent;
+                if (this.progress > 100) {
+                    this.progress = 100;
+                }
+                else if (this.progress < 0) {
+                    this.progress = 0;
+                }
+                this.$refs.videoContent.currentTime = parseInt(this.$refs.videoContent.duration / 100 * this.progress);
+                this.getCurrentTime();
+            },
+            mousedownProgress(event) {
+                let progressPercent = (event.offsetX * 100 / this.$refs.progress.clientWidth).toFixed(2);
+                this.setProgress(progressPercent);
+                
+                let oldX = event.screenX;
+                let oldProgress = this.progress;
+                let oldTime = new Date().getTime();
+                
+                document.onmousemove = (e) => {
+                    let nowTime = new Date().getTime();
+                    if (nowTime - oldTime > 100) {
+                        oldTime = nowTime;
+
+                        let newX = e.screenX;
+                        let left = newX - oldX;
+                        let progressMovePercent = parseFloat(oldProgress) + parseFloat((left * 100 / this.$refs.progress.clientWidth).toFixed(2));
+                        this.setProgress(progressMovePercent);
+                    }
+                };
+                document.onmouseup = (e) => {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            },
+            mousedownProgressButton(event) {
+                let oldX = event.screenX;
+                let oldProgress = this.progress;
+                let oldTime = new Date().getTime();
+
+                document.onmousemove = (e) => {
+                    let nowTime = new Date().getTime();
+                    if (nowTime - oldTime > 100) {
+                        oldTime = nowTime;
+
+                        let newX = e.screenX;
+                        let left = newX - oldX;
+                        let progressMovePercent = parseFloat(oldProgress) + parseFloat((left * 100 / this.$refs.progress.clientWidth).toFixed(2));
+                        this.setProgress(progressMovePercent);
+                    }
+                };
+                document.onmouseup = (e) => {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            },
+            getVolume() {
+                this.voice = this.$refs.videoContent.volume * 100;
+            },
+            setVolume(volume) {
+                this.voice = volume;
+                if (this.voice > 100) {
+                    this.voice = 100;
+                }
+                else if (this.voice < 0) {
+                    this.voice = 0;
+                }
+                this.$refs.videoContent.volume = (this.voice / 100).toFixed(2);
+            },
+            mousedownVoice(event) {
+                let rect = event.currentTarget.getBoundingClientRect();
+                //let volume = parseInt((this.$refs.voice.clientHeight - event.offsetY) * 100 / this.$refs.voice.clientHeight);
+                let volume = parseInt(this.$refs.voice.clientHeight - (event.clientY - rect.top));
+                //console.log(event.offsetY, this.$refs.voice.clientHeight, volume, event.clientY - rect.top)
+                this.setVolume(volume);
+
+                let oldY = event.screenY;
+                let oldVoice = this.voice;
+                let oldTime = new Date().getTime();
+
+                document.onmousemove = (e) => {
+                    let nowTime = new Date().getTime();
+                    if (nowTime - oldTime > 100) {
+                        oldTime = nowTime;
+
+                        let newY = e.screenY;
+                        let top = oldY - newY;
+                        let volumeMove = parseInt(oldVoice) + parseInt(top * 100 / this.$refs.voice.clientHeight);
+                        this.setVolume(volumeMove);
+                    }
+                };
+                document.onmouseup = (e) => {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            },
+            mousedownVoiceButton(event) {
+                let oldY = event.screenY;
+                let oldVoice = this.voice;
+                let oldTime = new Date().getTime();
+
+                document.onmousemove = (e) => {
+                    let nowTime = new Date().getTime();
+                    if (nowTime - oldTime > 100) {
+                        oldTime = nowTime;
+
+                        let newY = e.screenY;
+                        let top = oldY - newY;
+                        let volumeMove = parseInt(oldVoice) + parseInt(top * 100 / this.$refs.voice.clientHeight);
+                        this.setVolume(volumeMove);
+                    }
+                };
+                document.onmouseup = (e) => {
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            },
+            full() {
+                this.openFullscreen(this.$refs.videoComponent);
+                this.fullscreen = true;
+            },
+            exit() {
+                this.exitFullScreen(this.$refs.videoComponent);
+                this.fullscreen = false;
+            }
+        },
+        mounted() {
+            this.getDuration();
+            this.getCurrentTime();
+            //console.log(this.$refs.videoContent.volume);
+        },
+        beforeDestory() {
+            clearInterval(this.nowTimer);
+        }
+      }
+      </script>
+
+      <!-- Add "scoped" attribute to limit CSS to this component only -->
+      <style scoped lang="scss">
+      .my-video {
+          width: 1200px;
+          margin: 0 auto;
+          position: relative;
+
+          .video-content {
+              display: block;
+              width: 100%;
+              height: 100%;
+          }
+
+          .video-title {
+              position: absolute;
+              z-index: 1;
+              top: 0;
+              left: 0;
+          }
+
+          .video-control {
+              position: absolute;
+              z-index: 1;
+              bottom: 0;
+              left: 0;
+              display: flex;
+              width: 100%;
+              height: 32px;
+              background: rgba(0,0,0,.5);
+              cursor: pointer;
+
+              .video-start {
+                  width: 24px;
+                  height: 24px;
+                  background: #ff0000;
+              }
+
+              .video-stop {
+                  width: 24px;
+                  height: 24px;
+                  background: #00ff21;
+              }
+
+              .video-next {
+                  width: 24px;
+                  height: 24px;
+                  background: #ffffff;
+              }
+
+              .video-now {
+                  font-size: 12px;
+                  color: #FFFFFF;
+                  font-weight: bold;
+              }
+
+              .video-progress {
+                  width: 600px;
+                  height: 6px;
+                  background: rgba(255,255,255,0.4);
+                  border-radius: 3px;
+
+                  .progress-bar {
+                      background: #00AAFF;
+                      height: 6px;
+                      width: 0%;
+                      border-radius: 3px;
+                      position: relative;
+
+                      .progress-button {
+                          width: 8px;
+                          height: 16px;
+                          background: #FFFFFF;
+                          box-shadow: 0 0 8px 0 rgba(0,170,255,0.50);
+                          border-radius: 2px;
+                          position: absolute;
+                          right: -8px;
+                          top: -5px;
+                          z-index: 3;
+                      }
+                  }
+              }
+
+              .video-total {
+                  font-size: 12px;
+                  color: #FFFFFF;
+                  font-weight: bold;
+              }
+
+              .video-voice {
+                  width: 24px;
+                  height: 24px;
+                  background: #00AAFF;
+                  position: relative;
+
+                  .voice-box {
+                      position: absolute;
+                      width: 24px;
+                      height: 160px;
+                      background: rgba(0,0,0,.6);
+                      border-radius: 2px;
+                      bottom: 39px;
+                      left: 0;
+                      padding: 2px 0;
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+
+                      .voice-number {
+                          width: 24px;
+                          height: 24px;
+                          color: #fff;
+                          line-height: 24px;
+                          font-size: 12px;
+                          text-align: center;
+                          margin-bottom: 2px;
+                      }
+
+                      .voice-bg {
+                          width: 8px;
+                          height: 100px;
+                          background-color: #fff;
+                          display: flex;
+                          flex-direction: column-reverse;
+
+                          .voice-bar {
+                              width: 8px;
+                              background-color: #08f;
+                              position: relative;
+
+                              .voice-botton {
+                                  width: 14px;
+                                  height: 14px;
+                                  position: absolute;
+                                  border-radius: 14px;
+                                  background-color: #fff;
+                                  top: -7px;
+                                  left: -3px;
+                                  cursor: pointer;
+                              }
+                          }
+                      }
+                  }
+              }
+
+              .video-full {
+                  width: 24px;
+                  height: 24px;
+                  background: #ff6a00;
+              }
+
+              .video-exit {
+                  width: 24px;
+                  height: 24px;
+                  background: #ff6a00;
+              }
+          }
+      }
+      </style>
+      ```
 
 
 ### delete 操作符
