@@ -64,6 +64,10 @@
 * [typescript样例](#typescript样例)
 * [vue.use和vue.component](#vue.use和vue.component)
 * [路由懒加载原理](#路由懒加载原理)
+* [vue中使用了哪些设计模式](#vue中使用了哪些设计模式)
+* [nextTick使用场景和原理](#nextTick使用场景和原理)
+* [Vue.extend作用和原理](#Vue.extend作用和原理)
+* [Vue修饰符](#Vue修饰符)
 
 ---
 
@@ -82,9 +86,30 @@
 
 参考：[分享8个非常实用的Vue自定义指令](https://juejin.cn/post/6906028995133833230)
 
+指令本质上是装饰器，是 vue 对 HTML 元素的扩展，给 HTML 元素增加自定义功能。vue 编译 DOM 时，会找到指令对象，执行指令的相关方法。
+
+自定义指令有五个生命周期（也叫钩子函数），分别是 bind、inserted、update、componentUpdated、unbind
+
+1. bind：只调用一次，指令第一次绑定到元素时调用。在这里可以进行一次性的初始化设置。
+
+2. inserted：被绑定元素插入父节点时调用 (仅保证父节点存在，但不一定已被插入文档中)。
+
+3. update：被绑定于元素所在的模板更新时调用，而无论绑定值是否变化。通过比较更新前后的绑定值，可以忽略不必要的模板更新。
+
+4. componentUpdated：被绑定元素所在模板完成一次更新周期时调用。
+
+5. unbind：只调用一次，指令与元素解绑时调用。
+
 * 全局定义指令：在 vue 对象的 directive 方法里面有两个参数，一个是指令名称，另外一个是函数。组件内定义指令：directives
 * 钩子函数：bind（绑定事件触发）、inserted(节点插入的时候触发)、update（组件内相关更新）
 * 钩子函数参数：el、binding
+
+原理
+
+1. 在生成 ast 语法树时，遇到指令会给当前元素添加 directives 属性
+2. 通过 genDirectives 生成指令代码
+3. 在 patch 前将指令的钩子提取到 cbs 中,在 patch 过程中调用对应的钩子
+4. 当执行指令对应钩子函数时，调用对应指令定义的方法
 
 例子：
 
@@ -555,6 +580,35 @@ export default draggable
 * 销毁前/后：
   * 在执行 destroy 方法后，对 data 的改变不会再触发周期函数，说明此时 vue 实例已经解除了事件监听以及和 dom 的绑定，但是 dom 结构依然存在
 
+* 实现方法
+
+  利用发布订阅模式先把用户传入的的生命周期钩子订阅好（内部采用数组的方式存储）然后在创建组件实例的过程中会一次执行对应的钩子方法（发布）
+
+  ```js
+  export function callHook(vm, hook) {
+    // 依次执行生命周期对应的方法
+    const handlers = vm.$options[hook];
+    if (handlers) {
+      for (let i = 0; i < handlers.length; i++) {
+        handlers[i].call(vm); //生命周期里面的this指向当前实例
+      }
+    }
+  }
+
+  // 调用的时候
+  Vue.prototype._init = function (options) {
+    const vm = this;
+    vm.$options = mergeOptions(vm.constructor.options, options);
+    callHook(vm, "beforeCreate"); //初始化数据之前
+    // 初始化状态
+    initState(vm);
+    callHook(vm, "created"); //初始化数据之后
+    if (vm.$options.el) {
+      vm.$mount(vm.$options.el);
+    }
+  };
+  ```
+
 ## 自定义指令生命周期
 
 * bind:指令第一次绑定到元素时调用，定义绑定时执行一次的初始化动作。
@@ -919,6 +973,22 @@ const router = new VueRouter({
   ],
 });
 ```
+
+* 导航解析流程
+
+1. 导航被触发。
+2. 在失活的组件里调用 beforeRouteLeave 守卫。
+3. 调用全局的 beforeEach 守卫。
+4. 在重用的组件里调用 beforeRouteUpdate 守卫 (2.2+)。
+5. 在路由配置里调用 beforeEnter。
+6. 解析异步路由组件。
+7. 在被激活的组件里调用 beforeRouteEnter。
+8. 调用全局的 beforeResolve 守卫 (2.5+)。
+9. 导航被确认。
+10. 调用全局的 afterEach 钩子。
+11. 触发 DOM 更新。
+12. 调用 beforeRouteEnter 守卫中传给 next 的回调函数，创建好的组件实例会作为回调函数的参数传入。
+
 
 * vue3 router
 
@@ -4190,7 +4260,59 @@ v-model是用来在表单控件或者组件上创建双向绑定的,本质是v-b
 
 * Mixin 使我们能够为 Vue 组件编写可插拔和可重用的功能。
 * 多个组件之间重用一组组件选项，例如生命周期 hook、 方法等，则可以将其编写为 mixin，并在组件中引用。
+* 当组件初始化时会调用 mergeOptions 方法进行合并，采用策略模式针对不同的属性进行合并。
 * 如果你在 mixin 中定义生命周期 hook，执行时将优先于组件自已的 hook。
+
+```js
+export default function initMixin(Vue){
+  Vue.mixin = function (mixin) {
+    //   合并对象
+      this.options=mergeOptions(this.options,mixin)
+  };
+}
+};
+
+// src/util/index.js
+// 定义生命周期
+export const LIFECYCLE_HOOKS = [
+  "beforeCreate",
+  "created",
+  "beforeMount",
+  "mounted",
+  "beforeUpdate",
+  "updated",
+  "beforeDestroy",
+  "destroyed",
+];
+
+// 合并策略
+const strats = {};
+// mixin核心方法
+export function mergeOptions(parent, child) {
+  const options = {};
+  // 遍历父亲
+  for (let k in parent) {
+    mergeFiled(k);
+  }
+  // 父亲没有 儿子有
+  for (let k in child) {
+    if (!parent.hasOwnProperty(k)) {
+      mergeFiled(k);
+    }
+  }
+
+  //真正合并字段方法
+  function mergeFiled(k) {
+    if (strats[k]) {
+      options[k] = strats[k](parent[k], child[k]);
+    } else {
+      // 默认策略
+      options[k] = child[k] ? child[k] : parent[k];
+    }
+  }
+  return options;
+}
+```
 
 ## Vue模版编译原理
 
@@ -4436,6 +4558,17 @@ Vue.directive('loading', {
 4. 函数式组件不能通过$emit对外暴露事件，调用事件只能通过context.listeners.click的方式调用外部传入的事件
 5. 因为函数式组件是没有实例化的，所以在外部通过ref去引用组件时，实际引用的是HTMLElement
 6. 函数式组件的props可以不用显示声明，所以没有在props里面声明的属性都会被自动隐式解析为prop,而普通组件所有未声明的属性都被解析到$attrs里面，并自动挂载到组件根元素上面(可以通过inheritAttrs属性禁止)
+
+优点
+
+1. 由于函数式组件不需要实例化，无状态，没有生命周期，所以渲染性能要好于普通组件
+2. 函数式组件结构比较简单，代码结构更清晰
+
+使用场景：
+
+1. 一个简单的展示组件，作为容器组件使用 比如 router-view 就是一个函数式组件
+
+2. “高阶组件”——用于接收一个组件作为参数，返回一个被包装过的组件
 
 ```js
 export default {
@@ -6321,3 +6454,143 @@ function load(component) {
   * installedChunks[chunkId]为Promise对象，代表该chunk正在加载。
 * 处理chunk加载超时和加载出错的场景。
   * reject，抛出错误
+
+## vue 中使用了哪些设计模式
+
+1. 工厂模式 - 传入参数即可创建实例
+
+  虚拟 DOM 根据参数的不同返回基础标签的 Vnode 和组件 Vnode
+
+2. 单例模式 - 整个程序有且仅有一个实例
+
+  vuex 和 vue-router 的插件注册方法 install 判断如果系统存在实例就直接返回掉
+
+3. 发布-订阅模式 (vue 事件机制)
+
+4. 观察者模式 (响应式数据原理)
+
+5. 装饰模式: (@装饰器的用法)
+
+6. 策略模式 策略模式指对象有某个行为,但是在不同的场景中,该行为有不同的实现方案-比如选项的合并策略
+
+## nextTick使用场景和原理
+
+nextTick 中的回调是在下次 DOM 更新循环结束之后执行的延迟回调。在修改数据之后立即使用这个方法，获取更新后的 DOM。主要思路就是采用微任务优先的方式调用异步方法去执行 nextTick 包装的方法
+
+```js
+let callbacks = [];
+let pending = false;
+function flushCallbacks() {
+  pending = false; //把标志还原为false
+  // 依次执行回调
+  for (let i = 0; i < callbacks.length; i++) {
+    callbacks[i]();
+  }
+}
+let timerFunc; //定义异步方法  采用优雅降级
+if (typeof Promise !== "undefined") {
+  // 如果支持promise
+  const p = Promise.resolve();
+  timerFunc = () => {
+    p.then(flushCallbacks);
+  };
+} else if (typeof MutationObserver !== "undefined") {
+  // MutationObserver 主要是监听dom变化 也是一个异步方法
+  let counter = 1;
+  const observer = new MutationObserver(flushCallbacks);
+  const textNode = document.createTextNode(String(counter));
+  observer.observe(textNode, {
+    characterData: true,
+  });
+  timerFunc = () => {
+    counter = (counter + 1) % 2;
+    textNode.data = String(counter);
+  };
+} else if (typeof setImmediate !== "undefined") {
+  // 如果前面都不支持 判断setImmediate
+  timerFunc = () => {
+    setImmediate(flushCallbacks);
+  };
+} else {
+  // 最后降级采用setTimeout
+  timerFunc = () => {
+    setTimeout(flushCallbacks, 0);
+  };
+}
+
+export function nextTick(cb) {
+  // 除了渲染watcher  还有用户自己手动调用的nextTick 一起被收集到数组
+  callbacks.push(cb);
+  if (!pending) {
+    // 如果多次调用nextTick  只会执行一次异步 等异步队列清空之后再把标志变为false
+    pending = true;
+    timerFunc();
+  }
+}
+```
+
+## Vue.extend作用和原理
+
+Vue.extend 使用基础 Vue 构造器，创建一个“子类”。参数是一个包含组件选项的对象。
+
+使用原型继承的方法返回了 Vue 的子类 并且利用 mergeOptions 把传入组件的 options 和父类的 options 进行了合并
+
+```JS
+export default function initExtend(Vue) {
+  let cid = 0; //组件的唯一标识
+  // 创建子类继承Vue父类 便于属性扩展
+  Vue.extend = function (extendOptions) {
+    // 创建子类的构造函数 并且调用初始化方法
+    const Sub = function VueComponent(options) {
+      this._init(options); //调用Vue初始化方法
+    };
+    Sub.cid = cid++;
+    Sub.prototype = Object.create(this.prototype); // 子类原型指向父类
+    Sub.prototype.constructor = Sub; //constructor指向自己
+    Sub.options = mergeOptions(this.options, extendOptions); //合并自己的options和父类的options
+    return Sub;
+  };
+}
+```
+
+## Vue修饰符
+
+* 事件修饰符
+
+  * .stop 阻止事件继续传播
+  * .prevent 阻止标签默认行为
+  * .capture 使用事件捕获模式,即元素自身触发的事件先在此处处理，然后才交由内部元素进行处理
+  * .self 只当在 event.target 是当前元素自身时触发处理函数
+  * .once 事件将只会触发一次
+  * .passive 告诉浏览器你不想阻止事件的默认行为
+
+* v-model 的修饰符
+
+  * .lazy 通过这个修饰符，转变为在 change 事件再同步
+  * .number 自动将用户的输入值转化为数值类型
+  * .trim 自动过滤用户输入的首尾空格
+
+* 键盘事件的修饰符
+
+  * .enter
+  * .tab
+  * .delete (捕获“删除”和“退格”键)
+  * .esc
+  * .space
+  * .up
+  * .down
+  * .left
+  * .right
+
+* 系统修饰键
+
+  * .ctrl
+  * .alt
+  * .shift
+  * .meta
+
+* 鼠标按钮修饰符
+
+  * .left
+  * .right
+  * .middle
