@@ -7,6 +7,10 @@
 * [反向代理](#反向代理)
 * [配置邮箱](#配置邮箱)
 * [配置https](#配置https)
+* [目录信息分享](#目录信息分享)
+* [限制访问速度](#限制访问速度)
+* [记录access日志](#记录access日志)
+* [配置缓存服务器](#配置缓存服务器)
 
 ## 命令操作
 
@@ -537,3 +541,99 @@
         3. 创建签名请求的证书（CSR）openssl req -new -key server.key -out server.csr
         4. 设置信息
         5. 最后标记证书使用上述私钥和CSR：openssl x509 -req -days 365 -in server.csr -signkey server.key -out server.crt
+
+## 目录信息分享
+
+1. 参考链接：
+
+    * [前端必备的Nginx知识](https://juejin.cn/post/6963437199811411975)
+
+2. 详解
+
+    使用autoindex可以将一个目录信息分享给用户，用户根据自己需求打开对应目录。
+
+    开启了autoindex后，还是不会返回目录结构。可能是因为配置index指令，index指令优先级会大于autoindex指令。
+
+    index：当访问/时会返回index指令的文件内容。index file，默认值是index.html，可以出现在http、server和location指令块中。
+
+    autoindex：当url以/结尾时，尝试以html/xml/json等格式返回root/alias中指向目录的目录结构
+
+## 限制访问速度
+
+1. 参考链接：
+
+    * [前端必备的Nginx知识](https://juejin.cn/post/6963437199811411975)
+
+2. 详解
+
+    因为公网带宽是有限的，当有许多用户同时访问时，他们是一个增强关系。这时可能需要用户访问一些大文件时限制访问速度，以确保能有足够的带宽使得其他用户能够访问一些例如css，js等基础文件。
+
+    set $limit_rate 1k;
+
+## 记录access日志
+
+1. 参考链接：
+
+    * [前端必备的Nginx知识](https://juejin.cn/post/6963437199811411975)
+
+2. 详解
+
+    log_format格式允许设置一个名字，这就可以对不同用途时记录不同格式的日志文件。
+
+    ```txt
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" ' '$status $body_bytes_sent "$http_referer" ' '"$http_user_agent" "$http_x_forwarded_for" '
+    ```
+
+    * 内置变量：
+
+        * $remote_addr:表示远端的ip地址，也就是浏览器的ip地址
+        * $remote_user：表示用户名提供基本身份验证
+        * $time_local：表示访问时间
+        * $request：完整的原始请求行
+        * $status：表示响应状态
+        * $body_bytes_sent：发送给客户端的body字节数
+        * $http_referer：表示从哪跳转过来
+        * $http_user_agent：用户浏览器的类别，版本以及操作系统的一些信息
+        * $http_x_forwarded_for：客户端请求头中的"X-Forwarded-For"
+
+    access_log所在哪个server块中，就表示这类请求的日志都记录在access_log设置的地方
+
+    ```txt
+    server {
+        ...
+        access_log logs/access.log main;
+    } 
+    ```
+
+## 配置缓存服务器
+
+1. 参考链接：
+
+    * [前端必备的Nginx知识](https://juejin.cn/post/6963437199811411975)
+
+2. 详解
+
+    当nginx作为反向代理时，通常只有动态请求也就是不同用户访问同一个url时看到的内容是不同的，这是才会交由上游服务处理。有些内容一段时间内不会发生变化的，为了减轻上游服务的处理压力，就会让nginx缓存上游服务的返回信息一段时间。在这段时间内，是不会向上游服务请求的。
+
+    首先配置proxy_cache_pass指令，比如缓存文件写在哪、文件的命名方式、开多大的共享内存等控制缓存的属性
+
+    ```txt
+    proxy_cache_path /opt/niginx/nginxcache levels=1:2 keys_zone=my_cache:10m max_size=10g inactive=60m use_temp_path=off;
+    ```
+
+    使用的时候，只需配置proxy_cache指令即可
+
+    ```txt
+    server {
+        ...
+        location / {
+            ...
+            proxy_cache my_cache;
+            proxy_cache_key $host$uri$is_args$args;
+            proxy_cache_valid 200 304 302 1d;
+            ...
+        }
+    }
+    ```
+
+    同一个url访问时，对不同的用户可能返回的内容是不同的。所以key的配置中需要包含用户的变量，$host$uri$is_args$args是一个比较简单的key，只跟host、uri和一些参数作为整体key。 vaild指定是针对哪些响应不返回。
