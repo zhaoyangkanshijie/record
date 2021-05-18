@@ -419,7 +419,7 @@
 
         给出的方案：event.persist()，其实就是将当前的合成事件从事件池中移除了，所以能够继续保有对该事件的引用以及仍然能访问该事件的属性。
         ```js
-        setTPLinkId(e) {
+        setId(e) {
             this.setState({
                 id: e.target.value
             })

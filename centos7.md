@@ -29,10 +29,10 @@ systemctl restart mariadb.service
 
 ## 远程传文件夹
 ```shell
-$ scp -r TPLINKmWebsite root@172.31.249.6:/var/www
+$ scp -r mWebsite root@172.31.249.6:/var/www
 ```
 命令含义：
-* TPLINKmWebsite #起始路径文件
+* mWebsite #起始路径文件
 * root@172.31.249.6:/var/www #目的路径
 
 ## 防火墙设置
