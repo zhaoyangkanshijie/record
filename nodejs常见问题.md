@@ -31,6 +31,8 @@
 - [性能钩子](#性能钩子)
 - [inspect调试器](#inspect调试器)
 - [Buffer缓冲器](#Buffer缓冲器)
+- [ORM框架](#ORM框架)
+- [定时任务框架](#定时任务框架)
 
 ---
 
@@ -3983,3 +3985,481 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         console.log(`${length} bytes: ${buffer.toString('utf8', 8, 10)}`);
         // 打印: 2 个字节 : ab
         ```
+
+### ORM框架
+
+1. 参考链接：
+
+   [Nodejs之ORM框架](https://www.jianshu.com/p/0738e29d8af3)
+
+   [TypeORM 中文文档](https://typeorm.biunav.com/zh/#%E5%AE%89%E8%A3%85)
+
+   [Sequelize](https://sequelize.org/)
+
+   [node-orm2](https://github.com/dresende/node-orm2)
+
+2. 详解：
+
+    * ORM
+
+        Object Relational Mapping，对象-关系-映射
+
+        用面向对象的方式和目前的关系型数据库做匹配
+
+    * ORM的两种模式
+
+        1. Active Record 模式
+        
+            活动记录模式，一个模型类对应关系型数据库中的一个表，模型类的一个实例对应表中的一行记录。
+
+        2. Data Mapper 模式
+        
+            数据映射模式，领域模型对象和数据表是松耦合关系，只进行业务逻辑的处理，和数据层解耦，需要一个实体管理器来将模型和持久化层做对应。
+
+    * ORM框架
+
+        1. TypeORM
+
+            TypeORM 借鉴了hibernate，采用装饰类的方式，使用typescript
+
+            * cli
+
+                ```txt
+                npm install typeorm -g
+
+                typeorm init --name MyProject --database mysql
+                ```
+
+            * 生成文档结构
+
+                ```txt
+                MyProject
+                ├── src              // TypeScript 代码
+                │   ├── entity       // 存储实体（数据库模型）的位置
+                │   │   └── User.ts  // 示例 entity
+                │   ├── migration    // 存储迁移的目录
+                │   └── index.ts     // 程序执行主文件
+                ├── .gitignore       // gitignore文件
+                ├── ormconfig.json   // ORM和数据库连接配置
+                ├── package.json     // node module 依赖
+                ├── README.md        // 简单的 readme 文件
+                └── tsconfig.json    // TypeScript 编译选项
+                ```
+
+            * 实体类
+
+                ```ts
+                import {Entity, PrimaryGeneratedColumn, Column} from "typeorm";
+                @Entity()
+                export class User {
+                ​    @PrimaryGeneratedColumn()
+                ​    id: number;
+
+                ​    @Column()
+                ​    firstName: string;
+
+                ​    @Column()
+                ​    lastName: string;
+
+                ​    @Column()
+                ​    age: number;
+                }
+                ```
+
+            * CRUD操作
+
+                ```ts
+                import "reflect-metadata";
+                import {createConnection} from "typeorm";
+                import {User} from "./entity/User";
+
+                createConnection().then(async connection => {
+                ​    console.log("Inserting a new user into the database...");
+                ​    const user = new User();
+                ​    user.firstName = "Timber";
+                ​    user.lastName = "Saw";
+                ​    user.age = 25;
+                ​    await connection.manager.save(user);
+                ​    console.log("Saved a new user with id: " + user.id);
+                ​    console.log("Loading users from the database...");
+                ​    const users = await connection.manager.find(User);
+                ​    console.log("Loaded users: ", users);
+                ​    console.log("Here you can setup and run express/koa/any other framework.");
+                }).catch(error => console.log(error));
+                ```
+
+        2. Sequelize
+
+            没有cli
+
+            * 安装
+
+                ```txt
+                $ npm install --save sequelize
+                $ npm install --save mysql2
+                ```
+
+            * 数据库的配置文件config.js
+
+                ```js
+                module.exports = {
+                ​    database: {
+                ​        dbName: 'TEST',
+                ​        host: 'localhost',
+                ​        port: 3306,
+                ​        user: 'root',
+                ​        password: '123456'
+                ​    }
+                }
+                ```
+
+            * 数据库访问公共文件db.js
+
+                ```js
+                const Sequelize = require('sequelize')
+                const {
+                ​    dbName,
+                ​    host,
+                ​    port,
+                ​    user,
+                ​    password
+                } = require('../config').database
+
+                const sequelize = new Sequelize(dbName, user, password, {
+                ​    dialect: 'mysql',
+                ​    host,
+                ​    port,
+                ​    logging: true,
+                ​    timezone: '+08:00',
+                ​    define: {
+                ​        // create_time && update_time
+                ​        timestamps: true,
+                ​        // delete_time
+                ​        paranoid: true,
+                ​        createdAt: 'created_at',
+                ​        updatedAt: 'updated_at',
+                ​        deletedAt: 'deleted_at',
+                ​        // 把驼峰命名转换为下划线
+                ​        underscored: true,
+                ​        scopes: {
+                ​            bh: {
+                ​                attributes: {
+                ​                    exclude: ['password', 'updated_at', 'deleted_at', 'created_at']
+                ​                }
+                ​            },
+                ​            iv: {
+                ​                attributes: {
+                ​                    exclude: ['content', 'password', 'updated_at', 'deleted_at']
+                ​                }
+                ​            }
+                ​        }
+                ​    }
+                })
+                // 创建模型
+                sequelize.sync({
+                ​    force: false
+                })
+                module.exports = {
+                ​    sequelize
+                }
+                ```
+
+            * model
+
+                ```js
+                const {Sequelize, Model} = require('sequelize')
+                const {db} = require('../../db')
+
+                class User extends Model {}
+                User.init({
+                    // attributes
+                    firstName: {
+                        type: Sequelize.STRING,
+                        allowNull: false
+                    },
+                    lastName: {
+                        type: Sequelize.STRING
+                        // allowNull defaults to true
+                    }
+                }, {
+                    db,
+                    modelName: 'user'
+                    // options
+                });
+                ```
+
+            * CRUD操作
+
+                ```js
+                // Find all users
+                User.findAll().then(users => {
+                    console.log("All users:", JSON.stringify(users, null, 4));
+                });
+                // Create a new user
+                User.create({ firstName: "Jane", lastName: "Doe" }).then(jane => {
+                    console.log("Jane's auto-generated ID:", jane.id);
+                });
+                // Delete everyone named "Jane"
+                User.destroy({
+                    where: {
+                        firstName: "Jane"
+                    }
+                }).then(() => {
+                    console.log("Done");
+                });
+                // Change everyone without a last name to "Doe"
+                User.update({ lastName: "Doe" }, {
+                    where: {
+                        lastName: null
+                    }
+                }).then(() => {
+                    console.log("Done");
+                });
+                ```
+
+        3. node-orm2
+
+            配合express回调，npm install orm
+
+            * 数据库连接
+
+                ```js
+                var orm = require("orm");
+                orm.connect("mysql://username:password@host/database", 
+                    function (err, db) {
+                    // ...
+                });
+                ```
+
+            * model
+
+                ```js
+                var Person = db.define('person', {
+                    name: String,
+                    surname: String,
+                    age: String,
+                    male: boolean
+                }, {
+                    identityCache : true
+                });
+                ```
+
+            * CRUD操作
+
+                ```js
+                Person.create([
+                    {
+                        name: "John",
+                        surname: "Doe",
+                        age: 25,
+                        male: true
+                    },
+                    {
+                        name: "Liza",
+                        surname: "Kollan",
+                        age: 19,
+                        male: false
+                    }
+                ], function (err, items) {
+                    // err - description of the error or null
+                    // items - array of inserted items
+                });
+
+                Person.get(1, function (err, John) {
+                    John.name = "Joe";
+                    John.surname = "Doe";
+                    John.save(function (err) {
+                        console.log("saved!");
+                    });//保存
+                    Person.find({ surname: "Doe" }).remove(function (err) {
+                    // Does gone..
+                    });//删除
+                });
+
+                Person.find({
+                    name: "admin"})
+                    .limit(3)
+                    .offset(2)//跳过
+                    .only("name", "age")//返回字段
+                    .run(function(err, data) {
+                
+                });
+                ```
+
+        4. 其它
+
+            * bookshelf(也常用)
+            * persistencejs
+            * waterline
+            * mongoose
+            * node-mysql
+            * knex
+
+### 定时任务框架
+
+1. 参考链接：
+
+   [Nodejs 定时执行(node-cron)](https://blog.csdn.net/m0_37263637/article/details/83862250)
+
+   [Nodejs学习笔记（十二）--- 定时任务（node-schedule）](https://www.cnblogs.com/zhongweiv/p/node_schedule.html)
+
+   [[Node] Agenda 中文文档 定时任务调度系统[基础篇]](https://blog.csdn.net/github_36749622/article/details/76595489)
+
+   [nodejs bull 实现延时队列](https://www.cnblogs.com/xiaosongJiang/p/13047500.html)
+
+2. 详解：
+
+    * 时间语法
+
+        * 时间取值范围
+
+            ```txt
+            秒：0-59
+            分钟：0-59
+            小时：0-23
+            天：1-31
+            月份：0-11（1月至12月）
+            星期几：0-6（周日至周六）
+            ```
+
+        * 排列顺序
+
+            ```txt
+            *为通配符
+            -为时间段连接符
+            ,号为分隔符，可以在某一节输入多个值
+            /号为步进符
+            ```
+
+        * 例子
+
+            每秒都执行
+            ```txt
+            * * * * * *
+            ```
+
+            在每次分钟时间为10的时候执行(每次分钟为10的 那60秒 每秒都执行)
+            ```txt
+            * 10 * * * *
+            ```
+
+            在秒为10,分钟为3执行
+            ```txt
+            10 03 * * * *
+            ```
+
+            每天14点05分10秒时执行
+            ```txt
+            10 05 14 * * *
+            ```
+
+            每天14-17点的05分10秒时执行
+            ```txt
+            10 05 14-17 * * *
+            ```
+
+            每分钟的11 秒 22秒 25秒执行
+            ```txt
+            11,22,25 * * * * *
+            ``` 
+
+            间隔3秒执行
+            ```txt
+            */3 * * * * *
+            ```
+
+            间隔两分钟执行
+            ```txt
+            0 */2 * * * *
+            ```
+
+    * 框架
+
+        1. node-cron
+
+            ```js
+            var CronJob = require('cron').CronJob;
+            new CronJob('10 * * * * *', function() {
+                const d = new Date();
+                console.log(d);
+            }, null, true);
+            ```
+
+        2. node-schedule
+
+            npm install node-schedule
+            ```js
+            var schedule = require('node-schedule');
+
+            function scheduleCronstyle(){
+                schedule.scheduleJob('30 * * * * *', function(){
+                    console.log('scheduleCronstyle:' + new Date());
+                }); 
+            }
+
+            scheduleCronstyle();
+            ```
+
+            ```js
+            var schedule = require('node-schedule');
+
+            function scheduleRecurrenceRule(){
+                var rule = new schedule.RecurrenceRule();
+                // rule.dayOfWeek = 2;
+                // rule.month = 3;
+                // rule.dayOfMonth = 1;
+                // rule.hour = 1;
+                // rule.minute = 42;
+                rule.second = 0;
+                
+                schedule.scheduleJob(rule, function(){
+                console.log('scheduleRecurrenceRule:' + new Date());
+                });
+            }
+
+            scheduleRecurrenceRule();
+            ```
+
+            ```js
+            var schedule = require('node-schedule');
+
+            function scheduleObjectLiteralSyntax(){
+                //dayOfWeek
+                //month
+                //dayOfMonth
+                //hour
+                //minute
+                //second
+
+                schedule.scheduleJob({hour: 16, minute: 11, dayOfWeek: 1}, function(){
+                    console.log('scheduleObjectLiteralSyntax:' + new Date());
+                });
+            }
+
+            scheduleObjectLiteralSyntax();
+            ```
+
+            取消定时器
+            ```js
+            var schedule = require('node-schedule');
+
+            function scheduleCancel(){
+                var counter = 1;
+                var j = schedule.scheduleJob('* * * * * *', function(){
+                    console.log('定时器触发次数：' + counter);
+                    counter++;
+                });
+                setTimeout(function() {
+                    console.log('定时器取消')
+                    j.cancel();
+                }, 5000);
+            }
+
+            scheduleCancel();
+            ```
+
+        3. 其它
+
+            * Agenda
+            * bull
+
