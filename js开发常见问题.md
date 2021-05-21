@@ -41,6 +41,7 @@
 - [获取图片原始宽高](#获取图片原始宽高)
 - [JSON](#JSON)
 - [parseInt与Number](#parseInt与Number)
+- [DOM操作大全](#DOM操作大全)
 
 ---
 
@@ -9413,3 +9414,13 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
   * parseInt是将入参转化为指定进制的整数，而Number是将传入的参数转换成数字类型的值，两者在允许接收的参数个数上不同，同时在转换结果上也可能不同
   * parseInt会尽可能的将传入的参数转为数字，直到遇到不能转换为数字的字符，而Number会在转换前对入参进行扫描，只要含有不能转换成数字的字符，全部返回NaN
   * parseInt对于null和undefined均会返回NaN, 而Number对于null返回0、对于undefined返回NaN
+
+### DOM操作大全
+
+1. 参考链接：
+
+  [万字长文总结DOM操作](https://juejin.cn/post/6875674323042959368)
+
+2. 详解
+
+  ![dom](./dom.png)
