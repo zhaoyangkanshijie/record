@@ -23,6 +23,7 @@
 - [position:sticky](#position:sticky)
 - [scroll-snap-type滚动轮播](scroll-snap-type滚动轮播)
 - [图片相关](#图片相关)
+- [sass与less比较](#sass与less比较)
 
 ---
 
@@ -2063,6 +2064,7 @@
 
   2. 变量
 
+    常常一个颜色的值能出现很多很多次，或者一个宽度的值能出现很多次；
     ```scss
     $imagePath: "/public/images/";//用于设置background，不用每次都写路径
     $step: 3;//用于计算一行中每一块的宽度
@@ -2475,3 +2477,38 @@
     }
     </style>
     ```
+
+### sass与less比较
+
+1. 参考链接
+
+  [Sass基础入门(1)](https://juejin.cn/post/6964927276718751751)
+
+  [less与sass的区别是什么？](https://www.html.cn/qa/css3/13611.html)
+
+2. 详解
+
+  * 相同之处
+
+    1. 混入(Mixins)——class中的class；
+
+    2. 参数混入——可以传递参数的class，就像函数一样；
+
+    3. 嵌套规则——Class中嵌套class，从而减少重复的代码；
+
+    4. 运算——CSS中用上数学；
+
+    5. 颜色功能——可以编辑颜色；
+
+    6. 名字空间(namespace)——分组样式，从而可以被调用；
+
+    7. 作用域——局部修改样式；
+
+    8. JavaScript 赋值——在CSS中使用JavaScript表达式赋值。
+
+  * 不同之处
+
+    1. less和sass最大的区别在于其实现方式不同,sass是基于ruby编译的,服务端处理，less是基于nodejs编译的,客户端处理
+    2. 关于变量在Less和Sass中的唯一区别就是Less用@，Sass用$
+    3. sass有@extednd用于做继承，而less没有
+    4. sass支持@for循环，less则不支持
