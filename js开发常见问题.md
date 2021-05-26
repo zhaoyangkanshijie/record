@@ -42,6 +42,7 @@
 - [JSON](#JSON)
 - [parseInt与Number](#parseInt与Number)
 - [DOM操作大全](#DOM操作大全)
+- [swiper轮播](#swiper轮播)
 
 ---
 
@@ -9424,3 +9425,125 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
 2. 详解
 
   ![dom](./dom.png)
+
+### swiper轮播
+
+1. 参考链接：
+
+  [Swiper](https://www.swiper.com.cn/)
+
+  [关于Swiper](https://www.swiper.com.cn/about/us/)
+
+2. 详解
+
+  * swiper2
+
+    移动机制：transform或left/top
+
+    一般布局，wrapper宽度为slide总和
+
+    IE7+，部分移动端，IE7需引入JQuery
+
+    Smooth Progress插件
+
+    Swiper 3D flow插件
+
+    Scrollbar插件
+
+    滑动方向 mode
+
+    free模式动量 momentumRatio
+
+    偏移量 offsetPxBefore
+
+    3d流 tdFlow插件
+
+    导航按钮 swipePrev、swipeNext
+
+    Slide跳转函数 swipeTo、swipePrev、swipeNext
+
+  * swiper3
+
+    移动机制：transform
+
+    flex或一般布局，wrapper宽度为第一个slide
+
+    移动端浏览器、部分PC端浏览器
+
+    fade 渐变
+
+    cube 方块
+
+    coverflow 移动翻转
+
+    flip 翻转
+
+    滑动方向 direction
+
+    free模式动量 freeModeMomentumRatio
+
+    偏移量 slidesOffsetBefore
+
+    3d流 coverflow
+
+    导航按钮 prevButton、nextButton
+
+    Slide跳转函数 slideTo、slidePrev、slideNext
+
+    禁止滑动onlyExternal: true
+
+  * swiper4
+
+    移动机制：transform
+
+    flex或一般布局，wrapper宽度为第一个slide
+
+    移动端浏览器、部分PC端浏览器、IE10+
+
+    Navigation 分页器
+
+    Pagination 按钮
+
+    Scrollbar 滚动条
+
+    Autoplay 自动切换
+
+    Lazy Loading 延迟加载图片
+
+    Fade Effect 渐变过渡
+
+    Coverflow Effect 行进翻转过渡
+
+    Flip Effect 翻转过渡
+
+    Cube Effect 方块过渡
+
+    Zoom 缩放
+
+    Keyboard Control 键盘
+
+    Mousewheel Control 鼠标
+
+    Virtual Slides 虚拟块
+
+    Hash Navigation 锚导航
+
+    History Navigation 历史导航
+
+    Controller 相互控制
+
+    Accessibility 障碍使用辅助
+
+    禁止滑动allowTouchMove: false
+
+  * swiper5
+
+    Swiper5 增加了CSS模式（cssMode），并且可以通过CSS文件修改Swiper颜色风格。
+
+    不再全面支持IE
+
+  * swiper6
+
+    不再全面支持IE
+
+    新增swiper的React、Svelte、Vue.js版本，作为前端框架的组件使用

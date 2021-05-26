@@ -24,6 +24,7 @@
 - [scroll-snap-type滚动轮播](scroll-snap-type滚动轮播)
 - [图片相关](#图片相关)
 - [sass与less比较](#sass与less比较)
+- [css的var函数](#css的var函数)
 
 ---
 
@@ -2512,3 +2513,52 @@
     2. 关于变量在Less和Sass中的唯一区别就是Less用@，Sass用$
     3. sass有@extednd用于做继承，而less没有
     4. sass支持@for循环，less则不支持
+
+### css的var函数
+
+1. 参考链接
+
+  [var()](https://developer.mozilla.org/zh-CN/docs/Web/CSS/var())
+
+2. 详解
+
+  * 兼容性
+
+    唯独IE不支持
+
+  * 用法
+
+    ```css
+    var( <自定义属性名custom-property-name> , <后备值declaration-value在自定义属性值无效的情况下保证函数有值>?可空 )
+    ```
+
+    在 :root 上定义，然后使用它
+    ```css
+    :root {
+      --main-bg-color: pink;
+    }
+
+    body {
+      background-color: var(--main-bg-color);
+    }
+    ```
+
+    当第一个值未定义，回退值生效
+    ```css
+    /* 后备值 */
+
+    /* 在父元素样式中定义一个值 */
+    .component {
+      --text-color: #080; /* header-color 并没有被设定 */
+    }
+
+    /* 在 component 的样式中使用它： */
+    .component .text {
+      color: var(--text-color, black); /* 此处 color 正常取值 --text-color */
+    }
+    .component .header {
+      color: var(--header-color, blue); /* 此处 color 被回退到 blue */
+    }
+    ```
+
+    
