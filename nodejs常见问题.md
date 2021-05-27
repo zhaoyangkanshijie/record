@@ -1218,7 +1218,7 @@
     child_process模块主要包括以下几个异步进程函数:
 
     1. fork：实现父进程和子进程互相发送消息的方法，通过fork可以在父进程和子进程之间开放一个IPC通道，使得不同的node进程间可以进行消息通信。
-    2.exec: 衍生一个 shell 并在该 shell 中运行命令，当完成时则将stdout 和 stderr 传给回调函数
+    2. exec: 衍生一个 shell 并在该 shell 中运行命令，当完成时则将stdout 和 stderr 传给回调函数
     3. spawn
 
 ### process

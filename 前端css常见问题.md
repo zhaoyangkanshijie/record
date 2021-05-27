@@ -25,6 +25,8 @@
 - [图片相关](#图片相关)
 - [sass与less比较](#sass与less比较)
 - [css的var函数](#css的var函数)
+- [shape-outside环绕元素](#shape-outside环绕元素)
+- [纯CSS实现伪瀑布流布局](#纯CSS实现伪瀑布流布局)
 
 ---
 
@@ -1645,6 +1647,12 @@
 
    [最强大的 CSS 布局 —— Grid 布局](https://juejin.im/post/5f1e70315188252e937c088b)
 
+   [新时代创意布局不完全指南](https://juejin.cn/post/6966789229909114911)
+
+   [clip-path](https://developer.mozilla.org/zh-CN/docs/Web/CSS/clip-path)
+
+   [grid-template-areas](https://developer.mozilla.org/zh-CN/docs/Web/CSS/grid-template-areas)
+
 2. 详解：
 
     IE 10 以下不支持
@@ -1873,6 +1881,275 @@
 
     .wrapper-1 {
       grid-auto-flow: row dense;
+    }
+    ```
+
+    grid-template-areas(网格区域命名),grid-area(单个网格区域-对应命名),clip-path(使用裁剪方式创建元素的可显示区域)配合生成不规则网格快
+
+    IE完全不支持
+
+    效果：https://codepen.io/Chokcoco/pen/jOVjxjo
+    ```html
+    <div class="parent">
+      <div class="child">
+        <img src="https://i.pinimg.com/originals/0d/67/72/0d677237854ed19dcfe69f0f9a4065ee.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/736x/26/db/84/26db84b2bf348f79792f7c5f0f9bd5ef.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/736x/45/0d/1c/450d1c87ce61bc0c2429701ed3ea631a.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/564x/94/76/dd/9476dd3d346a3d697362da94b9aa2dc2.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://www.sitedogta.com.br/gta5/imagens/personagens/Trevor%20GTA%20V.JPG" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/564x/3b/3b/56/3b3b56745376625aa66d5943b3db0275.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/originals/c8/9c/6b/c89c6b8f2165cfbe5ecccfebace1042d.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://i.pinimg.com/736x/ea/e7/b5/eae7b513060702e86bdd51d4d5cfc5ae.jpg" alt="">
+      </div>
+      <div class="child">
+        <img src="https://cdn.hipwallpaper.com/i/94/92/Fk0l6I.jpg" alt="">
+      </div>
+    </div>
+    ```
+    ```css
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      padding: 0;
+      margin: 0;
+      background: #23232a;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: 40% 0;
+    }
+
+    .parent {
+      padding: .8rem;
+      background: black;
+      height: 95vh;
+      min-height: 500px;
+      width: 100%;
+      max-width: 600px;
+      margin: auto;
+      margin-top: 2.5vh;
+      border: 1px solid #c9b473;
+      overflow: hidden;
+      display: grid;
+
+      grid-template-columns: 1fr .7fr .3fr 1fr;
+      grid-template-rows: 20% 40% 20% 20%;
+      grid-template-areas: 'one two two three'
+        'four five five five'
+        'six five five five'
+        'six seven eight eight';
+    }
+
+
+    .child:nth-child(1),
+    .child:nth-child(2),
+    .child:nth-child(3) img {
+      width: 120%;
+      height: 120%;
+    }
+
+    .child:first-child {
+      grid-area: one;
+      clip-path: polygon(0% 0%, 93.24% 0%, 105.04% 110.16%, 0% 90%);
+    }
+
+    .child:nth-child(2) {
+      grid-area: two;
+      clip-path: polygon(0% 0%, 108.28% 0%, 96.45% 110.13%, 10.55% 110.93%);
+    }
+
+    .child:nth-child(3) {
+      grid-area: three;
+      clip-path: polygon(15.05% 0%, 100% 0%, 99.35% 91.7%, 3.08% 108.48%);
+    }
+
+    .child:nth-child(4) {
+      grid-area: four;
+      clip-path: polygon(0% -0.85%, 106.34% 9.98%, 121.32% 65.63%, 99.66% 109.89%, 1.86% 124.41%);
+    }
+
+    .child:nth-child(4) img {
+      width: 135%;
+      height: 135%;
+    }
+
+    .child:nth-child(5) {
+      grid-area: five;
+      clip-path: polygon(6.4% 6.48%, 47.24% 5.89%, 100% 0%, 98.41% 96.85%, 53.37% 100%, 53% 63.21%, 3.23% 73.02%, 14.30% 44.04%);
+    }
+
+    .child:nth-child(6) {
+      grid-area: six;
+      clip-path: polygon(2.14% 29.3%, 99.34% 15.42%, 98.14% 100.82%, 1.57% 101.2%);
+    }
+
+    .child:nth-child(7) {
+      grid-area: seven;
+      clip-path: polygon(7.92% 33.47%, 96.31% 23.39%, 95.38% 100%, 5.30% 100.85%);
+    }
+
+    .child:nth-child(8) {
+      grid-area: eight;
+      clip-path: polygon(2.5% 22.35%, 100% 0%, 100% 100%, 1.55% 100%);
+    }
+
+    .child:nth-child(9) {
+      grid-row-start: 3;
+      grid-row-end: 4;
+      grid-column-start: 2;
+      grid-column-end: 4;
+      clip-path: polygon(5.94% 28.66%, 100.61% -0.67%, 101.1% 108.57%, 5.4% 126.28%);
+    }
+
+    .child:nth-child(9) img {
+      object-position: 30% 50%;
+      height: 135%;
+    }
+    ```
+
+    使用 grid-template-rows: masonry 实现水平方向排布的瀑布流布局
+
+    在使用 firefox，并且开启了 layout.css.grid-template-masonry-value.enabled
+
+    效果：https://codepen.io/Chokcoco/pen/KGXqyo
+    ```html
+    <div class="g-container">
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+      <div class="g-item"></div>
+    </div>
+    ```
+
+    ```css
+    .g-container {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: masonry;
+    }
+
+    .g-item:nth-child(1) {
+      position: relative;
+      background: #e5971d;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 76px;
+    }
+
+    .g-item:nth-child(2) {
+      position: relative;
+      background: #54e1a3;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 167px;
+    }
+
+    .g-item:nth-child(3) {
+      position: relative;
+      background: #ef5b55;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 294px;
+    }
+
+    .g-item:nth-child(4) {
+      position: relative;
+      background: #867fc8;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 286px;
+    }
+
+    .g-item:nth-child(5) {
+      position: relative;
+      background: #fb6525;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 51px;
+    }
+
+    .g-item:nth-child(6) {
+      position: relative;
+      background: #de2305;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 314px;
+    }
+
+    .g-item:nth-child(7) {
+      position: relative;
+      background: #716aca;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 327px;
+    }
+
+    .g-item:nth-child(8) {
+      position: relative;
+      background: #1daa28;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 323px;
+    }
+
+    .g-item:nth-child(9) {
+      position: relative;
+      background: #ebdd45;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 64px;
+    }
+
+    .g-item:nth-child(10) {
+      position: relative;
+      background: #89b418;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 342px;
+    }
+
+    .g-item:nth-child(11) {
+      position: relative;
+      background: #7b7e85;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 101px;
+    }
+
+    .g-item:nth-child(12) {
+      position: relative;
+      background: #35efb2;
+      margin: 0.5vw;
+      grid-template-rows: 1fr auto;
+      height: 160px;
     }
     ```
 
@@ -2561,4 +2838,271 @@
     }
     ```
 
-    
+### shape-outside环绕元素
+
+1. 参考链接
+
+   [新时代创意布局不完全指南](https://juejin.cn/post/6966789229909114911)
+
+   [谈谈一些有趣的CSS题目（30）-- 奇妙的 CSS shapes(CSS图形)](https://github.com/chokcoco/iCSS/issues/18)
+
+   [shape-outside](https://developer.mozilla.org/zh-CN/docs/Web/CSS/shape-outside)
+
+2. 详解
+
+  shape-outside的CSS 属性定义了一个可以是非矩形的形状，相邻的内联内容应围绕该形状进行包装。 默认情况下，内联内容包围其边距框
+
+  完全不支持IE，要求浏览器版本较高
+
+  ```css
+  /* 关键字值 */
+  shape-outside: none;
+  shape-outside: margin-box;
+  shape-outside: content-box;
+  shape-outside: border-box;
+  shape-outside: padding-box;
+
+  /* 函数值 */
+  shape-outside: circle();
+  shape-outside: ellipse();
+  shape-outside: inset(10px 10px 10px 10px);
+  shape-outside: polygon(10px 10px, 20px 20px, 30px 30px);
+
+  /* <url> 值 */
+  shape-outside: url(image.png);
+
+  /* 渐变值 */
+  shape-outside: linear-gradient(45deg, rgba(255, 255, 255, 0) 150px, red 150px);
+
+  /* 全局值 */
+  shape-outside: initial;
+  shape-outside: inherit;
+  shape-outside: unset;
+  ```
+
+### 纯CSS实现伪瀑布流布局
+
+1. 参考链接
+
+   [新时代创意布局不完全指南](https://juejin.cn/post/6966789229909114911)
+
+   [CSS Inspiration -- CSS灵感](https://chokcoco.github.io/CSS-Inspiration/#/./layout/masonry-layout-colum)
+
+2. 详解
+
+  不借助 JavaScript，我们有 3 种纯 CSS 的方式可以实现伪瀑布流布局(注意，这里是伪瀑布流)，分别是：
+
+  * 使用 CSS column 实现瀑布流布局
+  * 使用 CSS flex 实现瀑布流布局
+  * 使用 CSS grid 实现瀑布流布局
+
+  利用上述三种方式实现的瀑布流布局，缺点比较明显：
+
+  对于 flex 和 column 布局而言，只能实现竖直排布的瀑布流布局，第一列填充满了填充第二列，以此类推
+
+  对于 Grid 布局而言，缺点则是无法自动适配不同的高度，需要手动指定每一个元素区块大小
+
+  在未来，标准基于 Grid 布局实现了 grid-template-rows: masonry，利用该标准，我们可以快速利用 Grid 实现水平排布的瀑布流布局，目前可以在 Firefox 体验该功能。
+
+  1. CSS实现瀑布流布局（column-count）
+
+    https://chokcoco.github.io/CSS-Inspiration/#/./layout/masonry-layout-colum
+
+    ```js
+    // pug 模板引擎
+    div.g-container
+        -for(var j = 0; j<32; j++)
+            div.g-item
+    ```
+
+    ```scss
+    $count: 32;
+
+    @function randomNum($max, $min: 0, $u: 1) {
+        @return ($min + random($max)) * $u;
+    }
+
+    @function randomColor() {
+        @return rgb(randomNum(255), randomNum(255), randomNum(255));
+    }
+
+    .g-container {
+        column-count: 4;
+        column-gap: .5vw;
+        padding-top: .5vw;
+    }
+
+    .g-item {
+        position: relative;
+        width: 24vw;
+        margin-bottom: 1vw;
+        break-inside: avoid;
+    }
+
+    @for $i from 1 to $count+1 {
+        .g-item:nth-child(#{$i}) {
+            height: #{randomNum(300, 50)}px;
+            background: randomColor();
+
+            &::after {
+                content: "#{$i}";
+                position: absolute;
+                color: #fff;
+                font-size: 2vw;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        }
+    }
+    ```
+
+  2. CSS 实现瀑布流布局（display: flex）
+
+    https://chokcoco.github.io/CSS-Inspiration/#/./layout/masonry-layout-flex
+
+    ```js
+    // pug 模板引擎
+    div.g-container
+        -for(var i = 0; i<4; i++)
+            div.g-queue
+                -for(var j = 0; j<8; j++)
+                    div.g-item
+    ```
+
+    ```scss
+    $lineCount: 4;
+    $count: 8;
+
+    @function randomNum($max, $min: 0, $u: 1) {
+        @return ($min + random($max)) * $u;
+    }
+
+    @function randomColor() {
+        @return rgb(randomNum(255), randomNum(255), randomNum(255));
+    }
+
+    .g-container {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        overflow: hidden;
+    }
+
+    .g-queue {
+        display: flex;
+        flex-direction: column;
+        flex-basis: 24%;
+
+    }
+
+    .g-item {
+        position: relative;
+        width: 100%;
+        margin: 2.5% 0;
+    }
+
+    @for $i from 1 to $lineCount+1 {
+        .g-queue:nth-child(#{$i}) {
+            @for $j from 1 to $count+1 {
+                .g-item:nth-child(#{$j}) {
+                    height: #{randomNum(300, 50)}px;
+                    background: randomColor();
+
+                    &::after {
+                        content: "#{$j}";
+                        position: absolute;
+                        color: #fff;
+                        font-size: 24px;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                    }
+                }
+            }
+        }
+    }
+    ```
+
+  3. CSS实现瀑布流布局（display: grid）
+
+    https://chokcoco.github.io/CSS-Inspiration/#/./layout/masonry-layout-grid
+
+    ```js
+    // pug 模板引擎
+    div.g-container
+        -for(var i = 0; i<8; i++)
+                div.g-item
+    ```
+
+    ```scss
+    $count: 8;
+
+    @function randomNum($max, $min: 0, $u: 1) {
+        @return ($min + random($max)) * $u;
+    }
+
+    @function randomColor() {
+        @return rgb(randomNum(255), randomNum(255), randomNum(255));
+    }
+
+    .g-container {
+        height: 100vh;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(8, 1fr);
+    }
+
+    @for $i from 1 to $count+1 {
+        .g-item:nth-child(#{$i}) {
+            position: relative;
+            background: randomColor();
+            margin: 0.5vw;
+
+            &::after {
+                content: "#{$i}";
+                position: absolute;
+                color: #fff;
+                font-size: 2vw;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+            }
+        }
+    }
+
+    .g-item {
+        &:nth-child(1) {
+            grid-column: 1;
+            grid-row: 1 / 3;
+        }
+        &:nth-child(2) {
+            grid-column: 2;
+            grid-row: 1 / 4;
+        }
+        &:nth-child(3) {
+            grid-column: 3;
+            grid-row: 1 / 5;
+        }
+        &:nth-child(4) {
+            grid-column: 4;
+            grid-row: 1 / 6;
+        }
+        &:nth-child(5) {
+            grid-column: 1;
+            grid-row: 3 / 9;
+        }
+        &:nth-child(6) {
+            grid-column: 2;
+            grid-row: 4 / 9;
+        }
+        &:nth-child(7) {
+            grid-column: 3;
+            grid-row: 5 / 9;
+        }
+        &:nth-child(8) {
+            grid-column: 4;
+            grid-row: 6 / 9;
+        }
+    }
+    ```
