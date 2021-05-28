@@ -68,6 +68,7 @@
 * [nextTick使用场景和原理](#nextTick使用场景和原理)
 * [Vue.extend作用和原理](#Vue.extend作用和原理)
 * [Vue修饰符](#Vue修饰符)
+* [devtools](#devtools)
 
 ---
 
@@ -6594,3 +6595,34 @@ export default function initExtend(Vue) {
   * .left
   * .right
   * .middle
+
+## devtools
+
+https://github.com/vuejs/vue-devtools
+
+https://www.jianshu.com/p/312cd88f5bdf
+
+下载、安装、编译
+```txt
+git clone https://github.com/vuejs/vue-devtools.git
+cd vue-devtools
+npm install 或者 cnpm install
+npm run build
+```
+
+修改安装目录vue-devtools\shells\chrome 中 的manifest.json文件。
+```js
+background.persistent=true;
+permissions=[
+  "http://*/*",
+  "https://*/*",
+  "file:///*",
+  "contextMenus",
+  "storage"
+]
+```
+
+chrome://extensions/,先勾选“开发者模式”,点击“加载已解压的扩展程序...”,选择vue-devtools>shells目录下的Chrome文件夹
+
+打开dev模式的vue应用
+
