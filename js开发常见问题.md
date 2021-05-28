@@ -43,6 +43,7 @@
 - [parseInt与Number](#parseInt与Number)
 - [DOM操作大全](#DOM操作大全)
 - [swiper轮播](#swiper轮播)
+- [腾讯位置服务汽车轨迹](#腾讯位置服务汽车轨迹)
 
 ---
 
@@ -9547,3 +9548,138 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
     不再全面支持IE
 
     新增swiper的React、Svelte、Vue.js版本，作为前端框架的组件使用
+
+### 腾讯位置服务汽车轨迹
+
+1. 参考链接：
+
+  [使用腾讯位置服务实现汽车沿轨迹行驶功能](https://juejin.cn/post/6967159990734094343)
+
+  [腾讯位置服务个性化图层创建及发布](https://juejin.cn/post/6967189715569082376)
+
+  [腾讯位置服务-JavaScript API GL](https://lbs.qq.com/webDemoCenter/glAPI/glMap/createMap)
+
+  [腾讯位置服务-参考手册](https://lbs.qq.com/webApi/javascriptGL/glDoc/glDocIndex)
+
+  [腾讯位置服务-个性化地图](https://lbs.qq.com/dev/console/custom/mapStyle)
+
+2. 详解
+
+  进入腾讯位置服务页面然后进行注册账号，注册完成后需要申请[AppKey](https://lbs.qq.com/dev/console/application/mine)，我们将在自己的应用中配置这个Key来使用SDK中的服务。
+  ```html
+  <!DOCTYPE html>
+  <html lang="en">
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>marker轨迹回放-全局模式</title>
+  </head>
+  <script charset="utf-8" src="https://map.qq.com/api/gljs?v=1.exp&key=QSWBZ-AL2KU-4Q4VI-46ONV-26OOT-ISB5G"></script>
+  <style type="text/css">
+    html,
+    body {
+      height: 100%;
+      margin: 0px;
+      padding: 0px;
+    }
+
+    #container {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+
+  <body>
+    <div id="container"></div>
+    <script type="text/javascript">
+      var center = new TMap.LatLng(39.984104, 116.307503);
+      //初始化地图
+      var map = new TMap.Map("container", {
+        zoom: 15,
+        center: center
+      });
+
+      var path = [
+        new TMap.LatLng(39.98481500648338, 116.30571126937866),
+        new TMap.LatLng(39.982266575222155, 116.30596876144409),
+        new TMap.LatLng(39.982348784165886, 116.3111400604248),
+        new TMap.LatLng(39.978813710266024, 116.3111400604248),
+        new TMap.LatLng(39.978813710266024, 116.31699800491333)
+      ];
+
+      var polylineLayer = new TMap.MultiPolyline({
+        map, // 绘制到目标地图
+        // 折线样式定义
+        styles: {
+          'style_blue': new TMap.PolylineStyle({
+            'color': '#3777FF', //线填充色
+            'width': 4, //折线宽度
+            'borderWidth': 2, //边线宽度
+            'borderColor': '#FFF', //边线颜色
+            'lineCap': 'round' //线端头方式
+          })
+        },
+        geometries: [{
+          styleId: 'style_blue',
+          paths: path
+        }],
+      });
+
+      var marker = new TMap.MultiMarker({
+        map,
+        styles: {
+          'car-down': new TMap.MarkerStyle({
+            'width': 40,
+            'height': 40,
+            'anchor': {
+              x: 20,
+              y: 20,
+            },
+            'faceTo': 'map',
+            'rotate': 180,
+            'src': 'https://mapapi.qq.com/web/lbs/javascriptGL/demo/img/car.png',
+          }),
+          "start": new TMap.MarkerStyle({
+            "width": 25,
+            "height": 35,
+            "anchor": { x: 16, y: 32 },
+            "src": 'https://mapapi.qq.com/web/lbs/javascriptGL/demo/img/start.png'
+          }),
+          "end": new TMap.MarkerStyle({
+            "width": 25,
+            "height": 35,
+            "anchor": { x: 16, y: 32 },
+            "src": 'https://mapapi.qq.com/web/lbs/javascriptGL/demo/img/end.png'
+          })
+        },
+        geometries: [{
+          id: 'car',
+          styleId: 'car-down',
+          position: new TMap.LatLng(39.98481500648338, 116.30571126937866),
+        }, {
+          "id": 'start',
+          "styleId": 'start',
+          "position": new TMap.LatLng(39.98481500648338, 116.30571126937866)
+        }, {
+          "id": 'end',
+          "styleId": 'end',
+          "position": new TMap.LatLng(39.978813710266024, 116.31699800491333)
+        }]
+      });
+
+      marker.moveAlong({
+        'car': {
+          path,
+          speed: 250
+        }
+      }, {
+        autoRotation: true
+      })
+    </script>
+  </body>
+
+  </html>
+  ```
+
