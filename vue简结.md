@@ -3310,6 +3310,8 @@ configeWebpack: (config) => {
 
   [万字长文带你全面掌握Vue3](https://juejin.cn/post/6903119693742080007)
 
+  [全面总结Vue3.0的新特性](https://juejin.cn/post/6968094627375087653)
+
   * 生命周期及nextTick
 
     ```js
@@ -4034,34 +4036,149 @@ configeWebpack: (config) => {
     7. vuex由Vue.use(Vuex)，Vuex.Store({})变为Vuex.createStore({})，由this.$store.~~~变为useStore().~~~
     8. 新增 Suspense 组件，处理动态引入的组件。defineAsyncComponent可以接受返回承诺的工厂函数
 
-    异步组件:提供了两个template 也就是两个插槽，一个是没请求回来的时候显示什么，一个是请求成功显示什么
-    ```ts
-    <template>
-      <Suspense>
-        <template #default>
-          <my-component />
-        </template>
-        <template #fallback>
-          Loading ...
-        </template>
-      </Suspense>
-    </template>
+      它允许我们的程序在等待异步组件时渲染一些后备的内容，可以让我们创建一个平滑的用户体验
 
-    <script lang='ts'>
-    import { defineComponent, defineAsyncComponent } from "vue";
-    const MyComponent = defineAsyncComponent(() => import('./Component'));
+      Vue中加载异步组件其实在Vue2.x中已经有了，我们用的vue-router中加载的路由组件其实也是一个异步组件
 
-    export default defineComponent({
-      components: {
-        MyComponent
-      },
-      setup() {
-        return {}
+      在Vue3中重新定义，异步组件需要通过defineAsyncComponent来进行显示的定义
+
+      异步组件:提供了两个template 也就是两个插槽，一个是没请求回来的时候显示什么，一个是请求成功显示什么
+      ```ts
+      <template>
+        <Suspense>
+          <template #default>
+            <my-component />
+          </template>
+          <template #fallback>
+            Loading ...
+          </template>
+        </Suspense>
+      </template>
+
+      <script lang='ts'>
+      import { defineComponent, defineAsyncComponent } from "vue";
+      const MyComponent = defineAsyncComponent(() => import('./Component'));
+
+      export default defineComponent({
+        components: {
+          MyComponent
+        },
+        setup() {
+          return {}
+        }
+      })
+      </script>
+      ```
+
+    9. Fragment
+
+      在vue2.x中，要求每个模板必须有一个根节点
+
+      或者在Vue2.x中还可以引入vue-fragments库，用一个虚拟的fragment代替div
+
+      在React中，解决方法是通过的一个React.Fragment标签创建一个虚拟元素
+
+      在Vue3中我们可以直接不需要根节点
+
+    10. Teleport
+
+      它可以将插槽中的元素或者组件传送到页面的其他位置(#app外)
+
+      虽然在不同的地方进行渲染，但是Teleport中的元素和组件还是属于父组件的逻辑子组件，还是可以和父组件进行数据通信
+
+      ```html
+      <template>
+        <button @click="showDialog = true">打开模态框</button>
+
+        <teleport to="body">
+          <div class="modal" v-if="showDialog" style="position: fixed">
+            我是一个模态框
+            <button @click="showDialog = false">关闭</button>
+            <child-component :msg="msg"></child-component>
+          </div>
+        </teleport>
+      </template>
+      <script>
+      export default {
+        data() {
+          return {
+            showDialog: false,
+            msg: "hello"
+          };
+        },
+      };
+      </script>
+      ```
+
+      在React中可以通过createPortal函数来创建需要传送的节点
+
+    11. v-model绑定多值变更
+
+      Vue2.x
+      ```html
+      <child-component 
+          :msg1.sync="msg1" 
+          :msg2.sync="msg2">
+      </child-component>
+      ```
+
+      Vue3将v-model和.sync进行了功能的整合，抛弃了.sync
+      ```html
+      <child-component
+          v-model.msg1="msg1"
+          v-model.msg2="msg2">
+      </child-component>
+      ```
+
+    12. v-for中ref
+
+      vue2.x中，在v-for上使用ref属性，通过this.$refs会得到一个数组
+      ```html
+      <template
+        <div v-for="item in list" :ref="setItemRef"></div>
+      </template>
+      <script>
+      export default {
+        data(){
+          list: [1, 2]
+        },
+        mounted () {
+          // [div, div]
+          console.log(this.$refs.setItemRef) 
+        }
       }
-    })
-    </script>
-    ```
-    9. 样例
+      </script>
+      ```
+
+      vue3不再自动创建数组，而是将ref的处理方式变为了函数，该函数默认传入该节点
+      ```html
+      <template
+        <div v-for="item in 3" :ref="setItemRef"></div>
+      </template>
+      <script>
+      import { reactive, onUpdated } from 'vue'
+      export default {
+        setup() {
+          let itemRefs = reactive([])
+
+          const setItemRef = el => {
+            itemRefs.push(el)
+          }
+
+          onUpdated(() => {
+            console.log(itemRefs)
+          })
+
+          return {
+            itemRefs,
+            setItemRef
+          }
+        }
+      }
+      </script>
+      ```
+      
+    13. 样例
     ```html
     <template>
         <div>
