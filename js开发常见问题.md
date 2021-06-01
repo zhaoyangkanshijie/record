@@ -44,6 +44,7 @@
 - [DOM操作大全](#DOM操作大全)
 - [swiper轮播](#swiper轮播)
 - [腾讯位置服务汽车轨迹](#腾讯位置服务汽车轨迹)
+- [IntlAPI与ECMAScript攻略](#IntlAPI与ECMAScript攻略)
 
 ---
 
@@ -9683,3 +9684,100 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
   </html>
   ```
 
+### IntlAPI与ECMAScript攻略
+
+1. 参考链接：
+
+  [最全 ECMAScript 攻略](https://juejin.cn/post/6968269593206849572)
+
+  [Intl](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl)
+
+2. 详解
+
+  IntlAPI：IE11部分兼容
+
+  * 日期格式化
+
+    ```js
+    // 例如我们希望出现的日期信息格式是：“xxxx年xx月xx日 xx:xx:xx”。
+    const res = new Intl.DateTimeFormat("zh", {
+      year: "numeric",
+      /* 
+            '2-digit'表示一定使用2位数字表示，
+            因此，如果数值不超过10，会自动在前面加0
+      */
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      // 设置为false表示我们采用24小时制
+      hour12: false,
+    }).format(new Date());
+
+    // IE11浏览器下的效果 完全符合我们的预期， - 2021年05月29日 10:15:27
+    // 但是在Chrome浏览器和Firefox浏览器下，却不是中文的年月日而是斜杠-2021/05/29 10:15:27， 还需要进一步字符处理下
+    console.log(res);
+    ```
+
+  * 连续数字千位分隔符分隔
+
+    ```js
+    new Intl.NumberFormat().format(12345.6789);
+    // 结果是："12,345.679"
+    ```
+
+  * 数字不足位数补 0
+
+    字符串补全 ES6 有现成的 API，padStart()和 padEnd()，不过 IE 不支持。
+    ```js
+    new Intl.NumberFormat(undefined, {
+      minimumIntegerDigits: 2,
+    }).format(8);
+    // 结果是："08"
+    ```
+
+  * 金额中文自带
+
+    ```js
+    new Intl.NumberFormat("zh-Hans", {
+      style: "currency",
+      currency: "CNY",
+      currencyDisplay: "name",
+    }).format(12345.6789);
+    // 结果是："12,345.68 人民币"
+    ```
+
+  * 数字变成中文数字显示
+
+    ```js
+    const res = `星期${new Intl.NumberFormat("zh-Hans-CN-u-nu-hanidec").format(
+      new Date().getDay(),
+    )}`;
+    // 结果是："星期五"
+    ```
+
+  * 中文排序
+
+    ```js
+    var arrUsername = [
+      "陈坤",
+      "邓超",
+      "杜淳",
+      "冯绍峰",
+      "韩庚",
+      "胡歌",
+      "黄晓明",
+      "贾乃亮",
+      "李晨",
+      "李易峰",
+      "鹿晗",
+      "井柏然",
+      "刘烨",
+      "陆毅",
+      "孙红雷",
+    ];
+
+    arrUsername.sort(new Intl.Collator("zh").compare);
+    // 结果是：["陈坤", "邓超", "杜淳", "冯绍峰", "韩庚", "胡歌", "黄晓明", "贾乃亮", "井柏然", "李晨", "李易峰", "刘烨", "陆毅", "鹿晗", "孙红雷"]
+    ```
