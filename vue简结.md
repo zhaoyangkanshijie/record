@@ -2219,6 +2219,53 @@ beforeRouteEnter(to,from,next){
 2. keep-alive 里包裹组件的子组件们都会触发 activated 和 deactivate 钩子（2.2.0+）版本后
 3. keep-alive 是虚拟组件，不会生成任何 dom
 
+* 实际案例
+
+1. 列表页和详情页切换，从详情页返回时，保留列表页状态
+
+路由出口渲染组件使用keep-alive
+```html
+<keep-alive>
+    <router-view v-if="$route.meta.keepAlive" class="router-view"></router-view>
+</keep-alive>
+<router-view v-if="!$route.meta.keepAlive" class="router-view" ></router-view>
+```
+路由配置meta参数，记录是否需要缓存组件和是否从详情页返回
+```js
+{
+  name: '首页',
+  path: 'index',
+  component: Index,
+  meta: {
+    keepAlive: true, 
+    isBack: false
+  }
+},
+```
+组件实例中，判断路由是从哪里跳转  
+```js
+beforeRouteEnter(to, from, next) {
+  if (from.path == "/detail") {
+    to.meta.isBack = true;
+  } else {
+    to.meta.isBack = false;
+  }
+  next();
+},
+```
+在其他页面进入时，更新页面中的列表数据，我们将在activated钩子函数中挂载页面初次进入时的请求数据
+```js
+activated() {
+  if (!this.$route.meta.isBack) {
+    this.list = [];
+    this.pageNum = 1;
+    this.getList();
+  }
+  this.$route.meta.isBack = false;
+},
+```
+页面跳转时，触发了滑动事件，返回后可能页面位置不正确，可考虑记录页面滚动位置，或在页面离开时beforeRouteLeave中把滑动事件禁用，然后再在页面进入的时候，在activated钩子中恢复滑动事件的。
+
 ## url 与 pushState
 
 * history.pushState(state, title, url) 与 history.replaceState(state, title, url)

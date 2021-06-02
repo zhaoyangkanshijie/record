@@ -45,6 +45,7 @@
 - [swiper轮播](#swiper轮播)
 - [腾讯位置服务汽车轨迹](#腾讯位置服务汽车轨迹)
 - [IntlAPI与ECMAScript攻略](#IntlAPI与ECMAScript攻略)
+- [代码简洁化](#代码简洁化)
 
 ---
 
@@ -9780,4 +9781,69 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
 
     arrUsername.sort(new Intl.Collator("zh").compare);
     // 结果是：["陈坤", "邓超", "杜淳", "冯绍峰", "韩庚", "胡歌", "黄晓明", "贾乃亮", "井柏然", "李晨", "李易峰", "刘烨", "陆毅", "鹿晗", "孙红雷"]
+    ```
+
+### 代码简洁化
+
+1. 参考链接：
+
+  [十个例子让你代码变的简洁起来](https://juejin.cn/post/6968287653770821663)
+
+2. 详解
+
+  * 大量选择分支的时候，过多if，使用object[key]
+
+    ```js
+    function chooseFruit(type = 'apple'){
+      if(type === 'apple'){
+        return '苹果';
+      }
+      else if(type === 'pear'){
+        return '雪梨';
+      }
+      else if(type === 'orange'){
+        return '橙';
+      }
+    }
+    ```
+    ```js
+    function optChooseFruit(type = 'apple'){
+      let fruit = {
+        apple: '苹果',
+        pear: '雪梨',
+        orange: '橙'
+      }
+      return fruit[type];
+    }
+    ```
+
+  * 大量的条件满足情况，利用数组的includes方法进行优化
+
+    ```js
+    function likeFruit(fruit){
+      if(fruit === 'apple' || fruit === 'pear' || fruit === 'orange'){
+        return 'like';
+      }
+      else{
+        return 'not like';
+      }
+    }
+    ```
+    ```js
+    function optLikeFruit(fruit){
+      if(['apple','pear','orange'].includes(fruit)){
+        return 'like';
+      }
+      else{
+        return 'not like';
+      }
+    }
+    ```
+
+  * 更快的让浮点数变成整数
+
+    ```js
+    const num = 1.111;
+    console.log(num.toFixed(0))
+    console.log(~~num)
     ```
