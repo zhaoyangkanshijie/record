@@ -486,6 +486,10 @@
 
    [浏览器与Node的事件循环(Event Loop)有何区别?](https://zhuanlan.zhihu.com/p/54882306)
 
+   [做一些动图，学习一下EventLoop](https://juejin.cn/post/6969028296893792286)
+
+   [requestAnimationFrame && setTimeout 原理剖析](https://www.jianshu.com/p/1e782d5702ef)
+
 2. 详解：
 
    - js 是单线程的非阻塞语言：因为如果是多线程，一边绑定事件，一边移除元素，会引起冲突。另外，如果引入锁，则大大增加复杂度，所以采取单线程。
@@ -500,7 +504,7 @@
 
    - 事件循环描述：所有同步任务都在主线程上执行，形成一个执行栈，主线程之外，还存在一个”任务队列”，只要异步任务有了运行结果，就在”任务队列”之中放置一个事件。一旦”执行栈”中的所有同步任务执行完毕，系统就会读取”任务队列”，于是异步任务结束等待状态，进入执行栈，开始执行。主线程从”任务队列”中读取事件，这个过程是循环不断的，所以整个的这种运行机制又称为 Event Loop（事件循环）。
 
-   - 宏任务：setInterval()，setTimeout()，xhr回调
+   - 宏任务：setInterval()，setTimeout()，setImmediate()，xhr回调
 
      - setTimeout：在指定的毫秒数后，将定时任务处理的函数添加到事件队列的队尾。
      - setInterval：按照指定的周期(以毫秒数计时)，将定时任务处理函数添加到事件队列的队尾。
@@ -520,15 +524,26 @@
        //保证定时器间隔
        ```
 
-   - 微任务 1：new Promise()
+   - 微任务 1：new Promise()、fetch()
 
      - Promise 是异步的，是指他的 then()和 catch()方法，Promise 本身还是同步的
      - 有 resolve()后，才能执行 then(),有 reject()，不执行 then()
+     - fetch基于promise
 
    - 微任务 2：async await
 
      - async function(){} 表示函数内存在异步操作
      - await 强制下面代码等待，直到这行代码得出结果(await setTimeout 无效，适用于 ajax)
+
+   - 微任务 3：MutationObserver
+
+   - 微任务 4：process.nextTick
+
+   - 操作系统任务、浏览器重绘任务：requestAnimationFrame
+
+      官方解释：window.requestAnimationFrame()告诉浏览器——你希望执行一个动画，并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。该方法需要传入一个回调函数作为参数，该回调函数会在浏览器下一次重绘之前执行。
+
+      requestAnimationFrame它不需要你去手动设置执行间隔时间，它是跟随系统的屏幕刷新频率走的，如果屏幕刷新频率是60Hz，那么它的执行间隔就是16.7ms(1000/60≈16.7)，如果屏幕刷新频率是100Hz，那么它的执行间隔就是10ms(1000/100=10)，这样就能够保证它的执行与屏幕的刷新频率保持一致，从而避免丢帧现象。
 
    - 事件优先级：同步任务>异步任务(微任务>宏任务(取决于延时时间))
 
