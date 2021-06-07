@@ -1959,6 +1959,28 @@
           }
           ```
 
+        - touch不存在offsetX问题(无法直接获取触摸点在元素中哪个位置)
+
+          ```js
+          touchstartEvent(enent){
+            //touches[0]表示触摸的第一只手指
+            let offsetX = event.touches[0].clientX - event.currentTarget.getBoundingClientRect().x;
+          }
+          //touches: TouchList
+          //0: Touch
+          //clientX: 852
+          //clientY: 702.6666870117188
+          //force: 1
+          //identifier: 0
+          //pageX: 852
+          //pageY: 702.6666870117188
+          //radiusX: 15.333333015441895
+          //radiusY: 15.333333015441895
+          //rotationAngle: 0
+          //screenX: 639
+          //screenY: 697
+          ```
+
    - layer 相关
 
      - layerY:指针距离元素顶部距离(含 border，旋转不变)
