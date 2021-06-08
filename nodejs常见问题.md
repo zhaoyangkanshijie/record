@@ -33,6 +33,7 @@
 - [Buffer缓冲器](#Buffer缓冲器)
 - [ORM框架](#ORM框架)
 - [定时任务框架](#定时任务框架)
+- [Node模块机制](#Node模块机制)
 
 ---
 
@@ -225,6 +226,8 @@
 
    [通过【垃圾回收机制】的角度认识【Map与WeakMap】的区别](https://mp.weixin.qq.com/s/1ORX2Ftd5Eo_Oc3IEn2R2g)
 
+   [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+
 2. 详解：
 
     * 背景
@@ -235,14 +238,23 @@
 
         造成这个问题的主要原因在于 Node 的 JavaScript 执行引擎 V8。
 
-        在 V8 中，所有的 JavaScript 对象都是通过堆来进行分配的。Node 提供了 V8 中内存的使用量查看方法 process.memoryUsage()
-
-        heapTotal 已申请到的堆内存，heapUsed 当前使用的堆内存
-
         限制内存原因：
         
         * V8 为浏览器而设计，不太可能遇到用大量内存的场景
         * V8 的垃圾回收机制的限制
+
+        在 V8 中，所有的 JavaScript 对象都是通过堆来进行分配的。Node 提供了 V8 中内存的使用量查看方法 process.memoryUsage()
+
+        ```js
+        {
+            rss: 4935680,
+            heapTotal: 1826816,
+            heapUsed: 650472,
+            external: 49879
+        }
+        ```
+
+        heapTotal 已申请到的堆内存，heapUsed 当前使用的堆内存。external 代表 V8 管理的，绑定到 Javascript 的 C++对象的内存使用情况。rss, 驻留集大小, 是给这个进程分配了多少物理内存(占总分配内存的一部分) 这些物理内存中包含堆，栈，和代码段。
 
         控制使用内存的大小选项：
 
@@ -269,7 +281,7 @@
 
             * 对象是否经历过一次 Scavenge 回收
 
-            *  空间已经使用超过 25%(原因：当这次 Scavenge 回收完成后，这个 To 空间将变成 From 空间，接下来的内存分配将在这个空间中进行，如果占比过高，会影响后续的内存分配)
+            * 空间已经使用超过 25%(原因：当这次 Scavenge 回收完成后，这个 To 空间将变成 From 空间，接下来的内存分配将在这个空间中进行，如果占比过高，会影响后续的内存分配)
 
             老生代中主要采用了 Mark-Sweep 和 Mark-Compact 相结合的方式进行垃圾回收
 
@@ -1965,29 +1977,79 @@
 
    [nodejs中 spawn 、fork、exec、execFile的区别](https://www.cnblogs.com/eret9616/p/11105840.html)
 
+   [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+
 2. 详解：
+
+面对 node 单线程对多核 CPU 使用不足的情况，Node 提供了 child_process 模块，来实现进程的复制，node 的多进程架构是主从模式
+```js
+var fork = require('child_process').fork;
+var cpus = require('os').cpus();
+for(var i = 0; i < cpus.length; i++){
+    fork('./worker.js');
+}
+```
 
 * spawn、exec、execFile、fork
 
-这四个都可以用来创建子进程
+    这四个都可以用来创建子进程
 
-fork与spawn类似，spawn和fork都是返回一个基于流的子进程对象，不同在于fork创建子进程需要执行js文件，返回的子进程对象可以和父进程对象进行通信，通过send和on方法。
+    * spawn(): 启动一个子进程来执行命令。
 
-exec和execFile可以在回调中拿到返回的buffer的内容（执行成功或失败的输出）
+        fork与spawn类似，spawn和fork都是返回一个基于流的子进程对象，不同在于fork创建子进程需要执行js文件，返回的子进程对象可以和父进程对象进行通信，通过send和on方法。
 
-exec是创建子shell去执行命令，用来直接执行shell命令  。execFile是去创建任意你指定的文件的进程
+        * spawn 在创建子进程的时候，第三个参数有一个 stdio 选项:
 
-spawn与exec和execFile不同的是，后两者创建时可以指定timeout属性设置超时时间，一旦进程超时就会被杀死；
+            选项用于配置在父进程和子进程之间建立的管道。
 
-exec与execFile不同的是，exec执行的是已有命令，execFile执行的是文件。
+            默认情况下，子进程的 stdin、 stdout 和 stderr 会被重定向到 ChildProcess 对象上相应的 subprocess.stdin、subprocess.stdout 和 subprocess.stderr 流。
+
+            这相当于将 options.stdio 设置为 ['pipe', 'pipe', 'pipe']。
+
+    * exec(): 启动一个子进程来执行命令，
+    
+        与 spawn()不同的是其接口不同，它有一个回调函数获知子进程的状况
+        
+        exec是创建子shell去执行命令，用来直接执行shell命令。
+
+    * execFlie(): 启动一个子进程来执行可执行文件
+    
+        exec和execFile可以在回调中拿到返回的buffer的内容（执行成功或失败的输出）
+        
+        execFile是去创建任意你指定的文件的进程
+        
+        exec与execFile不同的是，exec执行的是已有命令，execFile执行的是文件。
+
+        spawn与exec和execFile不同的是，后两者创建时可以指定timeout属性设置超时时间，一旦进程超时就会被杀死；
+
+* 实现一个 node 子进程被杀死，然后自动重启代码
+
+    ```js
+    var createWorker = function(){
+        var worker = fork(__dirname + 'worker.js')
+        worker.on('exit', function(){
+            console.log('Worker' + worker.pid + 'exited');
+            // 如果退出就创建新的worker
+            createWorker()
+        })
+    }
+    ```
+
+* 实现限量重启，比如我最多让其在 1 分钟内重启 5 次，超过了就报警给运维
+
+    思路大概是在创建 worker 的时候，就判断创建的这个 worker 是否在 1 分钟内重启次数超过 5 次
+
+    所以每一次创建 worker 的时候都要记录这个 worker 创建时间，放入一个数组队列里面，每次创建 worker 都去取队列里前 5 条记录
+    
+    如果这 5 条记录的时间间隔小于 1 分钟，就说明到了报警的时候了
 
 * pm2
 
-pm2常用命令：参考:koa2Example->生产环境pm2相关
+    pm2常用命令：参考:koa2Example->生产环境pm2相关
 
--i 参数，启动多线程；watch，-w，监听文件改变
+    -i 参数，启动多线程；watch，-w，监听文件改变
 
-pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.connfig.js —only=one-app-name
+    pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.connfig.js —only=one-app-name
 
 ### Nodemailer发送邮件
 
@@ -3478,6 +3540,8 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
 
    [Buffer](http://nodejs.cn/api/buffer.html)
 
+   [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+
 2. 详解：
 
     * Buffer 在全局作用域中,无需require
@@ -3986,6 +4050,32 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
         // 打印: 2 个字节 : ab
         ```
 
+    * 新建 Buffer 会占用 V8 分配的内存吗
+
+        不会，Buffer 属于堆外内存，不是 V8 分配的。
+
+    * Buffer.alloc 和 Buffer.allocUnsafe 的区别
+
+        Buffer.allocUnsafe 创建的 Buffer 实例的底层内存是未初始化的。新创建的 Buffer 的内容是未知的，可能包含敏感数据。
+
+        使用 Buffer.alloc() 可以创建以零初始化的 Buffer 实例。
+
+    * Buffer 的内存分配机制
+
+        为了高效的使用申请来的内存，Node 采用了 slab 分配机制。slab 是一种动态的内存管理机制。
+        
+        Node 以 8kb 为界限来来区分 Buffer 为大对象还是小对象，如果是小于 8kb 就是小 Buffer，大于 8kb 就是大 Buffer。
+        
+        例如第一次分配一个 1024 字节的 Buffer，Buffer.alloc(1024),那么这次分配就会用到一个 slab，接着如果继续 Buffer.alloc(1024),那么上一次用的 slab 的空间还没有用完，因为总共是 8kb，1024+1024 = 2048 个字节，没有 8kb，所以就继续用这个 slab 给 Buffer 分配空间。如果超过 8kb，那么直接用 C++底层地宫的 SlowBuffer 来给 Buffer 对象提供空间。
+
+    * Buffer 乱码问题
+
+        一般情况下，只需要设置 rs.setEncoding('utf8')即可解决乱码问题
+        ```js
+        var rs = require('fs').createReadStream('test.md', {highWaterMark: 11});
+        // 床前明???光，疑???地上霜，举头???明月，???头思故乡
+        ```
+
 ### ORM框架
 
 1. 参考链接：
@@ -4463,3 +4553,188 @@ pm2配置文件，可以配置多个app，apps数组，启动 pm2 start pm2.conn
             * Agenda
             * bull
 
+### Node模块机制
+
+1. 参考链接：
+
+   [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+
+2. 详解：
+
+    * node里的模块
+
+        所有的模块都是 Module 的实例。可以看到，当前模块（module.js）也是 Module 的一个实例。
+        ```js
+        function Module(id, parent) {
+            this.id = id;
+            this.exports = {};
+            this.parent = parent;
+            this.filename = null;
+            this.loaded = false;
+            this.children = [];
+        }
+
+        module.exports = Module;
+
+        var module = new Module(filename, parent);
+        ```
+
+    * require的模块加载机制
+
+        1. 先计算模块路径
+        2. 如果模块在缓存里面，取出缓存
+        3. 加载模块
+        4. 输出模块的 exports 属性
+
+        ```js
+        // require 其实内部调用 Module._load 方法
+        Module._load = function(request, parent, isMain) {
+            //  计算绝对路径
+            var filename = Module._resolveFilename(request, parent);
+
+            //  第一步：如果有缓存，取出缓存
+            var cachedModule = Module._cache[filename];
+            if (cachedModule) {
+                return cachedModule.exports;
+
+            // 第二步：是否为内置模块
+            if (NativeModule.exists(filename)) {
+                return NativeModule.require(filename);
+            }
+
+            /********************************这里注意了**************************/
+            // 第三步：生成模块实例，存入缓存
+            // 这里的Module就是我们上面的1.1定义的Module
+            var module = new Module(filename, parent);
+            Module._cache[filename] = module;
+
+            /********************************这里注意了**************************/
+            // 第四步：加载模块
+            // 下面的module.load实际上是Module原型上有一个方法叫Module.prototype.load
+            try {
+                module.load(filename);
+                hadException = false;
+            } finally {
+                if (hadException) {
+                delete Module._cache[filename];
+                }
+            }
+
+            // 第五步：输出模块的exports属性
+            return module.exports;
+        };
+        ```
+
+    * 为什么每个模块都有__dirname,__filename 属性
+
+        每个 module 里面都会传入__filename, __dirname 参数，这两个参数并不是 module 本身就有的，是外界传入的
+        ```js
+        // 上面(1.2部分)的第四步module.load(filename)
+        // 这一步，module模块相当于被包装了，包装形式如下
+        // 加载js模块，相当于下面的代码（加载node模块和json模块逻辑不一样）
+        (function (exports, require, module, __filename, __dirname) {
+            // 模块源码
+            // 假如模块代码如下
+            var math = require('math');
+            exports.area = function(radius){
+                return Math.PI * radius * radius
+            }
+        });
+        ```
+
+    * exports.xxx=xxx 和 Module.exports={}有什么区别
+
+        exports 其实就是 module.exports
+        ```js
+        //module.exports vs exports
+        //很多时候，你会看到，在Node环境中，有两种方法可以在一个模块中输出变量：
+
+        //方法一：对module.exports赋值：
+
+        // hello.js
+
+        function hello() {
+            console.log('Hello, world!');
+        }
+
+        function greet(name) {
+            console.log('Hello, ' + name + '!');
+        }
+
+        module.exports = {
+            hello: hello,
+            greet: greet
+        };
+        //方法二：直接使用exports：
+
+        // hello.js
+
+        function hello() {
+            console.log('Hello, world!');
+        }
+
+        function greet(name) {
+            console.log('Hello, ' + name + '!');
+        }
+
+        function hello() {
+            console.log('Hello, world!');
+        }
+
+        exports.hello = hello;
+        exports.greet = greet;
+        //但是你不可以直接对exports赋值：
+
+        // 代码可以执行，但是模块并没有输出任何变量:
+        exports = {
+            hello: hello,
+            greet: greet
+        };
+        //如果你对上面的写法感到十分困惑，不要着急，我们来分析Node的加载机制：
+
+        //首先，Node会把整个待加载的hello.js文件放入一个包装函数load中执行。在执行这个load()函数前，Node准备好了module变量：
+
+        var module = {
+            id: 'hello',
+            exports: {}
+        };
+        //load()函数最终返回module.exports：
+
+        var load = function (exports, module) {
+            // hello.js的文件内容
+            ...
+            // load函数返回:
+            return module.exports;
+        };
+
+        var exportes = load(module.exports, module);
+        //也就是说，默认情况下，Node准备的exports变量和module.exports变量实际上是同一个变量，并且初始化为空对象{}，于是，我们可以写：
+
+        exports.foo = function () { return 'foo'; };
+        exports.bar = function () { return 'bar'; };
+        //也可以写：
+
+        module.exports.foo = function () { return 'foo'; };
+        module.exports.bar = function () { return 'bar'; };
+        //换句话说，Node默认给你准备了一个空对象{}，这样你可以直接往里面加东西。
+
+        //但是，如果我们要输出的是一个函数或数组，那么，只能给module.exports赋值：
+
+        module.exports = function () { return 'foo'; };
+        //给exports赋值是无效的，因为赋值后，module.exports仍然是空对象{}。
+
+        //结论
+        //如果要输出一个键值对象{}，可以利用exports这个已存在的空对象{}，并继续在上面添加新的键值；
+
+        //如果要输出一个函数或数组，必须直接对module.exports对象赋值。
+
+        //所以我们可以得出结论：直接对module.exports赋值，可以应对任何情况：
+
+        module.exports = {
+            foo: function () { return 'foo'; }
+        };
+        //或者：
+
+        module.exports = function () { return 'foo'; };
+        //最终，我们强烈建议使用module.exports = xxx的方式来输出模块变量，这样，你只需要记忆一种方法。
+        ```
