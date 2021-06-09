@@ -58,6 +58,7 @@
     * [h5请求跨域解决方案](#h5请求跨域解决方案)
     * [微信小程序转uniapp](#微信小程序转uniapp)
 * [项目性能优化](#项目性能优化)
+* [原生nvue相关](#原生nvue相关)
 
 ---
 
@@ -3620,3 +3621,111 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
     * 懒加载
     * 防抖节流
     * 小程序的分包，见参考链接2
+
+## 原生nvue相关
+
+* uni-app App端
+
+    基于 weex 改进的原生渲染引擎
+
+    如果使用vue页面，则使用webview渲染(不熟悉原生排版使用)
+    
+    如果使用nvue页面(native vue的缩写)，则使用原生渲染(熟悉 weex或react native 开发使用)
+
+    支持vue页面和nvue页面混搭、互相跳转，也支持纯nvue原生渲染
+
+    纯原生渲染
+    ```json
+    // manifest.json
+    {
+        // ...
+        /* App平台特有配置 */
+        "app-plus": {
+            "renderer": "native", //App端纯原生渲染模式
+        }
+    }
+    ```
+
+* nvue组件
+
+    * Barcode扫码组件
+    * list长列表优化，性能高于使用view或scroll-view的滚动
+    * cell告诉原生引擎，哪些部分是可重用，支持添加任意类型的组件作为自己的子组件，但是不要在内部添加滚动容器
+    * recycle-list新的列表容器，具有回收和复用的能力，更优于list
+    * waterfall瀑布流布局
+    * refresh下拉刷新
+
+* 更适合使用nvue的情况
+
+    1. 涉及nvue组件场景
+    2. 软键盘右下角的按钮文字处理
+    3. 无法覆盖原生控件的层级问题：使用map、video、live-pusher等原生组件时，view等组件无法覆盖原生组件
+    4. 直播推流：live-pusher
+    5. 对App启动速度要求极致化：App端v3编译器模式下，如果首页使用nvue且在manifest里配置fast模式，那么App的启动速度可以控制在1秒左右。而使用vue页面的话，App的启动速度一般是3秒起，取决于你的代码性能和体积。
+
+* 更适合使用vue的情况
+
+    1. canvas
+    2. 动态横竖屏：nvue页面的css不支持媒体查询
+
+* 开发问题
+
+    * 不管是vue页面还是nvue页面，都需要在pages.json中注册。
+    * 一个页面路由下出现同名的vue和nvue文件，在App端，会仅编译nvue页面，在非App端，会优先使用vue页面。
+    * 只有nvue页面，则在非app端，只有uni-app编译模式的nvue文件才会编译。
+    * 开发nvue页面
+        * template： 模板写法、数据绑定同 vue。组件支持：weex 组件，uni-app组件，nvue专用组件
+        * style：并非所有浏览器的 css 均支持，布局模型只支持 flex 布局
+        * script：写法同 vue。API支持：nvue API，uni API，plus API
+    * debug：运行到手机端，查看console
+    * render-whole属性boolean，开启后将组件以及子组件的信息结构一次性和原生层通讯，通过整个节点的重绘提升了排版渲染性能。开启前将以子节点一个接着一个和原生层通讯再重绘。总体的渲染时间可能更久。
+    * 控制显隐只可以使用v-if不可以使用v-show
+    * 只支持flex布局，不能使用百分比、没有媒体查询。把这些不支持的css包裹在条件编译里，APP-PLUS-NVUE
+    * 布局排列方向默认为竖排（column），如需改变布局方向，可以在 manifest.json -> app-plus -> nvue -> flex-direction 节点下修改，仅在 uni-app 模式下生效。
+    * 只有text标签可以设置字体大小，字体颜色，文字内容，必须、只能在text组件下
+    * 建议有 nvue 的页面锁定手机方向
+    * 不支持背景图。但可以使用image组件和层级来实现类似web中的背景效果。各组件在安卓端默认是透明的，如果不设置background-color，可能会导致出现重影的问题。
+    * 只能使用 class 选择器，只支持数组语法
+    * Android端在一个页面内使用大量圆角边框会造成性能问题，应避免这类使用。
+    * 要滚的内容需要套在可滚动组件下：list、waterfall、scroll-view/scroller
+    * 在 App.vue 中定义的全局js变量不会在 nvue 页面生效。globalData和vuex是生效的。
+    * 加载自定义字体
+
+        ```html
+        <template>
+            <view>
+                <text class="my-iconfont">&#xe85c;</text>
+            </view>
+        </template>
+        <script>
+            export default{
+                beforeCreate() {
+                    const domModule = uni.requireNativePlugin('dom')
+                    domModule.addRule('fontFace', {
+                        'fontFamily': "myIconfont",
+                        'src': "url('http://at.alicdn.com/t/font_2234252_v3hj1klw6k9.ttf')"
+                    });
+                }
+            }
+        </script>
+        <style>
+            .my-iconfont {
+                font-family:myIconfont;
+                font-size:60rpx;
+                color: #00AAFF;
+            }
+        </style>
+        ```
+
+    * iOS平台默认情况下滚动容器组件（如list、waterfall组件）内容不足时，由于没有撑满容器的可视区域会导致无法上下滚动，此时无法操作下拉刷新功能，无法触发refresh组件的@refresh、@pullingdown事件。 此时可在容器组件中配置alwaysScrollableVertical属性值为true来设置支持上下滚动，支持下拉刷新操作。
+
+        ```html
+        <list class="scroll-v list" enableBackToTop="true" scroll-y alwaysScrollableVertical="true">
+            <refresh class="refresh" @refresh="onrefresh()" @pullingdown="onpullingdown">
+                //refresh content
+            </refresh>
+            <cell v-for="(newsitem,index) in list" :key="newsitem.id">
+                //cell content
+            </cell>
+        </list>
+        ```
