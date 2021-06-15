@@ -46,6 +46,7 @@
 - [腾讯位置服务汽车轨迹](#腾讯位置服务汽车轨迹)
 - [IntlAPI与ECMAScript攻略](#IntlAPI与ECMAScript攻略)
 - [代码简洁化](#代码简洁化)
+- [元素包含与点击元素外面](#元素包含与点击元素外面)
 
 ---
 
@@ -9869,3 +9870,49 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
     console.log(num.toFixed(0))
     console.log(~~num)
     ```
+
+### 元素包含与点击元素外面
+
+1. 参考链接：
+
+  * [.contains() 判断一个元素内是否包含另一个元素](https://blog.csdn.net/qq_25695065/article/details/79812121)
+  * [JavaScript Element contains() 方法](https://www.jc2182.com/javascript/javascript-element-contains-method.html)
+  * [contains 和 ele.compareDocumentPosition确定html节点间的关系](https://www.cnblogs.com/stephenykk/p/3880657.html)
+  * [cHTML DOM compareDocumentPosition() 方法](https://www.w3school.com.cn/jsref/met_node_comparedocumentposition.asp)
+
+2. 详解
+
+  Element.contains()方法返回一个布尔值，指示节点是否是指定节点的后代。
+
+  找出span元素是否是div元素的后代
+  ```js
+  var span = document.getElementById("mySPAN");
+  var div = document.getElementById("myDIV").contains(span);
+  ```
+
+  是否点击元素外面
+  ```js
+  document.addEventListener('click', function (e) {
+      if (!document.getElementById("myDIV").contains(e.target)) {
+          console.log('outside')
+      }
+  });
+  ```
+
+  NodeA.compareDocumentPosition(NodeB)方法比较两个节点，并返回描述它们在文档中位置的整数。
+  
+  返回值可能是：
+
+  1：没有关系，两个节点不属于同一个文档。
+
+  2：第一节点（P1）位于第二个节点后（P2）。
+
+  4：第一节点（P1）定位在第二节点（P2）前。
+
+  8：第一节点（P1）位于第二节点内（P2）。
+
+  16：第二节点（P2）位于第一节点内（P1）。
+
+  32：没有关系，或是两个节点是同一元素的两个属性。
+
+  返回值可以是值的组合。例如，返回 20 意味着在 p2 在 p1 内部（16），并且 p1 在 p2 之前（4）。
