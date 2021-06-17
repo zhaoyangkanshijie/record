@@ -60,6 +60,7 @@
 * [项目性能优化](#项目性能优化)
 * [原生nvue相关](#原生nvue相关)
 * [手机模拟器调试](#手机模拟器调试)
+* [关于ssr](#关于ssr)
 
 ---
 
@@ -3748,4 +3749,18 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
 
     3. 重启HbuilderX，运行到模拟器
 
-    
+## 关于ssr
+
+1. 参考链接
+
+    [uniapp h5版本ssr运行报错](https://ask.dcloud.net.cn/question/111292)
+
+    [请问uniapp-h5打包后，对百度SEO的收录问题](https://github.com/dcloudio/uni-app/issues/2194)
+
+2. 详解
+
+    目前uniapp暂不支持服务器端渲染，ssr可使用nuxt，但uniapp可以做SEO。
+
+    seo目前简单的方案是服务端识别爬虫ua，自动重定向到一个新接口，吐出静态html内容，这个页面不给用户看只供爬虫读内容，所以页面开发也会很简单。
+
+    这种方式不会被搜索引擎降权或者惩罚，根源毕竟是百度爬虫不智能造成的。
