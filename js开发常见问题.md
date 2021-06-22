@@ -9819,6 +9819,8 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
 
   [十个例子让你代码变的简洁起来](https://juejin.cn/post/6968287653770821663)
 
+  [2021年不可错过的34种JS优化技巧](https://mp.weixin.qq.com/s/R3fPSDNTMBk_OwMgD8uyhQ)
+
 2. 详解
 
   * 大量选择分支的时候，过多if，使用object[key]
@@ -9876,6 +9878,170 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
     const num = 1.111;
     console.log(num.toFixed(0))
     console.log(~~num)
+    ```
+
+  * null/undefined 检查和默认赋值
+
+    ```js
+    let test1 = null,//或undefined
+        test2 = test1 || '';
+    console.log("null check", test2); // output will be ""
+
+    const test= null ?? 'default';
+    console.log(test);
+    // expected output: "default"
+    const test1 = 0 ?? 2;
+    console.log(test1);
+    // expected output: 0
+    ```
+
+  * 给多个变量赋值
+
+    ```js
+    //Longhand 
+    let test1, test2, test3;
+    test1 = 1;
+    test2 = 2;
+    test3 = 3;
+    //Shorthand 
+    let [test1, test2, test3] = [1, 2, 3];
+    ```
+
+  * if 判断值是否存在
+
+    ```js
+    // Longhand
+    if (test1 === true) or if (test1 !== "") or if (test1 !== null)
+    // Shorthand //it will check empty string,null and undefined too
+    if (test1)
+    ```
+
+  * 多个条件判断的 && 操作符
+
+    ```js
+    //Longhand 
+    if (test1) {
+    callMethod(); 
+    } 
+    //Shorthand 
+    test1 && callMethod();
+    ```
+
+  * 循环简化
+
+    ```js
+    // Longhand
+    for (var i = 0; i < testData.length; i++)
+    // Shorthand
+    for (let i in testData) or  for (let i of testData)
+
+    function testData(element, index, array) {
+      console.log('test[' + index + '] = ' + element);
+    }
+    [11, 24, 32].forEach(testData);
+    // logs: test[0] = 11, test[1] = 24, test[2] = 32
+    ```
+
+  * 比较后返回
+
+    ```js
+    // Longhand
+    let test;
+    function checkReturn() {
+        if (!(test === undefined)) {
+            return test;
+        } else {
+            return callMe('test');
+        }
+    }
+    var data = checkReturn();
+    console.log(data); //output test
+    function callMe(val) {
+        console.log(val);
+    }
+    // Shorthand
+    function checkReturn() {
+        return test || callMe('test');
+    }
+    ```
+
+  * 简短的函数调用
+
+    ```js
+    // Longhand
+    function test1() {
+      console.log('test1');
+    };
+    function test2() {
+      console.log('test2');
+    };
+    var test3 = 1;
+    if (test3 == 1) {
+      test1();
+    } else {
+      test2();
+    }
+    // Shorthand
+    (test3 === 1? test1:test2)();
+    ```
+
+  * 模板字面量与跨行字符串
+
+    ```js
+    //longhand
+    const welcome = 'Hi ' + test1 + ' ' + test2 + '.'
+    //shorthand
+    const welcome = `Hi ${test1} ${test2}`;
+
+    //longhand
+    const data = 'abc abc abc abc abc abc\n\t'
+        + 'test test,test test test test\n\t'
+    //shorthand
+    const data = `abc abc abc abc abc abc
+            test test,test test test test`
+    ```
+
+  * 将字符串转成数字
+
+    ```js
+    //Longhand 
+    let test1 = parseInt('123'); 
+    let test2 = parseFloat('12.3'); 
+    //Shorthand 
+    let test1 = +'123'; 
+    let test2 = +'12.3';
+    ```
+
+  * indexOf 的按位操作简化
+
+    ```js
+    //longhand
+    if(arr.indexOf(item) > -1) { // item found 
+    }
+    if(arr.indexOf(item) === -1) { // item not found
+    }
+    //shorthand
+    if(~arr.indexOf(item)) { // item found
+    }
+    if(!~arr.indexOf(item)) { // item not found
+    }
+    ```
+
+  * 双重按位操作
+
+    ```js
+    // Longhand
+    Math.floor(1.9) === 1 // true
+    // Shorthand
+    ~~1.9 === 1 // true
+    ```
+
+  * 查找数组的最大值和最小值
+
+    ```js
+    const arr = [1, 2, 3]; 
+    Math.max(...arr); // 3
+    Math.min(...arr); // 1
     ```
 
 ### 元素包含与点击元素外面
