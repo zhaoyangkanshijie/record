@@ -2461,11 +2461,12 @@
    - [理解 es6 中 class 构造以及继承的底层实现原理](https://www.cnblogs.com/memphis-f/p/12029574.html)
    - [前端渣渣唠嗑一下前端中的设计模式（真实场景例子）](https://juejin.im/post/5e0eaff4e51d45413b7b77f3)
    - [8 个原生 JS 知识点 | 面试高频](https://mp.weixin.qq.com/s/tIasEjYJRaVqFMN_aVtpiw)
-   - [“浅尝”JavaScript设计模式](https://juejin.im/post/5eb3be806fb9a043426818c7#heading-5)
+   - [“浅尝”JavaScript设计模式](https://juejin.im/post/5eb3be806fb9a043426818c7)
    - [proxy-polyfill](https://github.com/linsk1998/proxy-polyfill/blob/master/proxy.js)
    - [进阶必读：深入理解 JavaScript 原型](https://juejin.cn/post/6901494216074100750)
    - [JS沙箱模式实例分析](https://www.jb51.net/article/122831.htm)
    - [说说JS中的沙箱](https://segmentfault.com/a/1190000020463234)
+   - [15 张前端高清知识地图，强烈建议收藏](https://juejin.cn/post/6976157870014332935)
 
 2. 详解：
 
@@ -5928,6 +5929,8 @@
 
    [TypeScript 进阶经验总结](https://juejin.cn/post/6953592990770298887)
 
+   [15 张前端高清知识地图，强烈建议收藏](https://juejin.cn/post/6976157870014332935)
+
 2. 详解
 
    - tsconfig.json配置样例
@@ -6697,6 +6700,10 @@
      - typeof 是获取一个对象/实例的类型
 
      - extends 主要作用是添加泛型约束
+
+     - NonNullable<T> 从T中除去undefined null
+
+     - ReturnType<T> 获取函数的返回值类型
 
      - Partial 将某个类型里的属性全部变为可选项
 
