@@ -62,7 +62,7 @@
 * [vue-router4](#vue-router4)
 * [循环条件动态class混合使用](#循环条件动态class混合使用)
 * [typescript样例](#typescript样例)
-* [vue.use和vue.component](#vue.use和vue.component)
+* [vue.use和vue.component与vue.install](#vue.use和vue.component与vue.install)
 * [路由懒加载原理](#路由懒加载原理)
 * [vue中使用了哪些设计模式](#vue中使用了哪些设计模式)
 * [nextTick使用场景和原理](#nextTick使用场景和原理)
@@ -6496,7 +6496,7 @@ export default class App extends Vue {
 </style>
 ```
 
-## vue.use和vue.component
+## vue.use和vue.component与vue.install
 
 参考链接：
 
@@ -6530,13 +6530,40 @@ const plugin = {
     // 添加全局方法或者属性
     Vue.myGlobMethod = function () {};
     // 添加全局指令
-    Vue.directive();
+    Vue.directive('click', {
+      bind(el, binding, vnode, oldVnode) {
+        //做绑定的准备工作,添加时间监听
+        console.log('指令my-directive的bind执行啦');
+      },
+      inserted: function(el){
+      //获取绑定的元素
+      console.log('指令my-directive的inserted执行啦');
+      },
+      update: function(){
+      //根据获得的新值执行对应的更新
+      //对于初始值也会调用一次
+      console.log('指令my-directive的update执行啦');
+      },
+      componentUpdated: function(){
+      console.log('指令my-directive的componentUpdated执行啦');
+      },
+      unbind: function(){
+      //做清理操作
+      //比如移除bind时绑定的事件监听器
+      console.log('指令my-directive的unbind执行啦');
+      }
+    }
     // 添加混入
-    Vue.mixin();
+    Vue.mixin({
+      created: function () {
+        console.log('注入组件的created被调用啦');
+        console.log('options的值为',options)
+      }
+    });
     // 添加实例方法
     Vue.prototype.$xxx = function () {};
     // 注册全局组件
-    Vue.component()
+    Vue.component("mycomponent", component)
   }
 }
 
