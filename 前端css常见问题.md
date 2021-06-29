@@ -27,6 +27,8 @@
 - [css的var函数](#css的var函数)
 - [shape-outside环绕元素](#shape-outside环绕元素)
 - [纯CSS实现伪瀑布流布局](#纯CSS实现伪瀑布流布局)
+- [css文字填色](#css文字填色)
+- [svg文字排布](#svg文字排布)
 
 ---
 
@@ -3105,4 +3107,205 @@
             grid-row: 6 / 9;
         }
     }
+    ```
+
+### css文字填色
+
+1. 参考链接
+
+  [纯css实现：文字被颜色逐渐填满的特效](https://juejin.cn/post/6966789229909114911)
+
+  [实现多行文字被颜色逐渐填满的特效](https://juejin.cn/post/6977758054473269255)
+
+2. 详解
+
+  * 单行
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <title>test</title>
+        <style>
+            h1{
+                position: relative;
+                font-size: 72px;
+                font-weight: 700;
+                color: #ccc;
+            }
+            h1::after{
+                content: attr(text-data);
+                white-space: nowrap;
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: linear-gradient(to right, #ABDCFF, #0396FF);
+                -webkit-background-clip: text;
+                color: transparent;
+                animation: changeColor 6s linear infinite;
+            }
+            @keyframes changeColor{
+                0%{
+                    width: 0%;
+                }
+                100%{
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <h1 text-data="testtesttesttesttest">testtesttesttesttest</h1>
+    </body>
+
+    </html>
+    ```
+
+  * 多行
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <title>test</title>
+        <style>
+            .box{
+                width: 888px;
+                height: 300px;
+                margin: 200px auto;
+                position: relative;
+            }
+        
+            p{
+                position: absolute;
+                top: 0;
+                left: 0;
+                font-size: 36px;
+                font-weight: 600;
+            }
+            #text{
+                color: #666;
+            }
+            #copyText{
+                color: rgb(253, 145, 145);
+            }
+            #inner {
+                color: transparent;
+                background: linear-gradient(to right, #ABDCFF, #0396FF);
+                -webkit-background-clip: text;
+                background-repeat: no-repeat;
+                animation: landIn 3s linear infinite;
+            }
+            @keyframes landIn {
+                0% {
+                    background-size: 0 100%;
+                }
+                100% {
+                    background-size: 90em 100%;
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="box">
+            <p id="text">测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试</p>
+            <p id="copyText"><span id="inner">测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试</span></p>
+        </div>
+    </body>
+
+    </html>
+    ```
+
+### svg文字排布
+
+1. 参考链接
+
+  [如何使用SVG制作沿任意路径排布的文字效果](https://juejin.cn/post/6969449102882897950)
+
+2. 详解
+
+  * 优劣势
+
+    纯 css 实现文字沿指定路径排列的效果会显得特别复杂，如果路径发生了变化，就需要要改很多 css 属性来适应路径变化。
+
+    SVG 原生支持以任意路径排列的文字，不只是环形，还有三角形、平行四边形等任意花里胡哨的形状路径都可以支持。
+
+  * 概念
+
+    * SVG
+
+      * SVG 指可伸缩矢量图形 (Scalable Vector Graphics)，在放大或改变尺寸的情况下其图形质量不会有所损失。
+      * SVG 使用 XML 格式定义图形，用来定义用于网络的基于矢量的图形。
+      * SVG 是万维网联盟的标准，与诸如 DOM 和 XSL 之类的 W3C 标准是一个整体。
+
+    * 路径元素
+
+      path 元素是用来定义形状的通用元素，我们可以用 path 元素来定义的任何路径。
+
+      * 基本操作
+
+        * M：将笔移动到指定点x，y而不绘图。
+        * a：从当前点到点x，y绘制一个椭圆弧。
+        * z：通过从当前点到第一个点画一条线来封闭路径。
+
+    * 视图框
+
+      ViewBox（视图框） 属性用来定义 svg 所占的空间大小。两个坐标定义元素左上角的用户坐标，后两个坐标定义右下角的用户坐标。
+
+      svg 所占的空间大小就是 ViewBox 左上坐标到右下坐标的空间。
+
+    * 文本路径
+
+      textpath 元素用于沿路径（例如，圆形）排列文本。 text 元素用于在 SVG 图像中绘制文本。
+
+  * 样例
+
+    ```html
+    <!DOCTYPE html>
+    <html lang="en">
+
+    <head>
+        <title>test</title>
+    </head>
+
+    <body>
+        <style>
+            .box {
+                width: 200px;
+                height: 200px;
+                margin: 50px;
+                font-size: 12px;
+                letter-spacing: 2px;
+            }
+            .box svg {
+                overflow: visible;
+            }
+            .box path { 
+                fill: none; 
+            }
+        </style>
+        <div class="box">
+            <svg viewBox="0 0 100 100">
+                <path d="m36.04045,45.99612c0.72238,0 18.78177,-17.27891 34.67404,-2.30385c15.89227,14.97505 -2.06122,51.71385 -33.12338,49.40999c-31.06217,-2.30385 -51.39459,-47.6821 -23.94431,-74.17643c27.45028,-26.49433 76.46594,-21.1417 90.427,-2.34993c13.96106,18.79177 9.22214,37.08444 7.59483,52.18238c-1.62731,15.09794 5.01952,28.13002 23.57052,28.88256c18.551,0.75254 68.69884,1.13642 61.38299,-46.48421" fill-opacity="null" id="circle" ></path>
+                <linearGradient id="myLinearGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="red"></stop>
+                    <stop offset="15%" stop-color="orange"></stop>
+                    <stop offset="30%" stop-color="yellow"></stop>
+                    <stop offset="45%" stop-color="green"></stop>
+                    <stop offset="60%" stop-color="cyan"></stop>
+                    <stop offset="80%" stop-color="blue"></stop>
+                    <stop offset="100%" stop-color="purple"></stop>
+                </linearGradient>
+                <text fill="url(#myLinearGradient)">
+                    <textPath xlink:href="#circle">如何使用SVG制作沿任意路径排布的文字效果~来跟大冰块一起来复习一下吧~</textPath>
+                </text>
+            </svg>
+        </div>
+    </body>
+
+    </html>
     ```
