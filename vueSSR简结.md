@@ -730,6 +730,30 @@ export default {
 }
 ```
 
+关于页面重定向，服务器端重定向防页面闪烁
+
+middleware/redirect.js
+```js
+export default function ({ isServer, req, redirect, route }) {
+    let pcOrigin = 'xxxx'
+    let mobileOrigin = 'xxxx'
+    let isMobile = (ua) => {
+      return !!ua.match(/AppleWebKit.*Mobile.*/)
+    }
+    let userAgent = req ? req.headers['user-agent'] : navigator.userAgent || ''
+    console.log(isMobile(userAgent))
+    return isMobile(userAgent) ? redirect(mobileOrigin + route.fullPath) : redirect(pcOrigin + route.fullPath)
+    // 使用redirect 重定向到外链需要加上前缀:http / https
+}
+```
+
+nuxt.config.js
+```js
+router:{
+    middleware: 'midd'
+},
+```
+
 ## nuxt路由生成策略
 
 @nuxt/builder
