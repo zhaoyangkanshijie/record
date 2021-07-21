@@ -36,7 +36,7 @@
 * [双向数据绑定](#双向数据绑定)
 * [数据格式处理](#数据格式处理)
 * [图片懒加载](#图片懒加载)
-* [正则获取URL参数](#正则获取URL参数)
+* [获取URL参数](#获取URL参数)
 * [操作cookie](#操作cookie)
 * [文件切片上传](#文件切片上传)
 * [活动倒计时](#活动倒计时)
@@ -47,7 +47,7 @@
 * [JSON.parse](#JSON.parse)
 * [原生实现getElementById](#原生实现getElementById)
 * [模拟sql语句](#模拟sql语句)
-* [零宽断言](#零宽断言)
+* [字符串转成千分位](#字符串转成千分位)
 
 ---
 
@@ -2644,7 +2644,7 @@ $(() => {
 </script>
 ```
 
-## 正则获取URL参数
+## 获取URL参数
 
 - 获取指定 URL 参数
 
@@ -2680,6 +2680,28 @@ function parse_url(_url) {
 
 var url = "http://www.baidu.com?name=elephant&age=25&sex=male";
 var params = parse_url(url); // ["name=elephant", "age=25", "sex=male"]
+```
+
+- URLSearchParams和URL(IE不支持)
+
+```js
+const urlSP = new URLSearchParams(location.search);
+function getQueryString(key){
+    return urlSP.get(key)
+}
+
+const urlObj = new URL(location.href);
+function getQueryString(key){
+    return urlObj.searchParams.get(key)
+}
+
+//测试地址： /index.html?pid=10
+
+const log = console.log;
+getQueryString
+
+log("pid", getQueryString("pid"));  // pid 10
+log("cid", getQueryString("cid"));  // cid null
 ```
 
 ## 操作cookie
@@ -3241,12 +3263,20 @@ class FindData {
 var find = (d) =>  new FindData(d);
 ```
 
-## 零宽断言
+## 字符串转成千分位
 
 将字符串转成千分位。例如 '12345678' 转化成千分位是 '12,345,678'.
 
+零宽断言
 ```js
 str.replace(/\d{1,3}(?=(\d{3})+$)/g,function(s){
     return s + ','
 }) 
+```
+
+toLocaleString
+```js
+function formatMoney(num){
+    return (+num).toLocaleString("en-US");
+}
 ```
