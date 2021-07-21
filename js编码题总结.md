@@ -45,6 +45,9 @@
 * [字符串模板](#字符串模板)
 * [JSON.stringify](#JSON.stringify)
 * [JSON.parse](#JSON.parse)
+* [原生实现getElementById](#原生实现getElementById)
+* [模拟sql语句](#模拟sql语句)
+* [零宽断言](#零宽断言)
 
 ---
 
@@ -3145,4 +3148,105 @@ new Function 实现
 ```js
 var json = '{"name":"小姐姐", "age":20}';
 var obj = (new Function('return ' + json))();
+```
+
+## 原生实现getElementById
+
+1. 手动写递归
+```js
+const nodes = document.body;
+
+function getId(node,nodeIdMap){
+    if(node){ 
+        if(node.id) nodeIdMap[node.id] = node; // 如果 id 属性存在，则把该DOM存入 Map
+        const children = node.children;
+        for(let i = 0 ; i < children.length; i++){
+            getId(children[i],nodeIdMap)
+        }
+    }
+    return nodeIdMap
+}
+
+const ids = getId(nodes,{})
+
+const findId = (id) => ids[id]
+```
+
+2. 借助 document.createNodeIterator
+```js
+const f =  (id)=> document.createNodeIterator(
+    document.body,
+    NodeFilter.SHOW_ALL,
+    {
+      acceptNode(node) {
+        return node.id === id? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
+      }
+    }
+);
+
+f('anyId').nextNode(); // 即可获取 任意ID 的DOM
+```
+
+## 模拟sql语句
+
+```js
+//测试数据
+var data = [
+    {title: 't1', userId: '10086', name: 'Jay'},
+    {title: 't2', userId: '10087', name: 'Tom1'},
+    {title: 't3', userId: '10088', name: 'Tina2'},
+]
+//调用
+find(data).where({name: /\d$/,}).orderBy('userId','desc');
+//结果
+[
+    {title: 't3', userId: '10088', name: 'Tina2'},
+    {title: 't2', userId: '10087', name: 'Tom1'}
+]
+```
+
+```js
+class FindData {
+
+  constructor(data) {
+    this.data = data;
+  }
+
+  where(regs) {
+    const keys = Object.keys(regs);
+    const d = this.data.filter((item) => {
+      let r = true;
+      for (let i = 0; i < keys.length; i++) {
+        const current = item[keys[i]];
+        if (!(current && regs[keys[i]].test(current))) {
+          r = false;
+        }
+      }
+      return r;
+    })
+    return new FindData(d);
+  }
+
+  orderBy(name, sort) {
+    let fn;
+    if(sort === 'desc'){
+      fn = (a,b)=> b[name] - a[name]
+    }else if(sort === 'asc'){
+      fn = (a,b)=> a[name] - b[name]
+    }
+    return this.data.sort(fn)
+  }
+}
+
+var find = (d) =>  new FindData(d);
+```
+
+## 零宽断言
+
+将字符串转成千分位。例如 '12345678' 转化成千分位是 '12,345,678'.
+
+```js
+str.replace(/\d{1,3}(?=(\d{3})+$)/g,function(s){
+    return s + ','
+}) 
 ```
