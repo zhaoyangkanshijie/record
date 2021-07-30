@@ -49,6 +49,8 @@
 * [模拟sql语句](#模拟sql语句)
 * [字符串转成千分位](#字符串转成千分位)
 * [加法远程api模拟](#加法远程api模拟)
+* [遍历文件夹下所有文件返回完整路径](#遍历文件夹下所有文件返回完整路径)
+* [根据入参路径创建对应目录和文件](#根据入参路径创建对应目录和文件)
 
 ---
 
@@ -3388,3 +3390,79 @@ function addFn(a, b) {
 }
 ```
 
+## 遍历文件夹下所有文件返回完整路径
+
+[自己写的几个node文件系统小方法](https://juejin.cn/post/6990623837700227108)
+```js
+const fs = require("fs")
+const path = require("path")
+
+function travel(basePath, callback) {
+  fs
+    .readdirSync(basePath)
+    .forEach((file) => {
+      let filePath = path.join(basePath, file)
+      if (fs.statSync(filePath).isDirectory()) {
+        // 如果是文件夹则递归继续
+        travel(filePath, callback)
+      } else {
+        callback(filePath)
+      }
+    })
+}
+
+// 使用
+let basePath = './' // 可以是以盘名开头的绝对路径：'F:/server'
+
+travel(basePath, function (filePath) {
+  console.log(filePath)
+})
+```
+
+## 根据入参路径创建对应目录和文件
+
+[自己写的几个node文件系统小方法](https://juejin.cn/post/6990623837700227108)
+```js
+const fs = require("fs")
+const path = require("path")
+// 生成可识别的完整路径
+const toResolvePath = (...file) => path.resolve(process.cwd(), ...file);
+// 创建目录
+const dirCreate = (targetPath, cb) => {
+    if (fs.existsSync(targetPath)) {
+        cb()
+    } else {
+        dirCreate(path.dirname(targetPath), () => {
+            fs.mkdirSync(targetPath)
+            cb()
+        })
+    }
+}
+const generateDirectoryCreate = async (dirPath) => {
+    return new Promise((resolve, reject) => {
+        dirCreate(dirPath, resolve)
+    })
+}
+
+// 创建文件
+const generateFileCreate = async (filePath, content) => {
+    return new Promise((resolve, reject) => {
+        fs.writeFile(filePath, content, 'utf8', err => {
+            if (err) {
+                console.log(err.message);
+                reject(err)
+            } else {
+                resolve()
+            }
+        })
+    })
+}
+
+// 使用
+const basePath = './aaa/bbb'
+const resolvedPath = toResolvePath(basePath);
+// 根据path创建目录
+generateDirectoryCreate(resolvedPath);
+// 根据path创建文件
+generateFileCreate(toResolvePath(basePath, 'index.js'), 'aaabbb\ncccddd');
+```
