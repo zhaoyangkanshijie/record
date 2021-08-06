@@ -15,6 +15,7 @@
 * [js基础语法问题](./js基础语法问题.md)
 * [js看输出题总结](./js看输出题总结.md)
 * [js运行机制](./js运行机制.md)
+* [typescript常见问题](./typescript常见问题.md)
 * [react简结](./react简结.md)
 * [vue2新手详解](./vue2新手详解.md)
 * [vue简结](./vue简结.md)
