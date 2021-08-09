@@ -20,29 +20,33 @@
 
    [gulp-typescript](https://github.com/ivogabe/gulp-typescript)
 
+   [Ts高手篇：22个示例深入讲解Ts最晦涩难懂的高级类型工具](https://juejin.cn/post/6994102811218673700)
+
 ## 目录
 
-* [tsconfig.json配置样例](tsconfig.json配置样例)
-* [基础类型](基础类型)
-* [引用类型](引用类型)
-* [类型断言](类型断言)
-* [使用webpack打包代码](使用webpack打包代码)
-* [使用gulp打包](使用gulp打包)
-* [结合构建工具](结合构建工具)
-* [typescript打包](typescript打包)
-* [对象书写](对象书写)
-* [接口书写](接口书写)
-* [interface与type区别](interface与type区别)
-* [interface](interface)
-* [extends继承](extends继承)
-* [type](type)
-* [声明合并](声明合并)
-* [交叉类型](交叉类型)
-* [keyof](keyof)
-* [泛型](泛型)
-* [属性相关](属性相关)
-* [类型断言:any大法好](类型断言:any大法好)
-* [函数重载](函数重载)
+* [tsconfig.json配置样例](#tsconfig.json配置样例)
+* [基础类型](#基础类型)
+* [引用类型](#引用类型)
+* [类型断言](#类型断言)
+* [使用webpack打包代码](#使用webpack打包代码)
+* [使用gulp打包](#使用gulp打包)
+* [结合构建工具](#结合构建工具)
+* [typescript打包](#typescript打包)
+* [对象书写](#对象书写)
+* [接口书写](#接口书写)
+* [interface与type区别](#interface与type区别)
+* [interface](#interface)
+* [extends继承](#extends继承)
+* [type](#type)
+* [声明合并](#声明合并)
+* [交叉类型](#交叉类型)
+* [keyof](#keyof)
+* [泛型](#泛型)
+* [属性相关](#属性相关)
+* [类型断言:any大法好](#类型断言:any大法好)
+* [函数重载](#函数重载)
+* [compiler内部实现的类型](#compiler内部实现的类型)
+* [自定义高级类型](#自定义高级类型)
 
 ---
 
@@ -905,7 +909,78 @@ logAdvance({ length: 3 });
 
 * NonNullable<T> 从T中除去undefined null
 
+* Parameters 获取函数的参数类型，将每个参数类型放在一个元组中。
+
+```ts
+/**
+ * @desc 具体实现
+ */
+type Parameters<T extends (...args: any) => any> = T extends (...args: infer P) => any ? P : never;
+
+/**
+ * @example
+ * type Eg = [arg1: string, arg2: number];
+ */
+type Eg = Parameters<(arg1: string, arg2: number) => void>;
+```
+* inter关键词作用是让Ts自己推导类型，并将推导结果存储在其参数绑定的类型上。只能在extends条件类型上使用。
+
+```ts
+/**
+ * 约束参数T为数组类型，
+ * 判断T是否为数组，如果是数组类型则推导数组元素的类型
+ */
+type FalttenArray<T extends Array<any>> = T extends Array<infer P> ? P : never;
+
+/**
+ * type Eg1 = number | string;
+ */
+type Eg1 = FalttenArray<[number, string]>
+/**
+ * type Eg2 = 1 | 'asd';
+ */
+type Eg2 = FalttenArray<[1, 'asd']>
+```
+
 * ReturnType<T> 获取函数的返回值类型
+
+```ts
+/**
+ * @desc ReturnType的实现其实和Parameters的基本一样
+ * 无非是使用infer R的位置不一样。
+ */
+type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any;
+```
+
+* ConstructorParameters 可以获取类的构造函数的参数类型，存在一个元组中。
+
+```ts
+/**
+ * 核心实现还是利用infer进行推导构造函数的参数类型
+ */
+type ConstructorParameters<T extends abstract new (...args: any) => any> = T extends abstract new (...args: infer P) => any ? P : never;
+
+
+/**
+ * @example
+ * type Eg = string;
+ */
+interface ErrorConstructor {
+  new(message?: string): Error;
+  (message?: string): Error;
+  readonly prototype: Error;
+}
+type Eg = ConstructorParameters<ErrorConstructor>;
+
+/**
+ * @example
+ * type Eg2 = [name: string, sex?: number];
+ */
+class People {
+  constructor(public name: string, sex?: number) {}
+}
+type Eg2 = ConstructorParameters<typeof People>
+```
 
 * Partial 将某个类型里的属性全部变为可选项
 
@@ -1206,3 +1281,354 @@ function configurable(value: boolean) {
     };
 }
 ```
+
+### compiler内部实现的类型
+
+* Uppercase
+
+```ts
+/**
+ * @desc 构造一个将字符串转大写的类型
+ * @example
+ * type Eg1 = 'ABCD';
+ */
+type Eg1 = Uppercase<'abcd'>;
+```
+
+* Lowercase
+
+```ts
+/**
+ * @desc 构造一个将字符串转小大写的类型
+ * @example
+ * type Eg2 = 'abcd';
+ */
+type Eg2 = Lowercase<'ABCD'>;
+```
+
+* Capitalize
+
+```ts
+/**
+ * @desc 构造一个将字符串首字符转大写的类型
+ * @example
+ * type Eg3 = 'abcd';
+ */
+type Eg3 = Capitalize<'Abcd'>;
+```
+
+* Uncapitalize
+
+```ts
+/**
+ * @desc 构造一个将字符串首字符转小写的类型
+ * @example
+ * type Eg4 = 'ABCD';
+ */
+type Eg4 = Uncapitalize<'aBCD'>;
+```
+
+### 自定义高级类型
+
+* SymmetricDifference
+
+获取没有同时存在于T和U内的类型。
+
+```ts
+/**
+ * SetDifference的实现和Exclude一样
+ */
+type SymmetricDifference<T, U> = Exclude<T | U, T & U>;
+
+/**
+ * @example
+ * type Eg = '1' | '4';
+ */
+type Eg = SymmetricDifference<'1' | '2' | '3', '2' | '3' | '4'>
+
+```
+
+* FunctionKeys
+
+获取T中所有类型为函数的key组成的联合类型。
+
+```ts
+/**
+ * @desc NonUndefined判断T是否为undefined
+ */
+type NonUndefined<T> = T extends undefined ? never : T;
+
+/**
+ * @desc 核心实现
+ */
+type FunctionKeys<T extends object> = {
+  [K in keyof T]: NonUndefined<T[K]> extends Function ? K : never;
+}[keyof T];
+
+/**
+ * @example
+ * type Eg = 'key2' | 'key3';
+ */
+type AType = {
+    key1: string,
+    key2: () => void,
+    key3: Function,
+};
+type Eg = FunctionKeys<AType>;
+```
+
+工厂实现
+```ts
+type Primitive =
+  | string
+  | number
+  | bigint
+  | boolean
+  | symbol
+  | null
+  | undefined;
+
+/**
+ * @desc 用于创建获取指定类型工具的类型工厂
+ * @param T 待提取的类型
+ * @param P 要创建的类型
+ * @param IsCheckNon 是否要进行null和undefined检查
+ */
+type KeysFactory<T, P extends Primitive | Function | object, IsCheckNon extends boolean> = {
+  [K in keyof T]: IsCheckNon extends true
+    ? (NonUndefined<T[K]> extends P ? K : never)
+    : (T[K] extends P ? K : never);
+}[keyof T];
+
+/**
+ * @example
+ * 例如上述KeysFactory就可以通过工厂类型进行创建了
+ */
+type FunctionKeys<T> = KeysFactory<T, Function, true>;
+type StringKeys<T> = KeysFactory<T, string, true>;
+type NumberKeys<T> = KeysFactory<T, string, true>;
+```
+
+* MutableKeys
+
+查找T所有可选类型的key组成的联合类型。
+
+```ts
+/**
+ * 核心实现
+ */
+type MutableKeys<T extends object> = {
+  [P in keyof T]-?: IfEquals<
+    { [Q in P]: T[P] },
+    { -readonly [Q in P]: T[P] },
+    P
+  >;
+}[keyof T];
+
+/**
+ * @desc 一个辅助类型，判断X和Y是否类型相同，
+ * @returns 是则返回A，否则返回B
+ */
+type IfEquals<X, Y, A = X, B = never> = (<T>() => T extends X ? 1 : 2) extends (<T>() => T extends Y ? 1 : 2)
+  ? A
+  : B;
+```
+
+* OptionalKeys
+
+提取T中所有可选类型的key组成的联合类型。
+
+```ts
+type OptionalKeys<T> = {
+  [P in keyof T]: {} extends Pick<T, P> ? P : never
+}[keyof T];
+
+type Eg = OptionalKeys<{key1?: string, key2: number}>
+// Eg2 = false
+type Eg2 = {} extends {key1: string} ? true : false;
+// Eg3 = true
+type Eg3 = {} extends {key1?: string} ? true : false;
+```
+
+* 增强Pick
+
+PickByValue提取指定值的类型
+```ts
+// 辅助函数，用于获取T中类型不能never的key组成的联合类型
+type TypeKeys<T> = T[keyof T];
+
+/**
+ * 核心实现
+ */
+type PickByValue<T, V> = Pick<T,
+  TypeKeys<{[P in keyof T]: T[P] extends V ? P : never}>
+>;
+
+/**
+ * @example
+ *  type Eg = {
+ *    key1: number;
+ *    key3: number;
+ *  }
+ */
+type Eg = PickByValue<{key1: number, key2: string, key3: number}, number>;
+```
+
+PickByValueExact精准的提取指定值的类型
+```ts
+/**
+ * 核心实现
+ */
+type PickByValueExact<T, V> = Pick<T,
+  TypeKeys<{[P in keyof T]: [T[P]] extends [V]
+    ? ([V] extends [T[P]] ? P : never)
+    : never;
+  }>
+>
+
+// type Eg1 = { b: number };
+type Eg1 = PickByValueExact<{a: string, b: number}, number>
+// type Eg2 = { b: number; c: number | undefined }
+type Eg2 = PickByValueExact<{a: string, b: number, c: number | undefined}, number>
+```
+
+* Intersection
+
+从T中提取存在于U中的key和对应的类型
+
+```ts
+/**
+ * 核心思路利用Pick提取指定的key组成的类型
+ */
+type Intersection<T extends object, U extends object> = Pick<T,
+  Extract<keyof T, keyof U> & Extract<keyof U, keyof T>
+>
+
+type Eg = Intersection<{key1: string}, {key1:string, key2: number}>
+```
+
+* Diff
+
+从T中排除存在于U中的key和类型
+
+```ts
+type Diff<T extends object, U extends object> = Pick<
+  T,
+  Exclude<keyof T, keyof U>
+>;
+```
+
+* Overwrite
+
+从U中的同名属性的类型覆盖T中的同名属性类型
+
+```ts
+/**
+ * Overwrite实现
+ * 获取前者独有的key和类型，再取两者共有的key和该key在后者中的类型，最后合并。
+ */
+type Overwrite<
+  T extends object,
+  U extends object,
+  I = Diff<T, U> & Intersection<U, T>
+> = Pick<I, keyof I>;
+
+/**
+ * @example
+ * type Eg1 = { key1: number; }
+ */
+type Eg1 = Overwrite<{key1: string}, {key1: number, other: boolean}>
+```
+
+* Assign
+
+类似于Object.assign()合并
+
+```ts
+// 实现
+type Assign<
+  T extends object,
+  U extends object,
+  I = Diff<T, U> & Intersection<U, T> & Diff<U, T>
+> = Pick<I, keyof I>;
+
+/**
+ * @example
+ * type Eg = {
+ *   name: string;
+ *   age: string;
+ *   other: string;
+ * }
+ */
+type Eg = Assign<
+  { name: string; age: number; },
+  { age: string; other: string; }
+>;
+```
+
+* DeepRequired
+
+将T的转换成必须属性
+
+```ts
+/**
+ * DeepRequired实现
+ */
+type DeepRequired<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends Array<any>
+    ? _DeepRequiredArray<T[number]>
+    : T extends object
+      ? _DeepRequiredObject<T>
+      : T;
+
+// 辅助工具，递归遍历数组将每一项转换成必选
+interface _DeepRequiredArray<T> extends Array<DeepRequired<NonUndefined<T>>> {}
+
+// 辅助工具，递归遍历对象将每一项转换成必选
+type _DeepRequiredObject<T extends object> = {
+  [P in keyof T]-?: DeepRequired<NonUndefined<T[P]>>
+}
+```
+
+* DeepReadonlyArray
+
+将T的转换成只读的
+
+```ts
+/**
+ * DeepReadonly实现
+ */
+type DeepReadonly<T> = T extends ((...args: any[]) => any) | Primitive
+  ? T
+  : T extends _DeepReadonlyArray<infer U>
+  ? _DeepReadonlyArray<U>
+  : T extends _DeepReadonlyObject<infer V>
+  ? _DeepReadonlyObject<V>
+  : T;
+
+/**
+ * 工具类型，构造一个只读数组
+ */
+interface _DeepReadonlyArray<T> extends ReadonlyArray<DeepReadonly<T>> {}
+
+/**
+ * 工具类型，构造一个只读对象
+ */
+type _DeepReadonlyObject<T> = {
+  readonly [P in keyof T]: DeepReadonly<T[P]>;
+};
+```
+
+* UnionToIntersection
+
+将联合类型转变成交叉类型
+
+```ts
+type UnionToIntersection<T> = (T extends any
+  ? (arg: T) => void
+  : never
+) extends (arg: infer U) => void ? U : never
+type Eg = UnionToIntersection<{ key1: string } | { key2: number }>
+```
+
