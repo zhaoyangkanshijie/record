@@ -4985,6 +4985,26 @@
     Math.min(...arr); // 1
     ```
 
+  * 对象动态属性
+
+    ```js
+    if (type === 'boy') {
+      this.setData({
+        boyName: name
+      })
+    } else if (type === 'girl') {
+      this.setData({
+        girlName: name
+      })
+    }
+    ```
+
+    ```js
+    this.setData({
+      [`${type}Name`]: name
+    })
+    ```
+
 ### 元素包含与点击元素外面
 
 1. 参考链接：
