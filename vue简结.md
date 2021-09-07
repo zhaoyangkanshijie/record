@@ -69,6 +69,8 @@
 * [Vue.extend作用和原理](#Vue.extend作用和原理)
 * [Vue修饰符](#Vue修饰符)
 * [devtools](#devtools)
+* [动态css](#动态css)
+* [props校验](#props校验)
 
 ---
 
@@ -6855,3 +6857,166 @@ chrome://extensions/,先勾选“开发者模式”,点击“加载已解压的�
 
 打开dev模式的vue应用
 
+## 动态css
+
+https://zhuanlan.zhihu.com/p/92405416
+
+1. component标签
+
+```html
+<template>
+  <div>
+    <component is="style">
+      .foo[data-id="{{ uniqueId }}"] {
+        color: {{ color }};
+      }
+      .foo[data-id="{{ uniqueId }}"] .bar {
+        text-align: {{ align }}
+      }
+    </component>
+    <div class="foo" :data-id="uniqueId">
+      <div class="bar">
+          hello world
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+export default {
+  computed: {
+    uniqueId() {
+      return 一个独一无二的id; // 是因为这样生成的 style 没有 scoped，别的组件也能使用这个样式
+    },
+    color() {
+      return someCondition ? 'red' : '#000';
+    },
+    align() {
+      return someCondition ? 'left' : 'right';
+    }
+  }
+}
+</script>
+```
+
+2. Vue.component插槽
+
+```html
+<div id="app">
+  <v-style>
+    .{{ className }} {
+      background: {{ bgColor }};
+      position: relative;
+    }
+
+    .{{ className }}:hover {
+      color: {{ hoverColor }};
+    }
+    .{{ className }}::after {
+      content: '';
+      display: block;
+      height: 40px;
+      width: 40px;
+      border: 1px solid black;
+      border-radius: 50%;
+      position: absolute;
+      top: 100%;
+    }
+  </v-style>
+  <div class="temp">
+
+  </div>
+</div>
+<script>
+Vue.component('v-style', {
+  render: function (createElement) {
+    return createElement('style', this.$slots.default)
+  }
+});
+export default {
+    data () {
+        return {
+            className: "temp",
+            hoverColor: "yellow",
+            bgColor: "blue"
+        }
+    },
+    computed () {
+        // 这里和上面一样，所以略去生成 uniqueId 的过程
+    }
+}
+</script>
+```
+
+3. css变量
+
+```html
+<template>
+    <div class="test">
+        <span :style="spanStyle" class="span1">hello world</span>
+        <br>
+        <span :style="{'--width': widthVar}" class="span2">hello earth</span>
+    </div>
+</template>
+<script>
+export default {
+    data() {
+        return {
+            spanStyle: {
+                "--color": "red"
+            },
+            widthVar: "100px"
+        };
+    }
+}
+</script>
+<style scoped>
+    .span1 {
+        color: var(--color);
+    }
+    .span2 {
+        text-align: center;
+        position: relative;
+        width: var(--width);
+    }
+    .span2::after {
+        content: '';
+        display: block;
+        position: absolute;
+        left: 100%; 
+        width: var(--width);
+        height: var(--width);
+        border-radius: 50%;
+        border: 2px solid black;      
+    }
+</style>
+```
+
+sass写法
+```html
+<style scoped lang="sass">
+    // 只在使用 CSS 变量的时候和前面略有不同
+    .span2
+        width: #{'var(--width)'}
+</style>
+```
+
+## props校验
+
+https://juejin.cn/post/6989389890014150692
+
+使用 prop 定义中的 validator 选项，可以将一个 prop 类型限制在一组特定的值中
+
+```js
+export default {
+  name: 'Image',
+  props: {
+    src: {
+      type: String,
+    },
+    style: {
+      type: String,
+      validator: s => ['square', 'rounded'].includes(s)
+    }
+  }
+};
+```
