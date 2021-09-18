@@ -26,6 +26,8 @@
 - [IntlAPI与ECMAScript攻略](#IntlAPI与ECMAScript攻略)
 - [特殊事件与自定义事件](#特殊事件与自定义事件)
 - [媒体查询匹配](#媒体查询匹配)
+- [iframe](#iframe)
+
 
 ---
 
@@ -5214,3 +5216,68 @@
    //onchange: null
    //__proto__: MediaQueryList
    ```
+
+### iframe
+
+1. 参考链接：
+
+  [Detect DOMContentLoaded in iframe](https://stackoverflow.com/questions/16960829/detect-domcontentloaded-in-iframe)
+
+  [使用 iframe + postMessage 实现跨域通信](https://blog.csdn.net/tang_yi_/article/details/79401280)
+
+2. 详解：
+
+  * 父向子发送消息
+
+    父
+    ```js
+    window.onload = function(){
+        document.getElementById('child').contentWindow.postMessage("主页面消息", "http://b.com/iframepage.html")
+    }
+    ```
+
+    子
+    ```js
+    window.addEventListener('message',function(event){
+        console.log(event);
+        document.getElementById('message').innerHTML = "收到" + event.origin + "消息：" + event.data;
+    }, false);
+    ```
+
+  * 子向父发送消息
+
+    子
+    ```js
+    window.addEventListener('message',function(event){
+        console.log(event);
+        document.getElementById('message').innerHTML = "收到" + event.origin + "消息：" + event.data;
+        top.postMessage("子页面消息收到", 'http://a.com/main.html')
+    }, false);
+    ```
+
+    父
+    ```js
+    window.addEventListener('message', function(event){
+        document.getElementById('message').innerHTML = "收到" + event.origin + "消息：" + event.data;
+    }, false);
+    ```
+
+  * iframe完全加载
+
+    ```js
+    document.getElementById('iframeId').onload=function(){}
+    ```
+
+  * iframe DOM加载完成，资源尚未加载完成
+
+    ```js
+    document.addEventListener('DOMContentLoaded', function () {
+        //必须通过frames获取，getElementById无法触发DOMContentLoaded
+        var iframeWindow = frames['iframe-name'];
+
+        iframeWindow.addEventListener('DOMContentLoaded', function () {
+            console.log('iframe DOM is loaded!');
+        });
+    });
+    ```
+
