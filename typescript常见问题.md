@@ -22,6 +22,8 @@
 
    [Ts高手篇：22个示例深入讲解Ts最晦涩难懂的高级类型工具](https://juejin.cn/post/6994102811218673700)
 
+   [这 30 道 TS 练习题，你能答对几道？](https://juejin.cn/post/7009046640308781063)
+
 ## 目录
 
 * [tsconfig.json配置样例](#tsconfig.json配置样例)
@@ -47,6 +49,7 @@
 * [函数重载](#函数重载)
 * [compiler内部实现的类型](#compiler内部实现的类型)
 * [自定义高级类型](#自定义高级类型)
+* [日常应用](#日常应用)
 
 ---
 
@@ -1632,3 +1635,642 @@ type UnionToIntersection<T> = (T extends any
 type Eg = UnionToIntersection<{ key1: string } | { key2: number }>
 ```
 
+### 日常应用
+
+* 写在前面：规律总结
+
+    * type里没循环，循环需要用infer+递归
+    * Pick和Omit+Partial和Require组合起来能实现很多功能
+    * 重载需要注意顺序
+    * 通过拓展运算符把arguments当做数组处理作可以一定程度上对限定参数之间的关系
+    * infer可以用来做各种pick，从type中中任意pick，配合递归
+    * never可以用来声明对象里必没有xx属性
+    * 内置类型PropertyKey
+    * 可以借助function的arguments对泛型做进一步处理
+    * 
+
+1. 返回值错误
+
+```ts
+type User = {
+    id: number;
+    kind: string;
+};
+
+function makeCustomer<T extends User>(u: T): T {
+    // Error（TS 编译器版本：v4.4.2）
+    // Type '{ id: number; kind: string; }' is not assignable to type 'T'.
+    // '{ id: number; kind: string; }' is assignable to the constraint of type 'T', 
+    // but 'T' could be instantiated with a different subtype of constraint 'User'.
+    return {
+        id: u.id,
+        kind: 'customer'
+    }
+}
+```
+
+修复
+```ts
+//1.T 类型兼容 User类型
+function makeCustomer<T extends User>(u: T): T {
+	// Error（TS 编译器版本：v4.4.2）
+	// Type '{ id: number; kind: string; }' is not assignable to type 'T'.
+	// '{ id: number; kind: string; }' is assignable to the constraint of type 'T',
+	// but 'T' could be instantiated with a different subtype of constraint 'User'.
+	return {
+                ...u,
+		id: u.id,
+		kind: 'customer',
+	};
+}
+//2.返回值限制为User 类型的
+function makeCustomer<T extends User>(u: T): ReturnMake<T, User> {
+	// Error（TS 编译器版本：v4.4.2）
+	// Type '{ id: number; kind: string; }' is not assignable to type 'T'.
+	// '{ id: number; kind: string; }' is assignable to the constraint of type 'T',
+	// but 'T' could be instantiated with a different subtype of constraint 'User'.
+	return {
+		id: u.id,
+		kind: 'customer',
+	};
+}
+```
+
+2. 我们希望参数 a 和 b 的类型都是一致的，即 a 和 b 同时为 number 或 string 类型。当它们的类型不一致的值，TS 类型检查器能自动提示对应的错误信息。
+
+```ts
+function f(a: string | number, b: string | number) {
+  if (typeof a === 'string') {
+    return a + ':' + b; // no error but b can be number!
+  } else {
+    return a + b; // error as b can be number | string
+  }
+}
+
+f(2, 3); // Ok
+f(1, 'a'); // Error
+f('a', 2); // Error
+f('a', 'b') // Ok
+```
+
+修复：函数重载
+```ts
+function f(a: string, b: string): string
+function f(a: number, b: number): number
+function f(a: string | number, b: string | number ): string | number {
+  if (typeof a === 'string') {
+    return a + ':' + b;
+  } else {
+    return ((a as number) + (b as number));
+  }
+}
+
+f(2, 3); // Ok
+f(1, 'a'); // Error
+f('a', 2); // Error
+f('a', 'b') // Ok
+```
+
+3. Partial\<T>，它的作用是将某个类型里的属性全部变为可选项 ?, 现定义一个 SetOptional/SetRequired 工具类型，支持把给定的 keys 对应的属性变成可选/必填
+
+```ts
+type Foo = {
+	a: number;
+	b?: string;
+	c: boolean;
+}
+
+type Simplify<T> = {
+  [P in keyof T]: T[P]
+}
+
+type SetOptional<T, K extends keyof T> = 
+  Simplify<Partial<Pick<T, K>> & Pick<T, Exclude<keyof T, K>>>
+
+// 测试用例
+type SomeOptional = SetOptional<Foo, 'a' | 'b'>;
+// type SomeOptional = {
+// 	a?: number; // 该属性已变成可选的
+// 	b?: string; // 保持不变
+// 	c: boolean;
+// }
+
+type SetRequired<T, K extends keyof T> = Simplify<Pick<T, Exclude<keyof T, K>> & Required<Pick<T, K>>>
+
+// 测试用例
+type SomeRequired = SetRequired<Foo, 'b' | 'c'>;
+// type SomeRequired = {
+// 	a?: number;
+// 	b: string; // 保持不变
+// 	c: boolean; // 该属性已变成必填
+// }
+```
+
+4. Pick的作用是将某个类型中的子属性挑出来，变成包含这个类型部分属性的子类型。定义一个 ConditionalPick 工具类型，支持根据指定的 Condition 条件来生成新的类型
+
+```ts
+interface Example {
+  a: string;
+  e: number;
+  b: string | number;
+  c: () => void;
+  d: {};
+  f: string | number | boolean;
+}
+type ConditionalPick<V, T> = {
+  [K in keyof V as V[K] extends T ? K : never]: V[K];
+};
+type StringKeysOnly = ConditionalPick<Example, string | number>;
+```
+
+5. 定义一个工具类型 AppendArgument，为已有的函数类型增加指定类型的参数，新增的参数名是 x，将作为新函数类型的第一个参数。
+
+1 使用 Parameters 和 ReturnType 工具类型
+```ts
+type AppendArgument<F extends (...args: any) => any, A> 
+  = (x: A, ...args: Parameters<F>) => ReturnType<F> 
+
+type Fn = (a: number, b: string) => number
+type FinalF = AppendArgument<Fn, boolean> 
+// (x: boolean, a: number, b: string) => number
+```
+
+2 使用 infer 方式
+```ts
+type AppendArgument<F, T> = F extends (...args: infer Args) => infer Return ? 
+  (x: T, ...args: Args) => Return : never
+
+type Fn = (a: number, b: string) => number
+type FinalFn = AppendArgument<Fn, boolean>
+// (x: boolean, a: number, b: string) => number
+```
+
+6. 支持把数组类型扁平化
+
+浅扁平
+```ts
+type NaiveFlat<T extends any[]> = {
+  [P in keyof T]: T[P] extends any[] ? T[P][number] : T[P]
+}[number]
+
+type NaiveResult = NaiveFlat<[['a'], ['b', 'c'], ['d']]>
+// NaiveResult的结果： "a" | "b" | "c" | "d"
+```
+
+深扁平
+```ts
+type Deep = [['a'], ['b', 'c'], [['d']], [[[['e']]]]];
+
+type DeepFlat<T extends any[]> = {
+  [K in keyof T]: T[K] extends any[] ? DeepFlat<T[K]> : T[K]
+}[number]
+
+type DeepTestResult = DeepFlat<Deep>
+// DeepTestResult: "a" | "b" | "c" | "d" | "e"
+```
+
+7. 定义一个 EmptyObject 类型，使得该类型只允许空对象赋值;更改以下 takeSomeTypeOnly 函数的类型定义，让它的参数只允许严格SomeType类型的值
+
+```ts
+type EmptyObject = {
+  // type PropertyKey = string | number | symbol
+  [K in PropertyKey]: never 
+}
+
+// 测试用例
+const shouldPass: EmptyObject = {}; // 可以正常赋值
+const shouldFail: EmptyObject = { // 将出现编译错误
+  prop: "TS"
+}
+```
+
+```ts
+type SomeType =  {
+  prop: string
+}
+
+type Exclusive<T1, T2 extends T1> = {
+  [K in keyof T2]: K extends keyof T1 ? T2[K] : never 
+}
+
+// 更改以下函数的类型定义，让它的参数只允许严格SomeType类型的值
+function takeSomeTypeOnly<T extends SomeType>(x: Exclusive<SomeType, T>) { return x }
+
+// 测试用例：
+const x = { prop: 'a' };
+takeSomeTypeOnly(x) // 可以正常调用
+
+const y = { prop: 'a', addditionalProp: 'x' };
+takeSomeTypeOnly(y) // 将出现编译错误
+```
+
+8. 定义 NonEmptyArray 工具类型，用于确保数据非空数组
+
+```ts
+type NonEmptyArray<T> = [T, ...T[]]
+//或
+type NonEmptyArray<T> = T[] & { 0: T };
+```
+
+9. 定义一个 JoinStrArray 工具类型，用于根据指定的 Separator 分隔符，对字符串数组类型进行拼接。
+
+```ts
+type JoinStrArray<Arr extends string[], Separator extends string, Result extends string = ""> = 
+    Arr extends [infer El,...infer Rest] ? 
+            Rest extends string[] ?
+            El extends string ?
+            Result extends "" ?
+            JoinStrArray<Rest, Separator,`${El}`> :
+            JoinStrArray<Rest, Separator,`${Result}${Separator}${El}`> :
+            `${Result}` :
+            `${Result}` :
+            `${Result}`
+
+type Names = ["Sem", "Lolo", "Kaquko"]
+type NamesComma = JoinStrArray<Names, ","> // "Sem,Lolo,Kaquko"
+type NamesSpace = JoinStrArray<Names, " "> // "Sem Lolo Kaquko"
+type NamesStars = JoinStrArray<Names, "⭐️"> // "Sem⭐️Lolo⭐️Kaquko"
+```
+
+10. 实现一个 Trim 工具类型，用于对字符串字面量类型进行去空格处理
+
+```ts
+type TrimLeft<V extends string> = V extends ` ${infer R}` ? TrimLeft<R> : V;
+type TrimRight<V extends string> = V extends `${infer R} ` ? TrimRight<R> : V;
+
+type Trim<V extends string> = TrimLeft<TrimRight<V>>;
+
+// 测试用例
+Trim<' semlinker '>
+//=> 'semlinker'
+```
+
+11. 实现一个 IsEqual 工具类型，用于比较两个类型是否相等
+
+```ts
+type IsEqual<A, B> = A extends B ? (B extends A ? true : false) : false;
+
+// 测试用例
+type E0 = IsEqual<1, 2>; // false
+type E1 = IsEqual<{ a: 1 }, { a: 1 }>; // true
+type E2 = IsEqual<[1], []>; // false
+```
+
+12. 实现一个 Head 工具类型，用于获取数组类型的第一个类型
+
+```ts
+type Head<T extends Array<any>> = T extends [] ? never : T[0];
+
+// 测试用例
+type H0 = Head<[]>; // never
+type H1 = Head<[1]>; // 1
+type H2 = Head<[3, 2]>; // 3
+```
+
+13. 实现一个 Tail 工具类型，用于获取数组类型除了第一个类型外，剩余的类型
+
+```ts
+type Tail<T extends Array<any>> = T extends [infer A, ...infer B] ? B : [];
+
+// 测试用例
+type T0 = Tail<[]>; // []
+type T1 = Tail<[1, 2]>; // [2]
+type T2 = Tail<[1, 2, 3, 4, 5]>; // [2, 3, 4, 5]
+```
+
+14. 实现一个 Unshift 工具类型，用于把指定类型 E 作为第一个元素添加到 T 数组类型中
+
+```ts
+type Unshift<T extends any[], E> = [E, ...T];
+
+// 测试用例
+type Arr = Unshift<[1, 2, 3], 0>; // [0, 1, 2, 3]
+```
+
+15. 实现一个 Shift 工具类型，用于移除 T 数组类型中的第一个类型
+
+```ts
+type Shift<T extends any[]> = T extends [infer A, ...infer B] ? B : [];
+
+// 测试用例
+type S0 = Shift<[1, 2, 3]>; // [2,3]
+type S1 = Shift<[string, number, boolean]>; //[number, boolean]
+type S2 = Shift<[]>; // []
+type S3 = Shift<[string]>; // []
+```
+
+16. 实现一个 Push 工具类型，用于把指定类型 E 作为最后一个元素添加到 T 数组类型中
+
+```ts
+type Push<T extends any[], V> = T extends [...infer U] ? [...U, V] : never;
+
+// 测试用例
+type Arr0 = Push<[], 1> // [1]
+type Arr1 = Push<[1, 2, 3], 4> // [1, 2, 3, 4
+```
+
+17. 实现一个 Includes 工具类型，用于判断指定的类型 E 是否包含在 T 数组类型中
+
+```ts
+//利用11编写的isEqual
+type Includes<T extends Array<any>, E> = T extends [infer A, ...infer B]
+  ? IsEqual<A, E> extends true
+    ? true
+    : Includes<B, E>
+  : false;
+
+type I0 = Includes<[], 1>; // false
+type I1 = Includes<[2, 2, 3, 1], 2>; // true
+type I2 = Includes<[2, 3, 3, 1], 1>; // true
+```
+
+18. 实现一个 UnionToIntersection 工具类型，用于把联合类型转换为交叉类型
+
+```ts
+/**
+ * 将联合类型转为对应的交叉函数类型
+ * @template U 联合类型
+ */
+type UnionToInterFunction<U> = (U extends any ? (k: () => U) => void : never) extends (
+  k: infer I,
+) => void
+  ? I
+  : never;
+
+/**
+ * 获取联合类型中的最后一个类型
+ * @template U 联合类型
+ */
+type GetUnionLast<U> = UnionToInterFunction<U> extends { (): infer A } ? A : never;
+
+/**
+ * 在元组类型中前置插入一个新的类型（元素）；
+ * @template Tuple 元组类型
+ * @template E 新的类型
+ */
+type Prepend<Tuple extends any[], E> = [E, ...Tuple];
+
+/**
+ * 联合类型转元组类型；
+ * @template Union 联合类型
+ * @template T 初始元组类型
+ * @template Last 传入联合类型中的最后一个类型（元素），自动生成，内部使用
+ */
+type UnionToTuple<Union, T extends any[] = [], Last = GetUnionLast<Union>> = {
+  0: T;
+  1: UnionToTuple<Exclude<Union, Last>, Prepend<T, Last>>;
+}[[Union] extends [never] ? 0 : 1];
+
+type TupleToIntersection<T extends Array<any>> = T extends [infer F, ...infer U]
+  ? U extends []
+    ? F
+    : F & TupleToIntersection<U>
+  : never;
+
+type UnionToIntersection<U> = TupleToIntersection<UnionToTuple<U>>;
+
+// 测试用例
+type U0 = UnionToIntersection<string | number>; // never
+type U1 = UnionToIntersection<{ name: string } | { age: number }>; // { name: string; } & { age: number; }
+```
+
+19. 实现一个 OptionalKeys 工具类型，用来获取对象类型中声明的可选属性
+
+```ts
+type Person = {
+  id: string;
+  name: string;
+  age: number;
+  from?: string;
+  speak?: string;
+};
+
+type OptionalKeys<T> = NonNullable<{
+  [P in keyof T]: undefined extends T[P] ? P : never
+}[keyof T]>
+
+type PersonOptionalKeys = OptionalKeys<Person> // "from" | "speak"
+```
+
+20. 实现一个 Curry 工具类型，用来实现函数类型的柯里化处理
+
+```ts
+type Curry<
+  F extends (...args: any[]) => any,
+  P extends any[] = Parameters<F>,
+  R = ReturnType<F>
+> = P extends [infer A, ...infer B]
+  ? B extends []
+    ? (...args: [A]) => R
+    : (...args: [A]) => Curry<(...args: B) => R>
+  : () => R;
+//
+type F0 = Curry<() => Date>; // () => Date
+type F1 = Curry<(a: number) => Date>; // (arg: number) => Date
+type F2 = Curry<(a: number, b: string) => Date>; //  (arg_0: number) => (b: string) => Date
+```
+
+21. 实现一个 Merge 工具类型，用于把两个类型合并成一个新的类型。第二种类型（SecondType）的 Keys 将会覆盖第一种类型（FirstType）的 Keys
+
+```ts
+type Foo = {
+  a: number;
+  b: string;
+};
+
+type Bar = {
+  b: number;
+};
+
+type Merge<FirstType, SecondType> = {
+  [K in keyof (FirstType & SecondType)]: K extends keyof SecondType
+    ? SecondType[K]
+    : K extends keyof FirstType
+    ? FirstType[K]
+    : never;
+};
+
+const ab: Merge<Foo, Bar> = { a: 1, b: 2 };
+```
+
+22. 实现一个 RequireAtLeastOne 工具类型，它将创建至少含有一个给定 Keys 的类型，其余的 Keys 保持原样
+
+```ts
+type Responder = {
+  text?: () => string;
+  json?: () => string;
+  secure?: boolean;
+};
+
+type RequireAtLeastOne<
+    ObjectType,
+    KeysType extends keyof ObjectType = keyof ObjectType,
+> = KeysType extends keyof ObjectType ? 
+  ObjectType & Required<Pick<ObjectType, KeysType>>: 
+  never;
+
+
+// 表示当前类型至少包含 'text' 或 'json' 键
+const responder: RequireAtLeastOne<Responder, 'text' | 'json'> = {
+    json: () => '{"message": "ok"}',
+    secure: true
+};
+
+const responder2: RequireAtLeastOne<Responder, 'text' | 'json'> = {
+    secure: true
+};
+
+const responder3: RequireAtLeastOne<Responder, 'text' | 'json'> = {
+};
+```
+
+23. 实现一个 RemoveIndexSignature 工具类型，用于移除已有类型中的索引签名
+
+```ts
+interface Foo {
+  [key: string]: any;
+  [key: number]: any;
+  bar(): void;
+}
+
+type RemoveIndexSignature<T> = {
+  [key in keyof T as string extends key ? never : number extends key ? never: key]: T[key] 
+}
+
+type FooWithOnlyBar = RemoveIndexSignature<Foo>; //{ bar: () => void; }
+```
+
+24. 实现一个 Mutable 工具类型，用于移除对象类型上所有属性或部分属性的 readonly 修饰符
+
+```ts
+ype Foo = {
+  readonly a: number;
+  readonly b: string;
+  readonly c: boolean;
+};
+
+type RemoveReadonly<T, Keys extends keyof T> = {
+  -readonly [K in Keys]: T[K];
+};
+
+type Mutable<T, Keys extends keyof T = keyof T> = Omit<T, Keys> & RemoveReadonly<T, Keys>;
+
+const mutableFoo: Mutable<Foo, "a"> = { a: 1, b: "2", c: true };
+
+mutableFoo.a = 3; // OK
+mutableFoo.b = "6"; // Cannot assign to 'b' because it is a read-only property.
+```
+
+25. 实现一个 IsUnion 工具类型，判断指定的类型是否为联合类型
+
+```ts
+type IsUnion<T, U = T> = T extends U ? ([U] extends [T] ? false : true) : never;
+
+type I0 = IsUnion<string | number>; // true
+type I1 = IsUnion<string | never>; // false
+type I2 = IsUnion<string | unknown>; // false
+```
+
+26. 实现一个 IsNever 工具类型，判断指定的类型是否为 never 类型
+
+```ts
+type IsNever<T> = [T] extends [never] ? true : false;
+
+type I0 = IsNever<never>; // true
+type I1 = IsNever<never | string>; // false
+type I2 = IsNever<null>; // false
+```
+
+27. 实现一个 Reverse 工具类型，用于对元组类型中元素的位置颠倒，并返回该数组
+
+```ts
+type Reverse<T extends Array<any>> = T extends [infer First, ...infer Rest]
+  ? [...Reverse<Rest>, First]
+  : [];
+
+type R0 = Reverse<[]>; // []
+type R1 = Reverse<[1, 2, 3]>; // [3, 2, 1]
+```
+
+28. 实现一个 Split 工具类型，根据给定的分隔符（Delimiter）对包含分隔符的字符串进行切割
+
+```ts
+type Item = "semlinker,lolo,kakuqo";
+
+type Split<
+  S extends string,
+  Delimiter extends string,
+> = S extends `${infer First}${Delimiter}${infer Rest}` ? [First, ...Split<Rest, Delimiter>] : [S];
+
+type ElementType = Split<Item, ",">; // ["semlinker", "lolo", "kakuqo"]
+```
+
+29. 实现一个 ToPath 工具类型，用于把属性访问（. 或 []）路径转换为元组的形式
+
+```ts
+type Str2Tuple<S extends string> = S extends `${infer First}[${infer Second}]`
+  ? [First, Second]
+  : [S];
+
+type ToPath<S extends string> = S extends `${infer First}.${infer Rest}`
+  ? [...Str2Tuple<First>, ...ToPath<Rest>]
+  : [S];
+
+type T1 = ToPath<"foo.bar.baz">; //=> ['foo', 'bar', 'baz']
+type T2 = ToPath<"foo[0].bar.baz">; //=> ['foo', '0', 'bar', 'baz']
+```
+
+30. 完善 Chainable 类型的定义，使得 TS 能成功推断出 result 变量的类型
+
+```ts
+declare const config: Chainable
+
+type Chainable = {
+  option(key: string, value: any): any
+  get(): any
+}
+
+const result = config
+  .option('age', 7)
+  .option('name', 'lolo')
+  .option('address', { value: 'XiaMen' })
+  .get()
+
+type ResultType = typeof result  
+// 期望 ResultType 的类型是：
+// {
+//   age: number
+//   name: string
+//   address: {
+//     value: string
+//   }
+// }
+```
+
+```ts
+declare const config: Chainable
+
+type Simplify<T> = {
+    [P in keyof T]: T[P]
+}
+
+type Chainable<T = {}> = {
+   // S extends string can make S is Template Literal Types
+    option<V, S extends string>(key: S, value: V): Chainable<T & {
+       // use Key Remapping in Mapped Types generate {  S: V } type  https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-1.html#key-remapping-in-mapped-types
+        [P in keyof {
+            S: S,
+        } as `${S}`]: V
+    }>
+    get(): Simplify<T>
+}
+
+const result = config
+    .option('age', 7)
+    .option('name', 'lolo')
+    .option('address', { value: 'XiaMen' })
+    .get()
+
+
+type ResultType = typeof result
+```
