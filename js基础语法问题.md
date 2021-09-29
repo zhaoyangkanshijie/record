@@ -5244,6 +5244,83 @@
     }, false);
     ```
 
+    一般需要结合setInterval和count进行重试和终止
+    ```html
+    <div id="app" v-cloak>
+        <input id="input" v-model="link" type="text" />
+        <iframe id="frame" name="myFrame" :src="link"></iframe>
+    </div>
+    <style>
+        #input{
+            display: block;
+            width:600px;
+            height:20px;
+        }
+        #button {
+            display: block;
+        }
+        #frame {
+            border: none;
+            padding: 0;
+            margin: 0;
+            position: relative;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: calc(100vh - 20px);
+        }
+    </style>
+    <script>
+        var vm = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    link: '',
+                    count: 20
+                }
+            },
+            methods: {
+                postMessage: function () {
+                    let that = this;
+                    that.timer = setInterval(() => {
+                        if (that.count > 0) {
+                            document.getElementById('frame').contentWindow.postMessage("post", that.link);
+                            that.count--;
+                        }
+                        else {
+                            that.reset();
+                        }
+                    }, 1000);
+                    window.addEventListener('message', function (event) {
+                        if (event.data === 'receive') {
+                            console.log('clear')
+                            that.reset();
+                        }
+                    }, false);
+                },
+                reset: function () {
+                    clearInterval(this.timer);
+                    this.count = 20;
+                    window.removeEventListener('message', function () { });
+                }
+            },
+            mounted() {
+                let that = this;
+                document.addEventListener('DOMContentLoaded', function () {
+                    that.postMessage();
+                });
+            },
+            watch: {
+                link(oldVal, newVal) {
+                    console.log(oldVal, newVal);
+                    this.reset();
+                    this.postMessage();
+                }
+            }
+        });
+    </script>
+    ```
+
   * 子向父发送消息
 
     子
@@ -5274,7 +5351,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         //必须通过frames获取，getElementById无法触发DOMContentLoaded
         var iframeWindow = frames['iframe-name'];
-
+        //仅限与iframe同域，因为跨域无法拿到iframe document，自然无法监听事件
         iframeWindow.addEventListener('DOMContentLoaded', function () {
             console.log('iframe DOM is loaded!');
         });

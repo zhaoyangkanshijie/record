@@ -11,6 +11,7 @@
 * [分享：nuxt中间件](https://blog.csdn.net/awseda/article/details/106227729)
 * [官网文档webpack配置](https://zh.nuxtjs.org/docs/2.x/configuration-glossary/configuration-build)
 * [nuxtjs 全局变量添加 asyncData 也可访问](http://quanzhan.applemei.com/webStack/TXpnNE5RPT0=)
+* [Nuxt 基础：面向源码研究Nuxt.js](https://www.cnblogs.com/laozhang-is-phi/p/9687504.html)
 
 ## 目录
 
@@ -667,6 +668,16 @@ Nuxt是Vue开源社区提供的一整套基于Vue生态的SSR解决方案，包�
 ├─ scripts
 ├─ test
 └─ yarn.lock
+```
+
+package.json指令
+```js
+"scripts": { 
+    "dev": "nuxt",           //    开启一个监听3000端口的服务器,同时提供hot-reloading功能
+    "build": "nuxt build", //构建整个应用,压缩合并JS和CSS文件(用于生产环境)
+    "start": "nuxt start", //    开启一个生产模式的服务器(必须先运行nuxt build命令)
+    "generate": "nuxt generate" //构建整个应用,并为每一个路由生成一个静态页面(用于静态服务器)
+}
 ```
 
 ## ssr核心原理
