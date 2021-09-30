@@ -27,6 +27,7 @@
 * [什么是nuxt？](#什么是nuxt？)
 * [nuxt源码架构](#nuxt源码架构)
 * [ssr核心原理](#ssr核心原理)
+* [nuxt源码与原理](#nuxt源码与原理)
 * [nuxt中间件](#nuxt中间件)
 * [nuxt路由生成策略](#nuxt路由生成策略)
 * [nuxt缓存](#nuxt缓存)
@@ -720,6 +721,57 @@ html渲染的过程从本质上看非常简洁，假设我们有一个模版+资
     ]
 }
 ```
+
+## nuxt源码与原理
+
+* 运行过程
+
+  1. 提取nuxt.config.js
+  2. 实例化nuxt
+  3. 运行nuxt.build
+  4. 开启node服务器并监听端口
+
+* nuxt类
+
+  * 默认配置项default={}，读取config时覆盖
+  * 判断运行环境
+  * 定义静态资源路径
+  * 判断store是否存在
+  * 读取template并缓存
+  * build/render/renderRoute/renderAndGetWindow/generate方法，实例化后执行
+  * 读取util方法
+  * close关闭服务器方法
+
+* build生成.nuxt过程
+
+  * 判断是否满足运行条件
+  * generateRoutesAndFiles方法生成路由并注入模板(.nuxt,.nuxt/components)
+    * 读取layout内容
+    * 根据pages目录生成路由
+    * 解析模板文件
+    * 判断是否有默认布局，无则新建
+    * 判断是否有store，有则插入路由模板
+    * 解析好的文件生成到.nuxt目录下
+  * buildFiles生成文件到.nuxt/dist目录
+    * 对于dev环境，添加watchPage方法，监听文件变化，热更新
+    * 对于pro环境，构建client和server
+
+* render相关
+
+  * render()
+    * nuxt递归挂载render
+    * dev模式调用webpack中间件
+    * 处理默认路由
+    * 处理static文件
+    * pro模式启动server处理.nuxt/dist文件
+    * 定义404,调用renderRoute方法
+    * 接收renderRoute产生的html进行响应
+  * renderRoute()
+    * 服务端渲染：生成完整html内容
+    * 非服务端渲染：产生id为_nuxt的div给客户端渲染
+    * 结合其它依赖文件内容输出html
+  * renderAndGetWindow()
+    * 检查生成的html的DOM结构，有异常则抛出，无则正常通知
 
 ## nuxt中间件
 
