@@ -71,6 +71,7 @@
 * [devtools](#devtools)
 * [动态css](#动态css)
 * [props校验](#props校验)
+* [createElement](#createElement)
 
 ---
 
@@ -7020,3 +7021,333 @@ export default {
   }
 };
 ```
+
+## createElement
+
+https://blog.csdn.net/a460550542/article/details/90600008
+
+* vue对象
+
+```js
+$attrs: Object
+$children: []
+$createElement: ƒ (e,n,r,i)
+$el: style
+$listeners: Object
+$options: {parent: wn, _parentVnode: pe, propsData: undefined, _parentListeners: {…}, _renderChildren: Array(1), …}
+$parent: wn {_uid: 0, _isVue: true, $options: {…}, _renderProxy: wn, _self: wn, …}
+$refs: {}
+$root: wn {_uid: 0, _isVue: true, $options: {…}, _renderProxy: wn, _self: wn, …}
+$scopedSlots: {$stable: false, $key: undefined, $hasNormal: true, default: ƒ}
+$slots: {default: Array(1)}
+$vnode: pe {tag: 'vue-component-1-v-style', data: {…}, children: undefined, text: undefined, elm: style, …}
+_c: ƒ (e,n,r,i)
+_data: {__ob__: we}
+_directInactive: false
+_events: {}
+_hasHookEvent: false
+_inactive: null
+_isBeingDestroyed: false
+_isDestroyed: false
+_isMounted: true
+_isVue: true
+_renderProxy: a {_uid: 1, _isVue: true, $options: {…}, _renderProxy: a, _self: a, …}
+_self: a {_uid: 1, _isVue: true, $options: {…}, _renderProxy: a, _self: a, …}
+_staticTrees: null
+_uid: 1
+_vnode: pe {tag: 'style', data: undefined, children: Array(1), text: undefined, elm: style, …}
+_watcher: fn {vm: a, deep: false, user: false, lazy: false, sync: false, …}
+_watchers: [fn]
+$data: Object
+$isServer: false
+$props: undefined
+$ssrContext: undefined
+get $attrs: ƒ ()
+set $attrs: ƒ (t)
+get $listeners: ƒ ()
+set $listeners: ƒ (t)
+[[Prototype]]: wn
+```
+
+* createElement
+
+  * 参数
+
+    ```js
+    createElement(
+      // {String | Object | Function}
+      // 一个 HTML 标签名、组件选项对象，或者
+      // resolve 了上述任何一种的一个 async 函数。必填项。
+      'div',
+    
+      // {Object}
+      // 一个与模板中属性对应的数据对象。可选。
+      {
+        // (详情见下一节)
+      },
+    
+      // {String | Array}
+      // 子级虚拟节点 (VNodes)，由 `createElement()` 构建而成，
+      // 也可以使用字符串来生成“文本虚拟节点”。可选。
+      [
+        '先写一些文字',
+        createElement('h1', '一则头条'),
+        createElement(MyComponent, {
+          props: {
+            someProp: 'foobar'
+          }
+        })
+      ]
+    )
+    ```
+
+  * 数据对象
+
+    ```js
+    {
+      // 与 `v-bind:class` 的 API 相同，
+      // 接受一个字符串、对象或字符串和对象组成的数组
+      'class': {
+        foo: true,
+        bar: false
+      },
+      // 与 `v-bind:style` 的 API 相同，
+      // 接受一个字符串、对象，或对象组成的数组
+      style: {
+        color: 'red',
+        fontSize: '14px'
+      },
+      // 普通的 HTML 特性
+      attrs: {
+        id: 'foo'
+      },
+      // 组件 prop
+      props: {
+        myProp: 'bar'
+      },
+      // DOM 属性
+      domProps: {
+        innerHTML: 'baz'
+      },
+      // 事件监听器在 `on` 属性内，
+      // 但不再支持如 `v-on:keyup.enter` 这样的修饰器。
+      // 需要在处理函数中手动检查 keyCode。
+      on: {
+        click: this.clickHandler
+      },
+      // 仅用于组件，用于监听原生事件，而不是组件内部使用
+      // `vm.$emit` 触发的事件。
+      nativeOn: {
+        click: this.nativeClickHandler
+      },
+      // 自定义指令。注意，你无法对 `binding` 中的 `oldValue`
+      // 赋值，因为 Vue 已经自动为你进行了同步。
+      directives: [
+        {
+          name: 'my-custom-directive',
+          value: '2',
+          expression: '1 + 1',
+          arg: 'foo',
+          modifiers: {
+            bar: true
+          }
+        }
+      ],
+      // 作用域插槽的格式为
+      // { name: props => VNode | Array<VNode> }
+      scopedSlots: {
+        default: props => createElement('span', props.text)
+      },
+      // 如果组件是其它组件的子组件，需为插槽指定名称
+      slot: 'name-of-slot',
+      // 其它特殊顶层属性
+      key: 'myKey',
+      ref: 'myRef',
+      // 如果你在渲染函数中给多个元素都应用了相同的 ref 名，
+      // 那么 `$refs.myRef` 会变成一个数组。
+      refInFor: true
+    }
+    ```
+
+  * 完整示例
+
+    ```js
+    var getChildrenTextContent = function (children) {
+      return children.map(function (node) {
+        return node.children
+          ? getChildrenTextContent(node.children)
+          : node.text
+      }).join('')
+    }
+    
+    Vue.component('anchored-heading', {
+      render: function (createElement) {
+        // 创建 kebab-case 风格的 ID
+        var headingId = getChildrenTextContent(this.$slots.default)
+          .toLowerCase()
+          .replace(/\W+/g, '-')
+          .replace(/(^-|-$)/g, '')
+    
+        return createElement(
+          'h' + this.level,
+          [
+            createElement('a', {
+              attrs: {
+                name: headingId,
+                href: '#' + headingId
+              }
+            }, this.$slots.default)
+          ]
+        )
+      },
+      props: {
+        level: {
+          type: Number,
+          required: true
+        }
+      }
+    })
+    ```
+
+  * 约束
+
+    * VNode 必须唯一
+
+      错误
+      ```js
+      render: function (createElement) {
+        var myParagraphVNode = createElement('p', 'hi')
+        return createElement('div', [
+          // 错误 - 重复的 VNode
+          myParagraphVNode, myParagraphVNode
+        ])
+      }
+      ```
+
+      正确
+      ```js
+      render: function (createElement) {
+        return createElement('div',
+          Array.apply(null, { length: 20 }).map(function () {
+            return createElement('p', 'hi')
+          })
+        )
+      }
+      ```
+
+    * 实现v-if 和 v-for
+
+      ```html
+      <ul v-if="items.length">
+        <li v-for="item in items">{{ item.name }}</li>
+      </ul>
+      <p v-else>No items found.</p>
+      ```
+      ```js
+      props: ['items'],
+      render: function (createElement) {
+        if (this.items.length) {
+          return createElement('ul', this.items.map(function (item) {
+            return createElement('li', item.name)
+          }))
+        } else {
+          return createElement('p', 'No items found.')
+        }
+      }
+      ```
+
+    * 实现v-model
+
+      ```js
+      props: ['value'],
+      render: function (createElement) {
+        var self = this
+        return createElement('input', {
+          domProps: {
+            value: self.value
+          },
+          on: {
+            input: function (event) {
+              self.$emit('input', event.target.value)
+            }
+          }
+        })
+      }
+      ```
+
+    * 事件 & 按键修饰符
+
+      ```txt
+      .passive	&
+      .capture	!
+      .once	~
+      .capture.once 或 .once.capture	~!
+
+      .stop	event.stopPropagation()
+      .prevent	event.preventDefault()
+      .self	if (event.target !== event.currentTarget) return
+      按键：
+      .enter, .13	if (event.keyCode !== 13) return (对于别的按键修饰符来说，可将 13 改为另一个按键码)
+      修饰键：
+      .ctrl, .alt, .shift, .meta	if (!event.ctrlKey) return (将 ctrlKey 分别修改为 altKey、shiftKey 或者 metaKey)
+      ```
+      ```js
+      on: {
+        '!click': this.doThisInCapturingMode,
+        '~keyup': this.doThisOnce,
+        '~!mouseover': this.doThisOnceInCapturingMode,
+        keyup: function (event) {
+          // 如果触发事件的元素不是事件绑定的元素
+          // 则返回
+          if (event.target !== event.currentTarget) return
+          // 如果按下去的不是 enter 键或者
+          // 没有同时按下 shift 键
+          // 则返回
+          if (!event.shiftKey || event.keyCode !== 13) return
+          // 阻止 事件冒泡
+          event.stopPropagation()
+          // 阻止该元素默认的 keyup 事件
+          event.preventDefault()
+          // ...
+        }
+      }
+      ```
+
+    * 插槽
+
+      ```js
+      render: function (createElement) {
+        // `<div><slot></slot></div>`
+        return createElement('div', this.$slots.default)
+      }
+      ```
+
+      作用域插槽
+      ```js
+      props: ['message'],
+      render: function (createElement) {
+        // `<div><slot :text="message"></slot></div>`
+        return createElement('div', [
+          this.$scopedSlots.default({
+            text: this.message
+          })
+        ])
+      }
+      ```
+
+      向子组件中传递作用域插槽
+      ```js
+      render: function (createElement) {
+        return createElement('div', [
+          createElement('child', {
+            // 在数据对象中传递 `scopedSlots`
+            // 格式为 { name: props => VNode | Array<VNode> }
+            scopedSlots: {
+              default: function (props) {
+                return createElement('span', props.text)
+              }
+            }
+          })
+        ])
+      }
+      ```
