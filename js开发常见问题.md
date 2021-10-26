@@ -3797,6 +3797,12 @@ document.body.appendChild(renderer.domElement); //body元素中插入canvas对�
 
     新增swiper的React、Svelte、Vue.js版本，作为前端框架的组件使用
 
+  * swiper7
+
+    不再全面支持IE
+
+    Swiper默认容器由.swiper-container改为.swiper
+
 ### 腾讯位置服务汽车轨迹
 
 1. 参考链接：
