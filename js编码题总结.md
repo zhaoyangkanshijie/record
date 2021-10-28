@@ -51,6 +51,7 @@
 * [加法远程api模拟](#加法远程api模拟)
 * [遍历文件夹下所有文件返回完整路径](#遍历文件夹下所有文件返回完整路径)
 * [根据入参路径创建对应目录和文件](#根据入参路径创建对应目录和文件)
+* [判断对象成环](#判断对象成环)
 
 ---
 
@@ -3465,4 +3466,104 @@ const resolvedPath = toResolvePath(basePath);
 generateDirectoryCreate(resolvedPath);
 // 根据path创建文件
 generateFileCreate(toResolvePath(basePath, 'index.js'), 'aaabbb\ncccddd');
+```
+
+## 判断对象成环
+
+[听说你的对象有个”环“？怎么发现的呢？](https://juejin.cn/post/7023898521010962462)
+
+```js
+const isCyclic = (obj) => {
+    // 使用Set数据类型来存储已经检测过的对象
+    let stackSet = new Set()
+    let detected = false
+
+    const detect = (obj) => {
+        // 不是对象类型的话，可以直接跳过
+        if (obj && typeof obj != 'object') {
+            return
+        }
+        // 当要检查的对象已经存在于stackSet中时，表示存在循环引用
+        if (stackSet.has(obj)) {
+            return detected = true
+        }
+        // 将当前obj存如stackSet
+        stackSet.add(obj)
+
+        for (let key in obj) {
+            // 对obj下的属性进行挨个检测
+            if (obj.hasOwnProperty(key)) {
+                detect(obj[key])
+            }
+        }
+        // 平级检测完成之后，将当前对象删除，防止误判
+        /*
+            例如：对象的属性指向同一引用，如果不删除的话，会被认为是循环引用
+            let tempObj = {
+            name: 'c'
+            }
+            let obj4 = {
+            obj1: tempObj,
+            obj2: tempObj
+            }
+        */
+        stackSet.delete(obj)
+    }
+
+    detect(obj)
+
+    return detected
+}
+
+// 1. 对象之间相互引用
+
+let obj1 = { name: 'a' }
+let obj2 = { name: 'b' }
+// 对象1的属性引用了对象2
+obj1.obj = obj2
+// 对象2的属性引用了对象1
+obj2.obj = obj1
+
+console.log(isCyclic(obj1)) // true
+console.log(isCyclic(obj2)) // true
+
+// 2. 对象的属性引用了对象本身
+
+let obj = { name: 'a' }
+// 对象的属性引用了对象本身
+obj.child = obj
+
+console.log(isCyclic(obj)) // true
+
+// 3. 对象的属性引用部分属性
+
+let obj3 = {
+name: 'c',
+child: {}
+}
+
+obj3.child.obj = obj3.child
+
+console.log(isCyclic(obj3)) // true
+
+// 4. 对象的属性指向同一引用
+let tempObj = {
+name: 'c'
+}
+let obj4 = {
+obj1: tempObj,
+obj2: tempObj
+}
+
+console.log(isCyclic(obj4)) // false
+
+// 5. 其他数据类型
+
+console.log(isCyclic(1)) // false
+console.log(isCyclic('c')) // false
+console.log(isCyclic(false)) // false
+console.log(isCyclic(null)) // false
+console.log(isCyclic(undefined)) // false
+console.log(isCyclic([])) // false
+console.log(isCyclic(Symbol('c'))) // false
 ```
