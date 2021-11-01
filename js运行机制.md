@@ -193,6 +193,8 @@
 
    [JavaScript 数据类型之 Symbol、BigInt](https://blog.csdn.net/lx11573/article/details/107250033)
 
+   [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
+
 2. 详解：
 
    - js 数据类型
@@ -222,6 +224,54 @@
       const s6 = Symbol.for(true);
       s5 === s6; // true
       ```
+
+      - 应用场景
+
+        1. 使用Symbol来作为对象属性名,使指定属性不被枚举和JSON.stringify
+
+          ```js
+          const gender = Symbol('gender')
+          const obj = {
+            name: 'Sunshine_Lin',
+            age: 23,
+            [gender]: '男'
+          }
+          console.log(obj['name']) // 'Sunshine_Lin'
+          console.log(obj['age']) // 23
+          console.log(obj[gender]) // 男
+          console.log(Object.keys(obj)) // [ 'name', 'age' ]
+          for(const key in obj) {
+            console.log(key) // name age
+          }
+          console.log(JSON.stringify(obj)) // {"name":"Sunshine_Lin","age":23}
+          ```
+
+          获取Symbol属性
+          ```js
+          // 方法一
+          console.log(Object.getOwnPropertySymbols(obj)) // [ Symbol(gender) ]
+          // 方法二
+          console.log(Reflect.ownKeys(obj)) // [ 'name', 'age', Symbol(gender) ]
+          ```
+
+        2. 使用Symbol定义类的私有属性
+
+          ```js
+          class Login {
+            constructor(username, password) {
+              const PASSWORD = Symbol()
+              this.username = username
+              this[PASSWORD] = password
+            }
+            checkPassword(pwd) { return this[PASSWORD] === pwd }
+          }
+
+          const login = new Login('123456', 'hahah')
+
+          console.log(login.PASSWORD) // 报错
+          console.log(login[PASSWORD]) // 报错
+          console.log(login[PASSWORD]) // 报错
+          ```
 
    - BigInt
 

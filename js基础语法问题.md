@@ -27,7 +27,8 @@
 - [特殊事件与自定义事件](#特殊事件与自定义事件)
 - [媒体查询匹配](#媒体查询匹配)
 - [iframe](#iframe)
-
+- [IntersectionObserver](#IntersectionObserver)
+- [getComputedStyle](#getComputedStyle)
 
 ---
 
@@ -2834,6 +2835,8 @@
 
     [MutationObserver](https://developer.mozilla.org/zh-CN/docs/Web/API/MutationObserver)
 
+    [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
+
 2.  详解
 
     * 定义
@@ -2843,6 +2846,49 @@
     * 使用场景
 
         长列表优化、水印放删改
+
+    * 兼容性
+
+        IE11+
+
+    * 语法
+
+        ```js
+        // 选择需要观察变动的节点
+        const targetNode = document.getElementById('some-id');
+
+        // 观察器的配置（需要观察什么变动）
+        const config = { attributes: true, childList: true, subtree: true };
+        // childList —— node 的直接子节点的更改，
+        // subtree —— node 的所有后代的更改，
+        // attributes —— node 的特性（attribute），
+        // attributeFilter —— 特性名称数组，只观察选定的特性。
+        // characterData —— 是否观察 node.data（文本内容）
+        // attributeOldValue —— 如果为 true，则将特性的旧值和新值都传递给回调，否则只传新值（需要 attributes 选项），
+        // characterDataOldValue —— 如果为 true，则将 node.data 的旧值和新值都传递给回调，否则只传新值（需要 characterData 选项）。
+
+        // 当观察到变动时执行的回调函数
+        const callback = function(mutationsList, observer) {
+            // Use traditional 'for loops' for IE 11
+            for(let mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    console.log('A child node has been added or removed.');
+                }
+                else if (mutation.type === 'attributes') {
+                    console.log('The ' + mutation.attributeName + ' attribute was modified.');
+                }
+            }
+        };
+
+        // 创建一个观察器实例并传入回调函数
+        const observer = new MutationObserver(callback);
+
+        // 以上述配置开始观察目标节点
+        observer.observe(targetNode, config);
+
+        // 之后，可停止观察
+        observer.disconnect();
+        ```
 
     * 实现指定节点防止删改
 
@@ -5358,3 +5404,147 @@
     });
     ```
 
+### IntersectionObserver
+
+1. 参考链接：
+
+  [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
+
+  [Intersection Observer](https://developer.mozilla.org/zh-CN/docs/Web/API/IntersectionObserver)
+
+2. 详解：
+
+  * 概念
+
+    IntersectionObserver是用来监听某个元素与视口的交叉状态
+
+    整个元素都在视口内，交叉状态是100%，元素只有一半显示在视口里，交叉状态为50%
+
+  * 兼容性
+
+    Edge15+
+
+  * 使用场景
+
+    懒加载、无限滚动
+
+  * 属性
+
+    ```js
+    {
+      time: 3893.92,//可见性发生变化的时间，单位为毫秒
+      rootBounds: ClientRect {//根元素的矩形区域的信息，getBoundingClientRect()方法的返回值，如果没有根元素（即直接相对于视口滚动），则返回null
+        bottom: 920,
+        height: 1024,
+        left: 0,
+        right: 1024,
+        top: 0,
+        width: 920
+      },
+      boundingClientRect: ClientRect {//目标元素的矩形区域的信息
+        // ...
+      },
+      intersectionRect: ClientRect {//目标元素与视口（或根元素）的交叉区域的信息
+        // ...
+      },
+      intersectionRatio: 0.54,//目标元素的可见比例，即intersectionRect占boundingClientRect的比例，完全可见时为1，完全不可见时小于等于0
+      target: element//被观察的目标元素，是一个 DOM 节点对象
+    }
+    ```
+
+  * 参数与方法
+
+    ```js
+    const io = new IntersectionObserver(entries => {//回调函数
+        console.log(entries)
+        // do something
+    }, {
+        threshold: [0, 0.25, 0.5, 0.75, 1]//当目标元素 0%、25%、50%、75%、100% 可见时，会触发回调函数
+        // root: xxxxxxxxx//指定目标元素所在的容器根元素(必须是目标元素的祖先节点)
+    })
+    io.observe(document.getElementById('box1'))//开始监听一个目标元素
+    io.takeRecords();//返回所有观察目标的IntersectionObserverEntry对象数组
+    io.unobserve(document.getElementById('box1'))//停止监听特定目标元素
+    io.disconnect()//使IntersectionObserver对象停止监听工作
+    ```
+
+  * 使用注意
+
+    1. new IntersectionObserver后默认触发一次回调函数，可加入可视率进行判断entries[0].intersectionRatio
+    2. 没有设置threshold，则仅在可视和不可视切换时触发回调
+    3. 一旦IntersectionObserver被创建，则无法更改其配置
+    4. 可以在同一个观察者对象中配置监听多个目标元素
+
+  * 样例
+
+    视频完全进入视窗后播放
+    ```html
+    <body>
+        <style>
+            .box {
+                width: 100%;
+                height: 700px;
+                background-color: rgb(187, 146, 86);
+            }
+            #video{
+                display: block;
+                width: 100%;
+            }
+        </style>
+
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"><video id="video" controls muted src="https://www.w3school.com.cn/i/movie.ogg"></video></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+        <div class="box"></div>
+
+        
+        <script>
+            let video = document.getElementById('video');
+            const io = new IntersectionObserver(entries => {
+                console.log(entries,entries[0].intersectionRatio)
+                if(entries[0].intersectionRatio == 1){
+                    video.play();
+                }
+            }, {
+                threshold: [0, 0.25, 0.5, 0.75, 1],
+                //root: document.getElementsByTagName('body')[0]
+            })
+            io.observe(video)
+        </script>
+    </body>
+    ```
+
+### getComputedStyle
+
+1. 参考链接：
+
+  [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
+
+  [getComputedStyle()](https://www.jianshu.com/p/37ecf104195a)
+
+2. 详解：
+
+  * 概念
+
+    可以获取当前元素所有最终使用的CSS属性值
+
+  * 语法
+
+    ```js
+    var style = window.getComputedStyle("元素", "伪类，不需要则不填");
+    //用法：
+    var dom = document.getElementById("test"),
+        style = window.getComputedStyle(dom , ":after");
+    ```
+
+  * 注意
+
+    * getComputedStyle只读不可写，style可读可写
+    * 对于一个光秃秃的元素p，getComputedStyle方法返回对象中length属性值就是190+，而element.style就是0
