@@ -27,6 +27,7 @@
 - [readline逐行读取](#readline逐行读取)
 - [stream流](#stream流)
 - [zlib压缩](#zlib压缩)
+- [Archiver压缩](#Archiver压缩)
 - [获取操作系统信息](#获取操作系统信息)
 - [性能钩子](#性能钩子)
 - [inspect调试器](#inspect调试器)
@@ -34,6 +35,7 @@
 - [ORM框架](#ORM框架)
 - [定时任务框架](#定时任务框架)
 - [Node模块机制](#Node模块机制)
+- [ssh2远程连接与自动部署](#ssh2远程连接与自动部署)
 
 ---
 
@@ -3264,6 +3266,86 @@ for(var i = 0; i < cpus.length; i++){
         }).listen(1337);
         ```
 
+### Archiver压缩
+
+1. 参考链接：
+
+   [Archiver](https://www.npmjs.com/package/archiver)
+
+2. 详解：
+
+    npm install archiver
+    ```js
+    // require modules
+    const fs = require('fs');
+    const archiver = require('archiver');
+
+    // create a file to stream archive data to.
+    const output = fs.createWriteStream(__dirname + '/example.zip');
+    const archive = archiver('zip', {
+        zlib: { level: 9 } // Sets the compression level.
+    });
+
+    // listen for all archive data to be written
+    // 'close' event is fired only when a file descriptor is involved
+    output.on('close', function() {
+        console.log(archive.pointer() + ' total bytes');
+        console.log('archiver has been finalized and the output file descriptor has closed.');
+    });
+
+    // This event is fired when the data source is drained no matter what was the data source.
+    // It is not part of this library but rather from the NodeJS Stream API.
+    // @see: https://nodejs.org/api/stream.html#stream_event_end
+    output.on('end', function() {
+        console.log('Data has been drained');
+    });
+
+    // good practice to catch warnings (ie stat failures and other non-blocking errors)
+    archive.on('warning', function(err) {
+        if (err.code === 'ENOENT') {
+            // log warning
+        } else {
+            // throw error
+            throw err;
+        }
+    });
+
+    // good practice to catch this error explicitly
+    archive.on('error', function(err) {
+        throw err;
+    });
+
+    // pipe archive data to the file
+    archive.pipe(output);
+
+    // append a file from stream
+    const file1 = __dirname + '/file1.txt';
+    archive.append(fs.createReadStream(file1), { name: 'file1.txt' });
+
+    // append a file from string
+    archive.append('string cheese!', { name: 'file2.txt' });
+
+    // append a file from buffer
+    const buffer3 = Buffer.from('buff it!');
+    archive.append(buffer3, { name: 'file3.txt' });
+
+    // append a file
+    archive.file('file1.txt', { name: 'file4.txt' });
+
+    // append files from a sub-directory and naming it `new-subdir` within the archive
+    archive.directory('subdir/', 'new-subdir');
+
+    // append files from a sub-directory, putting its contents at the root of archive
+    archive.directory('subdir/', false);
+
+    // append files from a glob pattern
+    archive.glob('file*.txt', {cwd:__dirname});
+
+    // finalize the archive (ie we are done appending files but streams have to finish yet)
+    // 'close', 'end' or 'finish' may be fired right after calling this method so register to them beforehand
+    archive.finalize();
+    ```
+
 ### 获取操作系统信息
 
 1. 参考链接：
@@ -4737,4 +4819,881 @@ for(var i = 0; i < cpus.length; i++){
 
         module.exports = function () { return 'foo'; };
         //最终，我们强烈建议使用module.exports = xxx的方式来输出模块变量，这样，你只需要记忆一种方法。
+        ```
+
+### ssh2远程连接与自动部署
+
+1. 参考链接：
+
+    [ssh2](https://www.npmjs.com/package/ssh2)
+
+    [nodejs ssh2 基本功能的封装](https://blog.csdn.net/llmys/article/details/52997924)
+
+    [nodejs ssh2](https://blog.csdn.net/weixin_34293059/article/details/94602737)
+
+    [前端自动化部署](https://www.jianshu.com/p/68924bb3f382)
+
+    [前端一键自动部署工具](https://juejin.cn/post/6872914108979609614)
+
+    [auto-deploy](https://github.com/HEJIN2016/auto-deploy)
+
+2. 详解：
+
+    * ssh2兼容性
+
+        nodejs >= v10.16.0
+
+        nodejs >= v12.0.0 支持 Ed25519 key
+
+    * ssh2基础
+
+        npm install ssh2
+        
+        ```js
+        const { Client } = require('ssh2');
+
+        const conn = new Client();
+
+        conn.on('ready', () => {
+
+            conn.exec('shell命令',(err,stream)=>{
+                stream.on('data',(data)=>{
+                    //...
+                }).on('close',(code,signal)=>{
+                    //...
+                }).end({
+                    //header键值对
+                })
+            })
+
+            //远程连接
+            conn.forwardOut('srcIP', srcPort, 'dstIP', dstPort, (err, stream) => {})
+            //本地连接
+            conn.forwardIn('127.0.0.1', 8000, (err) => {})
+
+            conn.sftp((err, sftp) => {
+                sftp.readdir('foo', (err, list) => {
+                    conn.end();
+                });
+            })
+
+        })
+        .on('tcp connection', (info, accept, reject) => {
+            accept().on('data',(data)=>{
+                //...
+            }).on('close',(code,signal)=>{
+                //...
+            }).end({
+                //header键值对
+            })
+        })
+        .connect({//连接信息
+            host: '主机ip',
+            port: 22,
+            username: '用户名',
+            password: '密码'//或者 privateKey: readFileSync('/path/to/my/key')
+        });
+
+        conn.on('x11', (info, accept, reject) => {
+            const xserversock = new net.Socket();
+            xserversock.on('connect', () => {
+                const xclientsock = accept();
+                xclientsock.pipe(xserversock).pipe(xclientsock);
+            });
+            // connects to localhost:0.0
+            xserversock.connect(6000, 'localhost');
+        });
+        ```
+
+    * ssh2样例
+
+        * 连接后执行shell命令
+
+            ```js
+            const { readFileSync } = require('fs');
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+            conn.on('ready', () => {
+                console.log('Client :: ready');
+                conn.exec('uptime', (err, stream) => {//打印服务器运行时间
+                    if (err) throw err;
+                        stream.on('close', (code, signal) => {
+                        console.log('Stream :: close :: code: ' + code + ', signal: ' + signal);
+                        conn.end();
+                    }).on('data', (data) => {
+                        console.log('STDOUT: ' + data);
+                    }).stderr.on('data', (data) => {
+                        console.log('STDERR: ' + data);
+                    });
+                });
+            }).connect({
+                host: '192.168.100.100',
+                port: 22,
+                username: 'frylock',
+                privateKey: readFileSync('/path/to/my/key')
+            });
+
+            // example output:
+            // Client :: ready
+            // STDOUT:  17:41:15 up 22 days, 18:09,  1 user,  load average: 0.00, 0.01, 0.05
+            //
+            // Stream :: exit :: code: 0, signal: undefined
+            // Stream :: close
+            ```
+
+        * 链接后开启可交互shell
+
+            ```js
+            const { readFileSync } = require('fs');
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+            conn.on('ready', () => {
+                console.log('Client :: ready');
+                conn.shell((err, stream) => {
+                    if (err) throw err;
+                    stream.on('close', () => {
+                        console.log('Stream :: close');
+                        conn.end();
+                    }).on('data', (data) => {
+                        console.log('OUTPUT: ' + data);
+                    });
+                    stream.end('ls -l\nexit\n');//列出目录后退出登录
+                });
+            }).connect({
+                host: '192.168.100.100',
+                port: 22,
+                username: 'frylock',
+                privateKey: readFileSync('/path/to/my/key')
+            });
+
+            // example output:
+            // Client :: ready
+            // STDOUT: Last login: Sun Jun 15 09:37:21 2014 from 192.168.100.100
+            //
+            // STDOUT: ls -l
+            // exit
+            //
+            // STDOUT: frylock@athf:~$ ls -l
+            //
+            // STDOUT: total 8
+            //
+            // STDOUT: drwxr-xr-x 2 frylock frylock 4096 Nov 18  2012 mydir
+            //
+            // STDOUT: -rw-r--r-- 1 frylock frylock   25 Apr 11  2013 test.txt
+            //
+            // STDOUT: frylock@athf:~$ exit
+            //
+            // STDOUT: logout
+            //
+            // Stream :: close
+            ```
+
+        * 服务器发送一个http请求到新服务器80端口
+
+            ```js
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+            conn.on('ready', () => {
+                console.log('Client :: ready');
+                conn.forwardOut('192.168.100.102', 8000, '127.0.0.1', 80, (err, stream) => {
+                    if (err) throw err;
+                    stream.on('close', () => {
+                        console.log('TCP :: CLOSED');
+                        conn.end();
+                    }).on('data', (data) => {
+                        console.log('TCP :: DATA: ' + data);
+                    }).end([
+                        'HEAD / HTTP/1.1',
+                        'User-Agent: curl/7.27.0',
+                        'Host: 127.0.0.1',
+                        'Accept: */*',
+                        'Connection: close',
+                        '',
+                        ''
+                    ].join('\r\n'));
+                });
+            }).connect({
+                host: '192.168.100.100',
+                port: 22,
+                username: 'frylock',
+                password: 'nodejsrules'
+            });
+
+            // example output:
+            // Client :: ready
+            // TCP :: DATA: HTTP/1.1 200 OK
+            // Date: Thu, 15 Nov 2012 13:52:58 GMT
+            // Server: Apache/2.2.22 (Ubuntu)
+            // X-Powered-By: PHP/5.4.6-1ubuntu1
+            // Last-Modified: Thu, 01 Jan 1970 00:00:00 GMT
+            // Content-Encoding: gzip
+            // Vary: Accept-Encoding
+            // Connection: close
+            // Content-Type: text/html; charset=UTF-8
+            //
+            //
+            // TCP :: CLOSED
+            ```
+
+        * 服务器本地连接到8000端口
+
+            ```js
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+            conn.on('ready', () => {
+                console.log('Client :: ready');
+                conn.forwardIn('127.0.0.1', 8000, (err) => {
+                    if (err) throw err;
+                    console.log('Listening for connections on server on port 8000!');
+                });
+            }).on('tcp connection', (info, accept, reject) => {
+                console.log('TCP :: INCOMING CONNECTION:');
+                console.dir(info);
+                accept().on('close', () => {
+                    console.log('TCP :: CLOSED');
+                }).on('data', (data) => {
+                    console.log('TCP :: DATA: ' + data);
+                }).end([
+                    'HTTP/1.1 404 Not Found',
+                    'Date: Thu, 15 Nov 2012 02:07:58 GMT',
+                    'Server: ForwardedConnection',
+                    'Content-Length: 0',
+                    'Connection: close',
+                    '',
+                    ''
+                ].join('\r\n'));
+            }).connect({
+                host: '192.168.100.100',
+                port: 22,
+                username: 'frylock',
+                password: 'nodejsrules'
+            });
+
+            // example output:
+            // Client :: ready
+            // Listening for connections on server on port 8000!
+            //  (.... then from another terminal on the server: `curl -I http://127.0.0.1:8000`)
+            // TCP :: INCOMING CONNECTION: { destIP: '127.0.0.1',
+            //  destPort: 8000,
+            //  srcIP: '127.0.0.1',
+            //  srcPort: 41969 }
+            // TCP DATA: HEAD / HTTP/1.1
+            // User-Agent: curl/7.27.0
+            // Host: 127.0.0.1:8000
+            // Accept: */*
+            //
+            //
+            // TCP :: CLOSED
+            ```
+
+        * 通过sftp列出目录
+
+            ```js
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+            conn.on('ready', () => {
+                console.log('Client :: ready');
+                conn.sftp((err, sftp) => {
+                    if (err) throw err;
+                    sftp.readdir('foo', (err, list) => {
+                        if (err) throw err;
+                        console.dir(list);
+                        conn.end();
+                    });
+                });
+            }).connect({
+                host: '192.168.100.100',
+                port: 22,
+                username: 'frylock',
+                password: 'nodejsrules'
+            });
+
+            // example output:
+            // Client :: ready
+            // [ { filename: 'test.txt',
+            //     longname: '-rw-r--r--    1 frylock   frylock         12 Nov 18 11:05 test.txt',
+            //     attrs:
+            //      { size: 12,
+            //        uid: 1000,
+            //        gid: 1000,
+            //        mode: 33188,
+            //        atime: 1353254750,
+            //        mtime: 1353254744 } },
+            //   { filename: 'mydir',
+            //     longname: 'drwxr-xr-x    2 frylock   frylock       4096 Nov 18 15:03 mydir',
+            //     attrs:
+            //      { size: 1048576,
+            //        uid: 1000,
+            //        gid: 1000,
+            //        mode: 16877,
+            //        atime: 1353269007,
+            //        mtime: 1353269007 } } ]
+            ```
+
+        * 连接跳转
+
+            ```js
+            const { Client } = require('ssh2');
+
+            const conn1 = new Client();
+            const conn2 = new Client();
+
+            // Checks uptime on 10.1.1.40 via 192.168.1.1
+
+            conn1.on('ready', () => {
+                console.log('FIRST :: connection ready');
+                // Alternatively, you could use something like netcat or socat with exec()
+                // instead of forwardOut(), depending on what the server allows
+                conn1.forwardOut('127.0.0.1', 12345, '10.1.1.40', 22, (err, stream) => {
+                    if (err) {
+                        console.log('FIRST :: forwardOut error: ' + err);
+                        return conn1.end();
+                    }
+                    conn2.connect({
+                        sock: stream,
+                        username: 'user2',
+                        password: 'password2',
+                    });
+                });
+            }).connect({
+                host: '192.168.1.1',
+                username: 'user1',
+                password: 'password1',
+            });
+
+            conn2.on('ready', () => {
+                // This connection is the one to 10.1.1.40
+
+                console.log('SECOND :: connection ready');
+                conn2.exec('uptime', (err, stream) => {
+                    if (err) {
+                        console.log('SECOND :: exec error: ' + err);
+                        return conn1.end();
+                    }
+                    stream.on('close', () => {
+                        conn1.end(); // close parent (and this) connection
+                    }).on('data', (data) => {
+                        console.log(data.toString());
+                    });
+                });
+            });
+            ```
+
+        * 发送远程桌面连接(x11)
+
+            ```js
+            const { Socket } = require('net');
+            const { Client } = require('ssh2');
+
+            const conn = new Client();
+
+            conn.on('x11', (info, accept, reject) => {
+                const xserversock = new net.Socket();
+                xserversock.on('connect', () => {
+                    const xclientsock = accept();
+                    xclientsock.pipe(xserversock).pipe(xclientsock);
+                });
+                // connects to localhost:0.0
+                xserversock.connect(6000, 'localhost');
+            });
+
+            conn.on('ready', () => {
+                conn.exec('xeyes', { x11: true }, (err, stream) => {
+                    if (err) throw err;
+                    let code = 0;
+                    stream.on('close', () => {
+                        if (code !== 0)
+                            console.log('Do you have X11 forwarding enabled on your SSH server?');
+                        conn.end();
+                    }).on('exit', (exitcode) => {
+                        code = exitcode;
+                    });
+                });
+            }).connect({
+                host: '192.168.1.1',
+                username: 'foo',
+                password: 'bar'
+            });
+            ```
+
+        * SOCKSv5代理，动态端口发送
+
+            ```js
+            const socks = require('socksv5');
+            const { Client } = require('ssh2');
+
+            const sshConfig = {
+                host: '192.168.100.1',
+                port: 22,
+                username: 'nodejs',
+                password: 'rules'
+            };
+
+            socks.createServer((info, accept, deny) => {
+                // NOTE: you could just use one ssh2 client connection for all forwards, but
+                // you could run into server-imposed limits if you have too many forwards open
+                // at any given time
+                const conn = new Client();
+                conn.on('ready', () => {
+                    conn.forwardOut(info.srcAddr,
+                        info.srcPort,
+                        info.dstAddr,
+                        info.dstPort,
+                        (err, stream) => {
+                            if (err) {
+                                conn.end();
+                                return deny();
+                            }
+
+                            const clientSocket = accept(true);
+                            if (clientSocket) {
+                                stream.pipe(clientSocket).pipe(stream).on('close', () => {
+                                    conn.end();
+                                });
+                            } else {
+                                conn.end();
+                            }
+                        });
+                }).on('error', (err) => {
+                    deny();
+                }).connect(sshConfig);
+            }).listen(1080, 'localhost', () => {
+                console.log('SOCKSv5 proxy server started on port 1080');
+            }).useAuth(socks.auth.None());
+
+            // test with cURL:
+            //   curl -i --socks5 localhost:1080 google.com
+            ```
+
+        * 通过http(s)代理发送http(s)请求
+
+            ```js
+            const http = require('http');
+            const { Client, HTTPAgent, HTTPSAgent } = require('ssh2');
+
+            const sshConfig = {
+                host: '192.168.100.1',
+                port: 22,
+                username: 'nodejs',
+                password: 'rules'
+            };
+
+            // Use `HTTPSAgent` instead for an HTTPS request
+            const agent = new HTTPAgent(sshConfig);
+            http.get({
+                host: '192.168.200.1',
+                agent,
+                headers: { Connection: 'close' }
+            }, (res) => {
+                console.log(res.statusCode);
+                console.dir(res.headers);
+                res.resume();
+            });
+            ```
+
+    * 自动部署
+
+        ```js
+        // 开发环境
+        const dev = {
+            host: 'dev.cn', // 服务器ip地址或域名
+            password: '', // 密码
+            catalog: '/var/www/dev', // 前端文件压缩目录
+            port: 22, // 服务器ssh连接端口号
+            username: 'root', // ssh登录用户
+            privateKey: null, // 私钥，私钥与密码二选一fs.readFileSync('myKey.key')
+            // ssh连接跳转至目标机配置，适用于跳板机-内网登录，如无需跳转请注释掉该配置
+            // agent: {
+            //   host: '10.186.77.223',
+            //   port: 22,
+            //   username: "root",
+            //   password: ""
+            // },
+        };
+        // 测试环境
+        const test = {
+            host: 'test.cn', // 服务器ip地址或域名
+            password: '', // 密码
+            catalog: '/var/www/test', // 前端文件压缩目录
+            port: 22, // 服务器ssh连接端口号
+            username: 'root', // ssh登录用户
+            privateKey: null, // 私钥，私钥与密码二选一
+        };
+        // 线上环境
+        const pro = {
+            host: 'pro.cn', // 服务器ip地址或域名
+            password: '', // 密码，请勿将此密码上传至git服务器
+            catalog: '/var/www/pro', // 前端文件压缩目录
+            port: 22, // 服务器ssh连接端口号
+            username: 'root', // ssh登录用户
+            privateKey: null, // 私钥，私钥与密码二选一
+        };
+
+
+        // 全局配置
+        const Config = {
+            // publishEnv: pro,
+            publishEnv: [test], // 发布环境，可填写多个，也可只填写一个
+
+            buildDist: 'dist', // 前端文件打包之后的目录，默认dist
+            buildCommand: 'npm run build', // 打包前端文件的命令
+            readyTimeout: 20000, // ssh连接超时时间
+            deleteFile: true // 是否删除线上上传的dist压缩包
+        };
+
+        const { exec } = require('child_process');
+        const path = require('path');
+        const archiver = require('archiver');
+        const fs = require('fs');
+        const Client = require("ssh2").Client;
+
+        // 前端打包文件的目录
+        const dir = path.resolve(__dirname, Config.buildDist);
+
+        /**
+        * ssh连接
+        */
+        class SSH {
+            constructor({ host, port, username, password, privateKey, agent }) {
+                this.server = {
+                    host, port, username, password, privateKey
+                };
+
+                this.hasAgent = agent && agent.host && agent.port && agent.username;
+                if (this.hasAgent) {
+                    this.connAgent = new Client(); // 连接跳板机
+                    this.conn = new Client(); // 连接目标机
+                    this.agent = agent;
+                } else {
+                    this.conn = new Client();
+                }
+            }
+
+            // 连接服务器
+            connectServer() {
+                return new Promise((resolve, reject) => {
+                    let conn = this.conn;
+                    if (this.hasAgent) {
+                        conn = this.connAgent;
+                    }
+                    conn.on("ready", () => {
+                        if (this.hasAgent) {
+                            // Alternatively, you could use netcat or socat with exec() instead of
+                            // forwardOut()
+                            console.log('----连接跳板机成功----');
+                            conn.forwardOut('127.0.0.1', 12345, this.agent.host, this.agent.port, (err, stream) => {
+                                if (err) {
+                                    conn.end();
+                                    reject({
+                                        success: false,
+                                        error: err
+                                    });
+                                }
+                                // 连接目标机
+                                this.conn.on('ready', () => {
+                                    console.log('----连接目标机成功----');
+                                    resolve({
+                                        success: true
+                                    });
+                                }).on('error', (err) => {
+                                    reject({
+                                        success: false,
+                                        error: err
+                                    });
+                                }).on('end', () => {
+                                    console.log("target ssh connect end!");
+                                }).on('close', (had_error) => {
+                                    console.log("target ssh connect close");
+                                }).connect({
+                                    sock: stream,
+                                    username: this.agent.username,
+                                    password: this.agent.password,
+                                });
+                            });
+                        } else {
+                            resolve({
+                                success: true
+                            });
+                        }
+                    }).on('error', (err) => {
+                        reject({
+                            success: false,
+                            error: err
+                        });
+                    }).on('end', () => {
+                        console.log('----SSH连接已结束----');
+                    }).on('close', (had_error) => {
+                        console.log('----SSH连接已关闭----');
+                    }).connect(this.server);
+                })
+            }
+
+            // 上传文件
+            uploadFile({ localPath, remotePath }) {
+                return new Promise((resolve, reject) => {
+                    return this.conn.sftp((err, sftp) => {
+                        if (err) {
+                            reject({
+                                success: false,
+                                error: err
+                            });
+                        } else {
+                            sftp.fastPut(localPath, remotePath, (err, result) => {
+                                if (err) {
+                                    reject({
+                                        success: false,
+                                        error: err
+                                    });
+                                }
+                                resolve({
+                                    success: true,
+                                    result
+                                });
+                            });
+                        }
+                    })
+                })
+            }
+
+            // 执行ssh命令
+            execSsh(command) {
+                return new Promise((resolve, reject) => {
+                    return this.conn.exec(command, (err, stream) => {
+                        if (err || !stream) {
+                            reject({
+                                success: false, error: err
+                            });
+                        } else {
+                            stream.on('close', (code, signal) => {
+                                resolve({
+                                    success: true
+                                });
+                            }).on('data', function (data) {
+                                console.log(data.toString());
+                            }).stderr.on('data', function (data) {
+                                resolve({
+                                    success: false,
+                                    error: data.toString()
+                                });
+                            });
+                        }
+                    });
+                })
+            }
+
+            // 结束连接
+            endConn() {
+                this.conn.end();
+                if (this.connAgent) {
+                    this.connAgent.end();
+                }
+            }
+
+        }
+
+        /*
+        * 本地操作
+        * */
+        class File {
+
+            constructor(fileName) {
+                this.fileName = fileName;
+            }
+
+            // 删除本地文件
+            deleteLocalFile() {
+                return new Promise((resolve, reject) => {
+                    fs.unlink(this.fileName, function (error) {
+                        if (error) {
+                            reject({
+                                success: false,
+                                error
+                            });
+                        } else {
+                            resolve({
+                                success: true
+                            });
+                        }
+                    })
+                })
+            }
+
+            // 压缩文件夹下的所有文件
+            zipFile(filePath) {
+                return new Promise((resolve, reject) => {
+                    // 创建文件输出流
+                    let output = fs.createWriteStream(__dirname + '/' + this.fileName);
+                    let archive = archiver('zip', {
+                        zlib: { level: 9 } // 设置压缩级别
+                    });
+                    // 文件输出流结束
+                    output.on('close', function () {
+                        console.log(`----压缩文件总共 ${archive.pointer()} 字节----`);
+                        console.log('----压缩文件夹完毕----');
+                        resolve({
+                            success: true
+                        })
+                    });
+                    // 数据源是否耗尽
+                    output.on('end', function () {
+                        console.error('----压缩失败，数据源已耗尽----');
+                        reject();
+                    });
+                    // 存档警告
+                    archive.on('warning', function (err) {
+                        if (err.code === 'ENOENT') {
+                            console.error('----stat故障和其他非阻塞错误----')
+                        } else {
+                            console.error('----压缩失败----');
+                        }
+                        reject(err);
+                    });
+                    // 存档出错
+                    archive.on('error', function (err) {
+                        console.error('----存档错误，压缩失败----');
+                        console.error(err);
+                        reject(err);
+                    });
+                    // 通过管道方法将输出流存档到文件
+                    archive.pipe(output);
+
+                    // 打包dist里面的所有文件和目录
+                    archive.directory(filePath, false);
+                    // archive.directory(`../${Config.buildDist}/`, false);
+
+                    // 完成归档
+                    archive.finalize();
+                })
+            }
+
+            // 打包本地前端文件
+            buildProject() {
+                console.log('----开始编译打包文件，请耐心等待----');
+                return new Promise((resolve, reject) => {
+                    exec(Config.buildCommand, async (error, stdout, stderr) => {
+                        if (error) {
+                            console.error(error);
+                            reject({
+                                error,
+                                success: false
+                            });
+                        } else if (stdout) {
+                            resolve({
+                                stdout,
+                                success: true
+                            });
+                        } else {
+                            console.error(stderr);
+                            reject({
+                                error: stderr,
+                                success: false
+                            });
+                        }
+                    });
+                })
+            }
+
+            // 停止程序之前需删除本地压缩包文件
+            stopProgress() {
+                this.deleteLocalFile().catch((e) => {
+                    console.error('----删除本地文件失败，请手动删除----');
+                    console.error(e);
+                }).then(() => {
+                    console.log('----已删除本地压缩包文件----');
+                })
+            }
+        }
+
+        // SSH连接，上传，解压，删除等相关操作
+        async function sshUpload(sshConfig, fileName) {
+            let sshCon = new SSH(sshConfig);
+            let sshRes = await sshCon.connectServer().catch(e => {
+                console.error(e);
+            });
+            if (!sshRes || !sshRes.success) {
+                console.error('----连接服务器失败，请检查用户名密码是否正确以及服务器是否已开启远程连接----');
+                return false;
+            }
+
+            console.log('----连接服务器成功，开始上传文件----');
+
+            let uploadRes = await sshCon.uploadFile({
+                localPath: path.resolve(__dirname, fileName),
+                remotePath: sshConfig.catalog + '/' + fileName
+            }).catch(e => {
+                console.error(e);
+            });
+
+            if (!uploadRes || !uploadRes.success) {
+                console.error('----上传文件失败，请重新上传----');
+                return false;
+            }
+            console.log('----上传文件成功，开始解压文件----');
+
+            let zipRes = await sshCon.execSsh(`unzip -o ${sshConfig.catalog + '/' + fileName} -d ${sshConfig.catalog}`)
+                .catch((e) => { });
+            if (!zipRes || !zipRes.success) {
+                console.error('----解压文件失败，请手动解压zip文件----');
+                console.error(`----错误原因：${zipRes.error}----`);
+            }
+            if (Config.deleteFile) {
+                console.log('----解压文件成功，开始删除上传的压缩包----');
+
+                // 注意：rm -rf为危险操作，请勿对此段代码做其他非必须更改
+                let deleteZipRes = await sshCon.execSsh(`rm -rf ${sshConfig.catalog + '/' + fileName}`).catch((e) => { });
+                if (!deleteZipRes || !deleteZipRes.success) {
+                    console.error('----删除文件失败，请手动删除zip文件----');
+                    console.error(`----错误原因：${deleteZipRes.error}----`);
+                }
+            }
+            // 结束ssh连接
+            sshCon.endConn();
+        }
+
+        // 执行前端部署
+        (async () => {
+            // 压缩包的名字
+            let date = new Date();
+            let year = date.getFullYear();
+            let month = date.getMonth() + 1;
+            let day = date.getDate();
+            let timeStr = `${year}_${month}_${day}`;
+            const fileName = `${Config.buildDist}-` + timeStr + '-' + Math.random().toString(16).slice(2) + '.zip';
+
+            let file = new File(fileName);
+
+            // 打包文件
+            let buildRes = await file.buildProject().catch(e => {
+                console.error(e);
+            });
+            if (!buildRes || !buildRes.success) {
+                console.error('----编译打包文件出错----');
+                return false;
+            }
+            console.log(buildRes.stdout);
+            console.log('----编译打包文件完成----');
+
+            // 压缩文件
+
+            let res = await file.zipFile(`${Config.buildDist}/`).catch(() => { });
+            if (!res || !res.success) return false;
+            console.log('----开始进行SSH连接----');
+
+            if (Config.publishEnv instanceof Array && Config.publishEnv.length) {
+                for (let i = 0; i < Config.publishEnv.length; i++) {
+                    await sshUpload(Config.publishEnv[i], fileName);
+                }
+            } else {
+                await sshUpload(Config.publishEnv, fileName);
+            }
+
+            console.log('----部署成功，正在为您删除本地压缩包----');
+            file.stopProgress();
+
+        })();
         ```
