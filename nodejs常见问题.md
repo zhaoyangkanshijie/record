@@ -4837,6 +4837,8 @@ for(var i = 0; i < cpus.length; i++){
 
     [auto-deploy](https://github.com/HEJIN2016/auto-deploy)
 
+    [ssh2-utils](https://www.npmjs.com/package/ssh2-utils)
+
 2. 详解：
 
     * ssh2兼容性
@@ -5293,6 +5295,82 @@ for(var i = 0; i < cpus.length; i++){
                 console.log(res.statusCode);
                 console.dir(res.headers);
                 res.resume();
+            });
+            ```
+
+    * ssh2-utils样例
+
+        * 执行shell命令
+
+            ```js
+            var SSH2Utils = require('ssh2-utils');
+            var ssh = new SSH2Utils();
+
+            var server = {host: "localhost", username:"user", password:"pwd" };
+
+            //执行cmd，返回输出
+            ssh.exec(server, 'ls', function(err,stdout,stderr){
+                if(err) console.log(err);
+                console.log(stdout);
+                console.log(stderr);
+            });
+
+            //执行cmd，返回流
+            ssh.run(server, ['ls','time'], function(err,stdout,stderr,server,conn){
+                if(err) console.log(err);
+                stdout.on('data', function(){
+                    console.log(''+data);
+                });
+                stderr.on('data', function(){
+                    console.log(''+data);
+                });
+                stdout.on('close',function(){
+                    conn.end();
+                });
+            });
+
+            //执行多条cmd，返回它们的输出
+            ssh.runMultiple(server, ['ls','time'], function(sessionText, sshObj){
+                console.log(sessionText);
+            });
+            ```
+
+        * 文件(夹)操作
+
+            ```js
+            var SSH2Utils = require('ssh2-utils');
+            var ssh = new SSH2Utils();
+
+            var server = {host: "localhost", username:"user", password:"pwd" };
+                
+            //下载文件
+            ssh.getFile(server,'/tmp/from_some_remote','/tmp/to_some_local', function(err){
+                if(err) console.log(err);
+            });
+
+            //上传文件
+            ssh.putFile(server,'/tmp/to_some_local','/tmp/from_some_remote', function(err){
+                if(err) console.log(err);
+            });
+
+            //上传文件夹
+            ssh.putDir(server,'/tmp/from_some_local','/tmp/to_some_remote', function(err){
+                if(err) console.log(err);
+            });
+
+            //创建文件夹
+            ssh.mkdir(server,'/tmp/to_some_remote', function(err){
+                if(err) console.log(err);
+            });
+
+            //删除文件夹
+            ssh.rmdir(server,'/tmp/to_some_remote', function(err){
+                if(err) console.log(err);
+            });
+
+            //检查文件是否存在
+            ssh.fileExists(server,'/tmp/to_some_remote', function(err){
+                if(err) console.log(err);
             });
             ```
 
