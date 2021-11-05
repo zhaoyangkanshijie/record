@@ -29,6 +29,7 @@
 - [纯CSS实现伪瀑布流布局](#纯CSS实现伪瀑布流布局)
 - [css文字填色](#css文字填色)
 - [svg文字排布](#svg文字排布)
+- [裁切响应式布局](#裁切响应式布局)
 
 ---
 
@@ -3309,3 +3310,37 @@
 
     </html>
     ```
+
+### 裁切响应式布局
+
+1. 参考链接
+
+  [How Do You Do max-font-size in CSS?](https://css-tricks.com/how-do-you-do-max-font-size-in-css/)
+
+  [caniuse](https://caniuse.com/)
+
+2. 详解
+
+  * 需求
+
+    屏幕宽度1680px以上两边裁切，1680px-1200px响应式布局，1200px或以下出滚动条
+
+  * css
+
+    ```css
+    /*以1680px为标准，1vw=168px，屏幕1680px时vw=px，1680以下vw生效*/
+    div{
+      width: 10vw;
+      max-width: 168px;
+      min-width: 120px;
+      margin: 0 auto;
+    }
+    /*有上下限的情况*/
+    h3{
+      font-size: min(max(60px, 5vw), 84px);/*IE6+*/
+      /*font-size: clamp(60px, 5vw, 84px);chrome79+*/
+    }
+    ```
+
+  * [css比较函数](#css比较函数)
+
