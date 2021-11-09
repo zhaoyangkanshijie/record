@@ -3344,3 +3344,10 @@
 
   * [css比较函数](#css比较函数)
 
+  * 注意
+
+    sass中max和min是内部函数，直接使用max(100px,1vw)会报错，有2种解决办法：
+
+    1. 添加css计算函数：calc(max(100px,1vw))，IE9-11中background-position不可使用
+    2. sass内部函数去除字符串引号，并以字符串输出：unquote("max(100px,1vw)")
+
