@@ -776,6 +776,18 @@
         });
         ```
 
+    * 文件变化监听
+
+        ```js
+        import { watchFile } from 'fs';
+
+        watchFile('message.text', (curr, prev) => {
+            console.log(`the current mtime is: ${curr.mtime}`);
+            console.log(`the previous mtime was: ${prev.mtime}`);
+        });
+        //撤销监听:fs.unwatchFile(filename[, listener])
+        ```
+
 ### path文件路径
 
 1. 参考链接：
