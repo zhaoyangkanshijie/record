@@ -36,6 +36,7 @@
 - [定时任务框架](#定时任务框架)
 - [Node模块机制](#Node模块机制)
 - [ssh2远程连接与自动部署](#ssh2远程连接与自动部署)
+- [glob文件列表](#glob文件列表)
 
 ---
 
@@ -2008,11 +2009,56 @@ for(var i = 0; i < cpus.length; i++){
 
             这相当于将 options.stdio 设置为 ['pipe', 'pipe', 'pipe']。
 
+        * 样例
+
+            ```js
+            const childProcess = require("child_process");
+            const ls = childProcess.spawn('node', ['-v']);
+
+            ls.stdout.on('data', (data) => {
+                console.log(`stdout: ${data}`);
+            });
+
+            ls.stderr.on('data', (data) => {
+                console.error(`stderr: ${data}`);
+            });
+
+            ls.on('close', (code) => {
+                console.log(`child process exited with code ${code}`);
+            });
+            //stderr:
+            //stdout: v16.11.1
+            //child process exited with code 0
+            ```
+
     * exec(): 启动一个子进程来执行命令，
     
         与 spawn()不同的是其接口不同，它有一个回调函数获知子进程的状况
         
         exec是创建子shell去执行命令，用来直接执行shell命令。
+
+        * 样例
+
+            ```js
+            //exec执行shell命令，因此npm -v不生效，echo "123"生效
+            const childProcess = require("child_process");
+            let a = childProcess.execSync('npm -v', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`exec error: ${error}`);
+                    return;
+                }
+                console.log(`stdout: ${stdout}`);
+                console.error(`stderr: ${stderr}`);
+            });
+            let b = childProcess.exec('echo "123"', (error, stdout, stderr) => {
+                if (error) {
+                    console.error(`exec error: ${error}`);
+                    return;
+                }
+                console.log(`stdout: ${stdout}`);
+                console.error(`stderr: ${stderr}`);
+            });
+            ```
 
     * execFlie(): 启动一个子进程来执行可执行文件
     
@@ -2023,6 +2069,19 @@ for(var i = 0; i < cpus.length; i++){
         exec与execFile不同的是，exec执行的是已有命令，execFile执行的是文件。
 
         spawn与exec和execFile不同的是，后两者创建时可以指定timeout属性设置超时时间，一旦进程超时就会被杀死；
+
+        * 样例
+
+            ```js
+            //默认执行cmd，不衍生shell
+            const childProcess = require("child_process");
+            const child = childProcess.execFile('node', ['--version'], (error, stdout, stderr) => {
+                if (error) {
+                    throw error;
+                }
+                console.log(stdout);
+            });
+            ```
 
 * 实现一个 node 子进程被杀死，然后自动重启代码
 
@@ -5775,3 +5834,75 @@ for(var i = 0; i < cpus.length; i++){
 
         })();
         ```
+
+## glob文件列表
+
+1. 参考链接：
+
+   [node-glob学习](https://www.cnblogs.com/liulangmao/p/4552339.html)
+
+   [node-glob](https://github.com/isaacs/node-glob)
+
+2. 详解：
+
+npm install glob
+
+* 基础
+
+以/分割路径，其余使用正则匹配
+```js
+glob("js/*.js",function (er, files) {
+    console.log(files)
+})
+//js/a[0-3].js
+//js/*(a|a1|b).js
+//js/!(a|b).js
+```
+
+* 设置 matchBase 属性为 true ,可以起到在当前路径下搜索所有子文件夹的效果
+
+```js
+glob("@(a|a1|b).js",{matchBase:true},function (er, files) {
+    console.log(files)
+})
+```
+
+* nonull: 设置为true以后,如果没有找到匹配的文件,不返回空字符串,而是返回原始glob语句
+
+```js
+glob("@(c|d|e).js",{nonull:true},function (er, files) {
+    console.log(files)
+})
+```
+
+* 同步获取匹配文件列表
+
+```js
+var globInstance = new glob.Glob("@(a|a1|b).js",{nonull:true,matchBase:true,sync:true});
+console.log(globInstance.found);
+```
+
+* 事件与方法
+
+```js
+var globInstance = new glob.Glob("js/@(a|a1|b).js",{nonull:true});
+//每次匹配到一个文件的时候触发,它接受的参数就是匹配到的文件
+globInstance.on('match',function(file){
+    console.log(file)
+});
+//文件匹配结束,找出所有匹配结果的时候触发,它接受的参数就是找到的文件的数组
+globInstance.on('end',function(files){
+    console.log(files)
+});
+//匹配遇到错误的时候触发.接受的参数就是错误信息
+globInstance.on('error',function(error){
+    console.log(error)
+});
+//调用了.abort()方法时,abort事件被触发
+globInstance.on('abort',function(){
+    console.log('abort')
+});
+globInstance.pause();//暂停匹配搜索
+globInstance.resume();//继续匹配搜索
+globInstance.abort();//永远停止匹配搜索,不能继续
+```
