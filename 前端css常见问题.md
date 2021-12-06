@@ -30,6 +30,7 @@
 - [css文字填色](#css文字填色)
 - [svg文字排布](#svg文字排布)
 - [裁切响应式布局](#裁切响应式布局)
+- [background-attachment与毛玻璃](#background-attachment与毛玻璃)
 
 ---
 
@@ -3351,3 +3352,103 @@
     1. 添加css计算函数：calc(max(100px,1vw))，IE9-11中background-position不可使用
     2. sass内部函数去除字符串引号，并以字符串输出：unquote("max(100px,1vw)")
 
+### background-attachment与毛玻璃
+
+1. 参考链接
+
+  [background-attachment属性进阶](https://www.cnblogs.com/starof/p/4511367.html)
+
+  [CSS技巧收集——毛玻璃效果](https://www.cnblogs.com/ghost-xyx/p/5677168.html)
+
+2. 详解
+
+* background-attachment
+
+  定义背景图片随滚动轴的移动方式
+
+  scroll:默认值，背景图相对于元素固定，背景随页面滚动而移动，即背景和内容绑定。
+
+  fixed：背景图相对于视口固定，所以随页面滚动背景不动，相当于背景被设置在了body上。
+
+  local：背景图相对于元素内容固定。
+
+  多背景图background-attachment
+
+  ```css
+  body {
+    background-image: url("img1.png"), url("img2.png");
+    background-attachment: scroll, fixed;
+  }
+  ```
+
+* 毛玻璃
+
+  ```html
+  <style>
+      #main {
+          position: absolute;
+          top: 0px;
+          left: 0px;
+          width: 100%;
+          height: 100%;
+          /*外层和内层设置相同背景，以便拼接*/
+          background-image: url("./a.jpg");
+          background-position: center top;
+          background-size: cover;
+      }
+
+      .content {
+          background-color: rgba(0, 0, 0, 0.3);
+          filter: blur(2px);/*对元素直接使用模糊会将其内容全部模糊掉，为了保证文字不会模糊掉需要多一个层单独应用模糊效果*/
+          position: absolute;
+          top: 10%;
+          left: 10%;
+          width: 200px;
+          height: 200px;
+      }
+
+      .detail {
+          font-size: 100px;
+          color: #fff;
+          line-height: 200px;
+          text-align: center;
+          margin: 0;
+      }
+
+      .content2 {
+          position: absolute;
+          top: 30%;
+          left: 60%;
+          width: 500px;
+          height: 200px;
+          z-index: 1;
+          overflow: hidden;/*效果不超出 content2 的范围*/
+      }
+
+      .content2:after {/*通过伪元素达到多一层的效果*/
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(255, 255, 255, 0.8);
+          z-index: -1;/*使伪元素位于 content 的下面，为不使其隐藏到背景图的后面，这里给 content2 设置 z-index:1*/
+          /*外层和内层设置相同背景，以便拼接*/
+          background-image: url("./a.jpg");
+          background-position: center top;
+          background-size: cover;
+          background-attachment: fixed;/*背景图相对于视口固定，相当于背景被设置在了body上，实现了背景拼接效果*/
+          filter: blur(20px);
+          margin: -30px;
+      }
+  </style>
+  <div id="main">
+      <div class="content">
+          <p class="detail">test</p>
+      </div>
+      <div class="content2">
+          <p class="detail">test</p>
+      </div>
+  </div>
+  ```
