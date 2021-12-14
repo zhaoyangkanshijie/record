@@ -27,6 +27,7 @@
 * [webpack](https://github.com/zhaoyangkanshijie/webpack4Example)
 * [canvas](https://github.com/zhaoyangkanshijie/canvasExample)
 * [threejs](https://github.com/zhaoyangkanshijie/web3DExample)
+* [qiankun](https://github.com/zhaoyangkanshijie/qiankunExample)
 * [Krpano WebVR](https://github.com/ningbonb/nodeKrpano)
 
 ## 后端
