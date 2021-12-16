@@ -72,6 +72,7 @@
 * [动态css](#动态css)
 * [props校验](#props校验)
 * [createElement](#createElement)
+* [vue3.2script-setup语法糖](#vue3.2script-setup语法糖)
 
 ---
 
@@ -7351,3 +7352,163 @@ set $listeners: ƒ (t)
         ])
       }
       ```
+
+## vue3.2script-setup语法糖
+
+https://juejin.cn/post/7036389587991658533
+
+1. 无需return
+
+```ts
+<template>
+  <my-component :num="num" @click="addNum" />
+</template>
+
+//必须使用驼峰命名
+<script setup>
+  import { ref } from 'vue';
+  import MyComponent from './MyComponent.vue';
+
+  // 像在平常的setup中一样的写,但是不需要返回任何变量
+  const num= ref(0)       //在此处定义的 num 可以直接使用
+  const addNum= () => {   //函数也可以直接引用,不用在return中返回
+    num.value++
+  }
+</script>
+```
+
+2. 无需component和name
+
+```ts
+<template>
+    <zi-hello></zi-hello>
+</template>
+
+<script setup>
+  import ziHello from './ziHello'
+</script>
+```
+
+3. defineProps替代props
+
+父组件
+```ts
+<template>
+  <div class="die">
+    <h3>我是父组件</h3>
+    <zi-hello :name="name"></zi-hello>
+  </div>
+</template>
+
+<script setup>
+  import ziHello from './ziHello'
+  
+  import {ref} from 'vue'
+  let name = ref('aaa')
+</script>
+```
+
+子组件
+```ts
+<template>
+  <div>
+    我是子组件{{name}} // aaa
+  </div>
+</template>
+
+<script setup>
+  import {defineProps} from 'vue'
+
+  defineProps({
+   name:{
+     type:String,
+     default:'我是默认值'
+   }
+ })
+</script>
+```
+
+4. defineEmits
+
+子组件
+```ts
+<template>
+  <div>
+    我是子组件{{name}}
+    <button @click="ziupdata">按钮</button>
+  </div>
+</template>
+
+<script setup>
+  import {defineEmits} from 'vue'
+
+  //自定义函数，父组件可以触发
+  const em=defineEmits(['updata'])
+  const ziupdata=()=>{
+    em("updata",'我是子组件的值')
+  }
+</script>
+```
+
+父组件
+```ts
+<template>
+  <div class="die">
+    <h3>我是父组件</h3>
+    <zi-hello @updata="updata"></zi-hello>
+  </div>
+</template>
+
+<script setup>
+  import ziHello from './ziHello'
+  
+  const updata = (data) => {
+    console.log(data); //我是子组件的值
+  }
+</script>
+```
+
+5. defineExpose
+
+子组件
+```ts
+<template>
+  <div>
+    我是子组件
+  </div>
+</template>
+
+<script setup>
+  import {defineExpose,reactive,ref} from 'vue'
+  let ziage=ref(18)
+  let ziname=reactive({
+    name:'aaa'
+  })
+  //暴露出去的变量
+  defineExpose({
+    ziage,
+    ziname
+  })
+</script>
+```
+
+父组件
+```ts
+<template>
+  <div class="die">
+    <h3 @click="isclick">我是父组件</h3>
+    <zi-hello ref="zihello"></zi-hello>
+  </div>
+</template>
+
+<script setup>
+  import ziHello from './ziHello'
+  import {ref} from 'vue'
+  const zihello = ref()
+
+  const isclick = () => {
+    console.log('接收ref暴漏出来的值',zihello.value.ziage)
+    console.log('接收reactive暴漏出来的值',zihello.value.ziname.name)
+  }
+</script>
+```
