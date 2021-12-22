@@ -1647,7 +1647,6 @@ type Eg = UnionToIntersection<{ key1: string } | { key2: number }>
     * never可以用来声明对象里必没有xx属性
     * 内置类型PropertyKey
     * 可以借助function的arguments对泛型做进一步处理
-    * 
 
 1. 返回值错误
 

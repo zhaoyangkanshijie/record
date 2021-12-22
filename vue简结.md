@@ -626,7 +626,7 @@ export default draggable
 
 * unbind:只调用一次，指令与元素解绑时调用。
 
-## vue 双向数据绑定原理
+## vue双向数据绑定原理
 
 * [探讨 vue 的双向绑定原理及实现](https://www.cnblogs.com/zhouyideboke/p/9626804.html)
 

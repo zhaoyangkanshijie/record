@@ -289,8 +289,6 @@
 
      cookie、localstorage、sessionstorage 不可跨域：在不同同源 url 下，获取到不同的数据，只有同源 url 才共享数据。
 
-
-
 ### for-in,for-of,foreach 区别
 
 1. 参考链接：
@@ -1501,8 +1499,6 @@
    //（6）输入模块的指定方法
    const { SourceMapConsumer, SourceNode } = require("source-map");
    ```
-
-
 
 ### 深入理解promise
 
@@ -5244,8 +5240,6 @@
    //Event.stopPropagation()
    obj.dispatchEvent(event);
    ```
-
-
 
 ### 媒体查询匹配
 
