@@ -1,5 +1,6 @@
 # 前端css常见问题
 
+- [css渲染层](#css渲染层)
 - [已知或者未知宽度的垂直水平居中](#已知或者未知宽度的垂直水平居中)
 - [三角形](#三角形)
 - [flexible 与高清屏](#flexible与高清屏)
@@ -34,6 +35,135 @@
 
 ---
 
+### css渲染层
+
+1. 参考链接：
+
+  [浏览器层合成与页面渲染优化](https://juejin.cn/post/6844903966573068301)
+
+  [CSS3硬件加速也有坑](https://div.io/topic/1348)
+
+  [层爆炸DEMO](http://fouber.github.io/test/layer/)
+
+2. 详解：
+
+  * 场景
+
+    IOS h5 使用 filter: blur(100px); 后，页面加载时存在明显的延迟，页面滚动时会出现短暂的局部白屏，占用 CPU 高
+
+    解决：开启 GPU 加速页面渲染，will-change: transform;
+
+  * 页面构建过程
+
+    构建 DOM 树、构建渲染树、布局、绘制、渲染层合成
+
+  * 什么是渲染层合成?
+
+    在 DOM 树中每个节点都会对应一个渲染对象（RenderObject），当它们的渲染对象处于相同的坐标空间（z 轴空间）时，就会形成一个 RenderLayers，也就是渲染层。
+
+    渲染层将保证页面元素以正确的顺序堆叠，这时候就会出现层合成（composite），从而正确处理透明元素和重叠元素的显示。
+
+  * 渲染对象（RenderObject）
+
+    一个 DOM 节点对应了一个渲染对象，渲染对象依然维持着 DOM 树的树形结构。一个渲染对象知道如何绘制一个 DOM 节点的内容，它通过向一个绘图上下文（GraphicsContext）发出必要的绘制调用来绘制 DOM 节点。
+
+  * 渲染层（RenderLayer）
+
+    这是浏览器渲染期间构建的第一个层模型，处于相同坐标空间（z轴空间）的渲染对象，都将归并到同一个渲染层中，因此根据层叠上下文，不同坐标空间的的渲染对象将形成多个渲染层，以体现它们的层叠关系。
+
+    对于满足形成层叠上下文条件的渲染对象，浏览器会自动为其创建新的渲染层。
+
+    能够导致浏览器为其创建新的渲染层的，包括以下几类常见的情况：
+
+      * 根元素 document
+      * 有明确的定位属性（relative、fixed、sticky、absolute）
+      * opacity < 1
+      * 有 CSS fliter 属性
+      * 有 CSS mask 属性
+      * 有 CSS mix-blend-mode 属性且值不为 normal
+      * 有 CSS transform 属性且值不为 none
+      * backface-visibility 属性为 hidden
+      * 有 CSS reflection 属性
+      * 有 CSS column-count 属性且值不为 auto或者有 CSS column-width 属性且值不为 auto
+      * 当前有对于 opacity、transform、fliter、backdrop-filter 应用动画
+
+    DOM 节点和渲染对象是一一对应的，满足以上条件的渲染对象就能拥有独立的渲染层。当然这里的独立是不完全准确的，并不代表着它们完全独享了渲染层，由于不满足上述条件的渲染对象将会与其第一个拥有渲染层的父元素共用同一个渲染层，因此实际上，这些渲染对象会与它的部分子元素共用这个渲染层。
+
+  * 图形层（GraphicsLayer）
+
+    GraphicsLayer 其实是一个负责生成最终准备呈现的内容图形的层模型，它拥有一个图形上下文（GraphicsContext），GraphicsContext 会负责输出该层的位图。存储在共享内存中的位图将作为纹理上传到 GPU，最后由 GPU 将多个位图进行合成，然后绘制到屏幕上。
+
+  * 合成层（CompositingLayer）
+
+    满足某些特殊条件的渲染层，会被浏览器自动提升为合成层。合成层拥有单独的 GraphicsLayer，而其他不是合成层的渲染层，则和其第一个拥有 GraphicsLayer 的父层共用一个。
+
+    提升为合成层条件：
+
+      * 3D transforms：translate3d、translateZ 等
+      * video、canvas、iframe 等元素
+      * 通过 Element.animate() 实现的 opacity 动画转换
+      * 通过 СSS 动画实现的 opacity 动画转换
+      * position: fixed
+      * 具有 will-change 属性
+      * 对 opacity、transform、fliter、backdropfilter 应用了 animation 或者 transition
+      * 隐式合成
+
+        一个或多个非合成元素应出现在堆叠顺序上的合成元素之上，被提升到合成层。
+
+        例如：
+        
+        两个 absolute 定位的 div 在屏幕上交叠了，根据 z-index 的关系，其中一个 div 就会”盖在“了另外一个上边。
+
+        如果处于下方的 div 被加上了 CSS 属性：transform: translateZ(0)，就会被浏览器提升为合成层。提升后的合成层位于 Document 上方，假如没有隐式合成，原本应该处于上方的 div 就依然还是跟 Document 共用一个 GraphicsLayer，层级反而降了，就出现了元素交叠关系错乱的问题。
+
+        所以为了纠正错误的交叠顺序，浏览器必须让原本应该”盖在“它上边的渲染层也同时提升为合成层。
+
+    将 CPU 消耗高的渲染元素提升为一个新的合成层，才能开启 GPU 加速
+
+  * 层爆炸
+
+    在平时的开发过程中，我们很少会去关注层合成的问题，很容易就产生一些不在预期范围内的合成层，当这些不符合预期的合成层达到一定量级时，就会变成层爆炸。
+
+    层爆炸会占用 GPU 和大量的内存资源，严重损耗页面性能，因此盲目地使用 GPU 加速，结果有可能会是适得其反。
+
+  * 层压缩
+
+    如果多个渲染层同一个合成层重叠时，这些渲染层会被压缩到一个 GraphicsLayer 中，以防止由于重叠原因导致可能出现的“层爆炸”。
+
+    浏览器的层压缩机制，会将隐式合成的多个渲染层压缩到同一个 GraphicsLayer 中进行渲染
+
+    有四个 absolute 定位的 div 在屏幕内发生了交叠。此时处于最下方的 div 在加上了 CSS 属性 transform: translateZ(0) 后被浏览器提升为合成层，上方的三个 div 最终会处于同一个合成层中，这就是浏览器的层压缩。
+
+  * 层合成的得与失
+
+    * 优点：
+
+      * 合成层的位图，会交由 GPU 合成，比 CPU 处理要快得多；
+      * 当需要 repaint 时，只需要 repaint 本身，不会影响到其他的层；
+      * 元素提升为合成层后，transform 和 opacity 才不会触发 repaint，如果不是合成层，则其依然会触发 repaint。
+
+    * 缺点：
+
+      * 绘制的图层必须传输到 GPU，这些层的数量和大小达到一定量级后，可能会导致传输非常慢，进而导致一些低端和中端设备上出现闪烁；
+      * 隐式合成容易产生过量的合成层，每个合成层都占用额外的内存，而内存是移动设备上的宝贵资源，过多使用内存可能会导致浏览器崩溃，让性能优化适得其反。
+
+  * Chrome Devtools 如何查看合成层
+
+    More tools -> Rendering -> Layer borders
+
+    More tools -> Layers
+
+    * Size：合成层的大小，其实也就是对应元素的尺寸；
+    * Compositing Reasons：形成复合层原因，这是最关键的，也是我们分析问题的突破口，比如图中的合成层产生的原因就是交叠问题；
+    * Memory estimate：内存占用估算；
+    * Paint count：绘制次数；
+    * Slow scroll regions：缓慢滚动区域。
+
+  * 优化建议
+
+    1. 持续变化位置的 animation 元素，我们最好是使用 transform 来实现而不是通过改变 left/top 的方式
+    2. 减少隐式合成，把动画节点的 z-index 属性值设置得大一些，让层叠顺序高过于页面其他无关节点
+    3. 使用 width 和 height 属性减小合成层的物理尺寸，然后再用 transform: scale(…) 放大，这样一来可以极大地减少层合成带来的内存消耗。
 
 ### 已知或者未知宽度的垂直水平居中
 

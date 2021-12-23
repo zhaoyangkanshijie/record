@@ -33,6 +33,8 @@
 * [react源码api](#react源码api)
 * [useEffect和componentDidMount有什么差异](#useEffect和componentDidMount有什么差异)
 * [Mobx](#Mobx)
+* [Immutable](#Immutable)
+* [thunk](#thunk)
 
 ---
 
@@ -4974,3 +4976,320 @@ class Switch extends React.Component {
             componentWillReact 不接收参数;
 
             componentWillReact 初始化渲染前不会触发 (使用 componentWillMount 替代);
+
+## Immutable
+
+1. 参考链接
+
+    [Immutable 详解及 React 中实践](https://zhuanlan.zhihu.com/p/20295971)
+
+    [不难懂------react---Immutable的基本使用](https://www.cnblogs.com/yebai/p/11383210.html)
+
+    [单文件组件下的vue，可以擦出怎样的火花](https://segmentfault.com/a/1190000005168085)
+
+2. 详解
+
+    * 场景
+
+        JavaScript 中的对象一般是可变的（Mutable），因为使用了引用赋值，新的对象简单的引用了原始对象，改变新的对象将影响到原始对象。
+
+        为了解决这个问题，一般的做法是使用 shallowCopy（浅拷贝）或 deepCopy（深拷贝）来避免被修改，但这样做造成了 CPU 和内存的浪费。
+
+    * 什么是 Immutable Data？
+
+        Immutable Data 就是一旦创建，就不能再被更改的数据。
+
+        对 Immutable 对象的任何修改或添加删除操作都会返回一个新的 Immutable 对象。
+        
+        Immutable 实现的原理是 Persistent Data Structure（持久化数据结构），也就是使用旧数据创建新数据时，要保证旧数据同时可用且不变。
+        
+        同时为了避免 deepCopy 把所有节点都复制一遍带来的性能损耗，Immutable 使用了 Structural Sharing（结构共享），即如果对象树中一个节点发生变化，只修改这个节点和受它影响的父节点，其它节点则进行共享。
+
+    * Immutable 库
+
+        1. immutable.js
+
+            与 React 同期出现，但没有被默认放到 React 工具集里（React 提供了简化的 Helper）。它内部实现了一套完整的 Persistent Data Structure，还有很多易用的数据类型。像 `Collection`、`List`、`Map`、`Set`、`Record`、`Seq`。有非常全面的`map`、`filter`、`groupBy`、`reduce``find`函数式操作方法。同时 API 也尽量与 Object 或 Array 类似。
+
+            ```js
+            import Immutable from 'immutable';
+            foo = Immutable.fromJS({a: {b: 1}});
+            bar = foo.setIn(['a', 'b'], 2);   // 使用 setIn 赋值
+            console.log(foo.getIn(['a', 'b']));  // 使用 getIn 取值，打印 1
+            console.log(foo === bar);  //  打印 false
+            ```
+
+        2. seamless-immutable
+
+            没有实现完整的 Persistent Data Structure，而是使用 `Object.defineProperty`（因此只能在 IE9 及以上使用）扩展了 JavaScript 的 Array 和 Object 对象来实现，只支持 Array 和 Object 两种数据类型，API 基于与 Array 和 Object 操持不变。
+
+            代码库非常小，压缩后下载只有 2K。而 Immutable.js 压缩后下载有 16K。
+
+            ```js
+            import SImmutable from 'seamless-immutable';
+            foo = SImmutable({a: {b: 1}})
+            bar = foo.merge({a: { b: 2}})   // 使用 merge 赋值
+            console.log(foo.a.b);  // 像原生 Object 一样取值，打印 1
+
+            console.log(foo === bar);  //  打印 false
+            ```
+
+    * Immutable 优点
+
+        1. Immutable 降低了 Mutable 带来的复杂度
+        2. 节省内存
+        3. Undo/Redo，Copy/Paste，时间旅行
+        
+            每次数据都是不一样的，只要把这些数据放到一个数组里储存起来，想回退到哪里就拿出对应数据即可
+
+        4. 并发安全
+
+            传统的并发非常难做，因为要处理各种数据不一致问题，因此『聪明人』发明了各种锁来解决。但使用了 Immutable 之后，数据天生是不可变的，并发锁就不需要了。
+
+        5. 纯函数式编程
+
+            只要输入一致，输出必然一致
+
+    * 使用 Immutable 的缺点
+
+        1. 需要学习新的 API
+
+        2. 增加了资源文件大小
+
+        3. 容易与原生对象混淆
+
+            一些办法来避免类似问题发生：
+
+            * TypeScript静态类型检查
+
+            * 约定变量命名规则：如所有 Immutable 类型对象以 `$$` 开头。
+
+            * 使用 `Immutable.fromJS` 而不是 `Immutable.Map` 或 `Immutable.List` 来创建对象
+
+    * Immutable.is
+
+        为了直接比较对象的值，immutable.js 提供了 `Immutable.is` 来做值比较
+
+        由于 immutable 内部使用了 Trie 数据结构来存储，只要两个对象的 `hashCode` 相等，值就是一样的。这样的算法避免了深度遍历比较，性能非常好。
+
+        使用 `Immutable.is` 来减少 React 重复渲染，提高性能。
+
+    * 与 Object.freeze、const 区别
+
+        `Object.freeze` 和 ES6 中新加入的 `const` 都可以达到防止对象被篡改的功能，但它们是 shallowCopy 的。对象层级一深就要特殊处理了。
+
+    * 深层数据访问Cursor
+
+        ```js
+        import Immutable from 'immutable';
+        import Cursor from 'immutable/contrib/cursor';
+
+        let data = Immutable.fromJS({ a: { b: { c: 1 } } });
+        // 让 cursor 指向 { c: 1 }
+        let cursor = Cursor.from(data, ['a', 'b'], newData => {
+            // 当 cursor 或其子 cursor 执行 update 时调用
+            console.log(newData);
+        });
+
+        cursor.get('c'); // 1
+        cursor = cursor.update('c', x => x + 1);
+        cursor.get('c'); // 2
+        ```
+
+    * 与 React 搭配使用，Pure Render
+
+        React 做性能优化时有一个避免重复渲染的大招，就是使用 `shouldComponentUpdate()`，但它默认返回 `true`，即始终会执行 `render()` 方法，然后做 Virtual DOM 比较，并得出是否需要做真实 DOM 更新，这里往往会带来很多无必要的渲染并成为性能瓶颈。
+
+        可以在 `shouldComponentUpdate()` 中使用使用 deepCopy 和 deepCompare 来避免无必要的 `render()`，但 deepCopy 和 deepCompare 一般都是非常耗性能的。
+
+        Immutable 则提供了简洁高效的判断数据是否变化的方法，只需 `===` 和 `is` 比较就能知道是否需要执行 `render()`，而这个操作几乎 0 成本，所以可以极大提高性能。
+
+        修改后的 `shouldComponentUpdate` 是这样的：
+        ```js
+        import { is } from 'immutable';
+
+        shouldComponentUpdate: (nextProps = {}, nextState = {}) => {
+            const thisProps = this.props || {}, thisState = this.state || {};
+
+            if (Object.keys(thisProps).length !== Object.keys(nextProps).length ||
+                Object.keys(thisState).length !== Object.keys(nextState).length) {
+                return true;
+            }
+
+            for (const key in nextProps) {
+                if (thisProps[key] !== nextProps[key] || ！is(thisProps[key], nextProps[key])) {
+                    return true;
+                }
+            }
+
+            for (const key in nextState) {
+                if (thisState[key] !== nextState[key] || ！is(thisState[key], nextState[key])) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        ```
+
+    * setState 的一个技巧
+
+        React 建议把 `this.state` 当作 Immutable 的，因此修改前需要做一个 deepCopy，显得麻烦：
+
+        ```js
+        import '_' from 'lodash';
+
+        const Component = React.createClass({
+            getInitialState() {
+                return {
+                    data: { times: 0 }
+                }
+            },
+            handleAdd() {
+                let data = _.cloneDeep(this.state.data);
+                data.times = data.times + 1;
+                this.setState({ data: data });
+                // 如果上面不做 cloneDeep，下面打印的结果会是已经加 1 后的值。
+                console.log(this.state.data.times);
+            }
+        }
+        ```
+
+        使用 Immutable 后：
+        ```js
+        handleAdd() {
+            this.setState({ data: this.state.data.update('times', v => v + 1) });
+            // 这时的 times 并不会改变
+            console.log(this.state.data.get('times'));
+        }
+        ```
+
+    * 与 Flux 搭配使用，实现一个类似带有添加和撤销功能的 Store：
+
+        ```js
+        import { Map, OrderedMap } from 'immutable';
+        let todos = OrderedMap();
+        let history = [];  // 普通数组，存放每次操作后产生的数据
+
+        let TodoStore = createStore({
+            getAll() { return todos; }
+        });
+
+        Dispatcher.register(action => {
+            if (action.actionType === 'create') {
+                let id = createGUID();
+                history.push(todos);  // 记录当前操作前的数据，便于撤销
+                todos = todos.set(id, Map({
+                id: id,
+                complete: false,
+                text: action.text.trim()
+                }));
+                TodoStore.emitChange();
+            } else if (action.actionType === 'undo') {
+                // 这里是撤销功能实现，
+                // 只需从 history 数组中取前一次 todos 即可
+                if (history.length > 0) {
+                todos = history.pop();
+                }
+                TodoStore.emitChange();
+            }
+        });
+        ```
+
+    * 使用 redux-immutablejs
+
+        Redux 是目前流行的 Flux 衍生库。它简化了 Flux 中多个 Store 的概念，只有一个 Store，数据操作通过 Reducer 中实现；同时它提供更简洁和清晰的单向数据流（View -> Action -> Middleware -> Reducer），也更易于开发同构应用。
+
+        由于 Redux 中内置的 `combineReducers` 和 reducer 中的 `initialState` 都为原生的 Object 对象，所以不能和 Immutable 原生搭配使用。
+
+        可以自己重写 `combineReducers` 或使用 redux-immutablejs 来提供支持。
+
+        因为 Redux 中已经有了 select 来做检索，Action 来更新数据，因此 Cursor 在这里就没有用武之地了。
+
+    * Immutable常用API　
+
+        ```js
+        //Map()  原生object转Map对象 (只会转换第一层，注意和fromJS区别)
+        immutable.Map({name:'danny', age:18})
+        
+        //List()  原生array转List对象 (只会转换第一层，注意和fromJS区别)
+        immutable.List([1,2,3,4,5])
+        
+        //fromJS()   原生js转immutable对象  (深度转换，会将内部嵌套的对象和数组全部转成immutable)
+        immutable.fromJS([1,2,3,4,5])    //将原生array  --> List
+        immutable.fromJS({name:'danny', age:18})   //将原生object  --> Map
+        
+        //toJS()  immutable对象转原生js  (深度转换，会将内部嵌套的Map和List全部转换成原生js)
+        immutableData.toJS();
+        
+        //查看List或者map大小  
+        immutableData.size  或者 immutableData.count()
+        
+        // is()   判断两个immutable对象是否相等
+        immutable.is(imA, imB);
+        
+        //merge()  对象合并
+        var imA = immutable.fromJS({a:1,b:2});
+        var imA = immutable.fromJS({c:3});
+        var imC = imA.merge(imB);
+        console.log(imC.toJS())  //{a:1,b:2,c:3}
+        
+        //增删改查（所有操作都会返回新的值，不会修改原来值）
+        var immutableData = immutable.fromJS({
+            a:1,
+            b:2,
+            c:{
+                d:3
+            }
+        });
+        var data1 = immutableData.get('a') //  data1 = 1  
+        var data2 = immutableData.getIn(['c', 'd']) // data2 = 3   getIn用于深层结构访问
+        var data3 = immutableData.set('a' , 2);   // data3中的 a = 2
+        var data4 = immutableData.setIn(['c', 'd'], 4);   //data4中的 d = 4
+        var data5 = immutableData.update('a',function(x){return x+4})   //data5中的 a = 5
+        var data6 = immutableData.updateIn(['c', 'd'],function(x){return x+4})   //data6中的 d = 7
+        var data7 = immutableData.delete('a')   //data7中的 a 不存在
+        var data8 = immutableData.deleteIn(['c', 'd'])   //data8中的 d 不存在
+        ```
+
+    * vue是否需要immutability?
+
+        Object.defineProperty/Proxy配合data单一watcher，我们再也不需要顾虑双向绑定的效率问题，无需像React搞immutability，再也不用担心你忘记实现shouldComponentUpdate了
+
+        “双向绑定”，“脏检查”都是在AngularJS那里。但AngularJS有明显的问题，他的digest cycle神马的很容易被搞出循环依赖，而且她的“脏检查”是go throught对象的属性，检查属性的值是否相同，而且效率很低。
+
+        于是为了避免Angular的问题，React引入了immutability，通过shouldComponentUpdate方法，要求组件作者自己维护该组件是否“脏”了，而判断是否“脏”的很高效的方式就是检查reference是否同一个。
+
+        然后vue认为，尽管immutability很屌，但仍然需要自己实现shouldComponentUpdate，而且为了保证你不会意外的更改对象，我们还需要引入immutable.js。增加了外部引用和学习成本。于是vue利用ES5的一个特性Object.definePropery实现了一套“黑魔法”，在你绑定数据的时候，就为对象里每一个属性设置了setter/getter，只要你一改属性，就会触发变更，效率之高，使用之简令人咂舌。当然这也有问题，就是IE9以下那些不支持ES5的浏览器是不能用的。
+
+## 对于react-thunk中间件的简单理解
+
+1. 参考链接
+
+    [对于react-thunk中间件的简单理解](https://blog.csdn.net/weixin_38642331/article/details/81748312)
+
+2. 详解
+
+    引入thunk插件后，我们可以在actionCreators里通过返回一个函数，然后就可以在函数里编写某些异步操作了(处理请求结果)。而不只是单纯的返回一个action对象。最后通过传入的store.dispatch，发出action通知给Store要进行状态更新。
+
+    ```js
+    import { applyMiddleware, createStore } from 'redux';
+    import thunk from 'redux-thunk';
+    import middleware1 from 'middleware1';
+    import middleware2 from 'middleware2';
+
+    const store = createStore(
+        reducer,
+        initialState,
+        applyMiddleware(thunk, middleware1, middleware2)
+    );
+    ```
+
+    applyMiddleware用于调用各种中间件，执行后，将所有入参中间件存入一个数组，并且返回一个闭包，闭包接受一个createStore作为入参并且执行后返回下一个闭包
+
+    中间件串联执行，使用了一个compose函数
+
+    thunk一定会接受上一个中间件的执行结果继续执行，然后最终在createState里返回一个改造好的dispatch
+
+    非function,不处理，将action 传给下一个中间件，最终都会根据传入的action计算相应的reducers
+
+    function类型的action, 自动触发函数，并且将store.dispatch传入
