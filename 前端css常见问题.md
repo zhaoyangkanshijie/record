@@ -32,6 +32,7 @@
 - [svg文字排布](#svg文字排布)
 - [裁切响应式布局](#裁切响应式布局)
 - [background-attachment与毛玻璃](#background-attachment与毛玻璃)
+- [css解决height:auto动画问题](#css解决height:auto动画问题)
 
 ---
 
@@ -3582,3 +3583,74 @@
       </div>
   </div>
   ```
+
+### css解决height:auto动画问题
+
+1. 参考链接：
+
+  - [CSS 奇技淫巧：动态高度过渡动画](https://juejin.cn/post/6917061427958120461)
+
+2. 详解
+
+  height:auto配transition不能产生动画效果，解决方法：
+
+  1. max-height
+
+    ```html
+    <style type="text/css">
+      div{
+        position: relative;
+      }
+      p{
+        width: 100px;
+        position: absolute;
+        top: 20px;
+        left: 0px;
+        max-height: 0;
+        transition: max-height 0.3s linear;
+        overflow: hidden;
+      }
+      div:hover p{
+        max-height: 100px;
+      }
+    </style>
+    <div>
+      <h3>hover</h3>
+      <p>testtesttesttesttesttesttesttesttesttest</p>
+    </div>
+    ```
+
+  2. translateY
+
+    ```html
+    <style type="text/css">
+        div{
+          position: relative;
+          background-color: #fff;
+        }
+        h3{
+          background-color: #fff;
+          margin: 0;
+          position: relative;
+          z-index: 1;
+        }
+        p{
+          width: 100px;
+          position: absolute;
+          top: 20px;
+          left: 0px;
+          transition: all 0.3s linear;
+          transform: translateY(-200%);
+          height: 0;
+          overflow: hidden;
+        }
+        div:hover p{
+          transform: translateY(0);
+          height: auto;
+        }
+      </style>
+      <div>
+      <h3>hover</h3>
+      <p>testtesttesttesttesttesttesttesttesttest</p>
+    </div>
+    ```

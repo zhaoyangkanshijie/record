@@ -19,6 +19,14 @@
 - [ChromeBug:FontBoosting](#ChromeBug:FontBoosting)
 - [swiper轮播](#swiper轮播)
 - [腾讯位置服务汽车轨迹](#腾讯位置服务汽车轨迹)
+- [页面复制文字时自动加版权](#页面复制文字时自动加版权)
+- [js监听url变化](#js监听url变化)
+- [如何找到当前页面出现次数最多的HTML标签](#如何找到当前页面出现次数最多的HTML标签)
+- [基准URL与刷新重定向](#基准URL与刷新重定向)
+- [Svelte](#Svelte)
+- [mockjs](#mockjs)
+- [简单实现双向数据绑定mvvm](#简单实现双向数据绑定mvvm)
+- [便捷的函数与方法](#便捷的函数与方法)
 
 ---
 
@@ -3794,3 +3802,1177 @@
 
   </html>
   ```
+
+### 页面复制文字时自动加版权
+
+1.  参考链接：
+
+    [JS 实现页面复制文字时自动加版权](https://blog.csdn.net/lzuacm/article/details/88197591)
+
+2.  详解：
+
+    利用 chrome 查看网站触发某事件(如 copy)时的代码:
+
+        F12-source-Event Listener Breakpoints-选择事件打勾-触发事件
+    
+        可以看到csdn使用copyright.js，百度即可，或搜索“js加版权”
+
+    ```js
+    $(document).on("copy", function (e) {
+      var selected = window.getSelection();
+      var selectedText = selected.toString().replace(/\n/g, "<br>");
+      var copyFooter =
+        "<br>---------------------<br>著作权归作者所有。<br>" +
+        "商业转载请联系作者获得授权，非商业转载请注明出处。<br>" +
+        "作者：Bravo Yeung<br> 源地址：" +
+        document.location.href +
+        "<br>来源：博客园cnblogs<br>© 版权声明：本文为博主原创文章，转载请附上博文链接！";
+      var copyHolder = $("<div>", {
+        id: "temp",
+        html: selectedText + copyFooter,
+        style: { position: "absolute", left: "-99999px" },
+      });
+      //创建div，内容为选中的文字+附加的内容，位置设为不可见
+      $("body").append(copyHolder);
+      selected.selectAllChildren(copyHolder[0]); //把指定元素的所有子元素设为选中区域，并取消之前的选中区域
+      window.setTimeout(function () {
+        copyHolder.remove();
+      }, 0);
+    });
+    ```
+
+    ```js
+    var ua = navigator.userAgent.toLowerCase();
+    if (window.ActiveXObject) {
+      /* 兼容IE */
+      document.body.oncopy = function () {
+        event.returnValue = false;
+        var selectedText = document.selection.createRange().text;
+        var pageInfo =
+          "<br>---------------------<br>著作权归作者所有。<br>" +
+          "商业转载请联系作者获得授权，非商业转载请注明出处。<br>" +
+          "作者：Bravo Yeung<br> 源地址：" +
+          document.location.href +
+          "<br>来源：博客园cnblogs<br>© 版权声明：本文为博主原创文章，转载请附上博文链接！";
+        clipboardData.setData(
+          "Text",
+          selectedText.replace(/\n/g, "<br>") + pageInfo
+        );
+      };
+    } else {
+      function addCopyRight() {
+        var body_element = document.getElementsByTagName("body")[0];
+        var selection = window.getSelection();
+        var pageInfo =
+          "<br>---------------------<br>著作权归作者所有。<br>" +
+          "商业转载请联系作者获得授权，非商业转载请注明出处。<br>" +
+          "作者：Bravo Yeung<br> 源地址：" +
+          document.location.href +
+          "<br>来源：博客园cnblogs<br>© 版权声明：本文为博主原创文章，转载请附上博文链接！";
+        var copyText = selection.toString().replace(/\n/g, "<br>") + pageInfo;
+        var newDiv = document.createElement("div");
+        newDiv.style.position = "absolute";
+        newDiv.style.left = "-99999px";
+        body_element.appendChild(newDiv);
+        newDiv.innerHTML = copyText;
+        selection.selectAllChildren(newDiv);
+        window.setTimeout(function () {
+          body_element.removeChild(newDiv);
+        }, 0);
+      }
+      document.oncopy = addCopyRight;
+    }
+    ```
+
+### js监听url变化
+
+1. 参考链接：
+
+  - [如何监听URL的变化？](https://blog.csdn.net/liubangbo/article/details/103272393)
+
+2. 详解
+
+  * 监听hashchange:#改变触发
+
+    ```js
+    window.onhashchange=function(event){
+      console.log(event);
+    }
+    //或者
+    window.addEventListener('hashchange',function(event){
+      console.log(event);
+    })
+    ```
+
+  * 监听popstate:前进后退触发
+
+    ```js
+    window.addEventListener('popstate', function(event) {
+        console.log(event);
+    })
+    ```
+
+  * 自定义事件replaceState和pushState行为的监听:单页面应用url改变能生效
+
+    ```js
+    let historyEvent = function(type) {
+        let origin = history[type];
+        return function() {
+            let result = origin.apply(this, arguments);
+            let event = new Event(type);
+            event.arguments = arguments;
+            window.dispatchEvent(event);
+            return result;
+        };
+    };
+    history.pushState = historyEvent('pushState');
+    history.replaceState = historyEvent('replaceState');
+
+    window.addEventListener('replaceState', function(e) {
+      console.log('THEY DID IT AGAIN! replaceState 111111');
+    });
+    window.addEventListener('pushState', function(e) {
+      console.log('THEY DID IT AGAIN! pushState 2222222');
+    });
+    ```
+
+### 如何找到当前页面出现次数最多的HTML标签
+
+1. 参考链接：
+
+  - [山月最近的面试总结](https://juejin.cn/post/6922229465468633095)
+  - [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
+
+2. 详解
+
+  * 列出所有标签
+
+    1. document.querySelector('*')，标准规范实现
+    2. $$('*')，devtools 实现
+    3. document.all，非标准规范实现
+    4. createNodeIterator(IE9+)
+
+      ```js
+      const body = document.getElementsByTagName('body')[0]
+      const it = document.createNodeIterator(body)
+      let root = it.nextNode()
+      while(root) {
+          console.log(root)
+          root = it.nextNode()
+      }
+      ```
+
+  * 实现
+
+    使用 document.querySelectorAll 实现
+
+    ```js
+    const maxBy = (list, keyBy) => list.reduce((x, y) => keyBy(x) > keyBy(y) ? x : y)
+
+    function getFrequentTag () {
+      const tags = [...document.querySelectorAll('*')].map(x => x.tagName).reduce((o, tag) => { 
+        o[tag] = o[tag] ? o[tag] + 1 : 1;
+        return o
+      }, {})
+      return maxBy(Object.entries(tags), tag => tag[1])
+    }
+    ```
+
+    DOM 的体积过大会影响页面性能，假如你想在用户关闭页面时统计（计算并反馈给服务器）当前页面中元素节点的数量总和、元素节点的最大嵌套深度以及最大子元素个数，请用 JS 配合原生 DOM API 实现该需求（不用考虑陈旧浏览器以及在现代浏览器中的兼容性，可以使用任意浏览器的最新特性；不用考虑 shadow DOM）。比如在如下页面中运行后：
+    ```html
+    <html>
+      <head></head>
+      <body>
+        <div>
+          <span>f</span>
+          <span>o</span>
+          <span>o</span>
+        </div>
+      </body>
+    </html>
+    ```
+    ```json
+    {
+      totalElementsCount: 7,
+      maxDOMTreeDepth: 4,
+      maxChildrenCount: 3
+    }
+    ```
+
+    ```js
+    window.onload = function() {
+      let outer = document.querySelectorAll('*');
+      let totalElementsCount = 0;
+      let maxDOMTreeDepth = 0;
+      let maxChildrenCount = 0;
+      //console.log(outer)
+      let elementQueue = [outer[0]];
+      let htmlObject = {
+        tagName: '',
+        deep: 0,
+        childrenCount: 0
+      };
+      let nodeInfo = [];
+      let deepInfo = [];
+      let childrenCountInfo = [];
+      let currentDeep = 1;
+
+      while(elementQueue.length != 0){
+        for(let i = 0;i < elementQueue.length;i++){
+          let info = JSON.parse(JSON.stringify(htmlObject));
+          info.tagName = elementQueue[i].tagName;
+          info.deep = currentDeep;
+          info.childrenCount = elementQueue[i].childElementCount;
+          nodeInfo.push(info);
+          deepInfo.push(info.deep);
+          childrenCountInfo.push(info.childrenCount);
+        }
+        //console.log(nodeInfo)
+        let newQueue = [];
+        for(let i = 0;i < elementQueue.length;i++){
+          if(elementQueue[i].hasChildNodes()){
+            //console.log(elementQueue[i].children)
+            Array.prototype.push.apply(newQueue,elementQueue[i].children);
+          }
+        }
+        //console.log(newQueue)
+        elementQueue = newQueue;
+        currentDeep++;
+      }
+      deepInfo = deepInfo.sort((a,b)=>(b-a));
+      childrenCountInfo = childrenCountInfo.sort((a,b)=>(b-a));
+
+      totalElementsCount = nodeInfo.length;
+      maxDOMTreeDepth = deepInfo[0];
+      maxChildrenCount = childrenCountInfo[0];
+      console.log({
+        totalElementsCount: totalElementsCount,
+        maxDOMTreeDepth: maxDOMTreeDepth,
+        maxChildrenCount: maxChildrenCount
+      })
+    }
+    ```
+
+### 基准URL与刷新重定向
+
+1. 参考链接：
+
+  - [HTML <base> 标签的 href 属性](https://www.w3school.com.cn/tags/att_base_href.asp)
+  - [5个不常提及的HTML技巧](https://mp.weixin.qq.com/s/Sr6GwTdoQrMoyBZ5BWmo_g)
+
+2. 详解
+
+  使用base后，如果不是完整链接，则变为base+后缀的链接，对于完整链接则不变
+  ```html
+  <head>
+    <base href="https://www.weibo.com/" target="_blank">  
+  </head>
+  <body>
+    <a href="jackiechan">成龙</a>
+    <a href="kukoujialing">贾玲</a>
+    <img src="eg_smile.gif" />
+    <a href="https://www.baidu.com/">百度</a>
+  </body>
+  ```
+
+  刷新重定向
+  ```html
+  <meta http-equiv="refresh" content="4; URL='https://www.baidu.com'" />
+  ```
+
+### Svelte
+
+1. 参考链接：
+
+  - [都快2020年，你还没听说过SvelteJS?](https://zhuanlan.zhihu.com/p/97825481)
+  - [Svelte文档](https://www.sveltejs.cn/)
+  - [如何看待 svelte 这个前端框架？](https://www.zhihu.com/question/53150351)
+
+2. 详解
+
+  * Svelte解决的问题
+
+    Svelte 的核心思想在于『通过静态编译减少框架运行时的代码量』
+
+    框架无论是 React Angular 还是 Vue，不管你怎么编译，使用的时候必然需要『引入』框架本身，也就是所谓的运行时 (runtime)。
+
+    一个 Svelte 组件编译了以后，所有需要的运行时代码都包含在里面了，除了引入这个组件本身，你不需要再额外引入一个所谓的框架运行时
+
+  * 编译规则
+
+    编译前
+    ```html
+    <a>{{ msg }}</a>
+    ```
+
+    编译后
+    ```js
+    function renderMainFragment ( root, component, target ) {
+      var a = document.createElement( 'a' );
+      
+      var text = document.createTextNode( root.msg );
+      a.appendChild( text );
+      
+      target.appendChild( a )
+
+      return {
+        update: function ( changed, root ) {
+          text.data = root.msg;
+        },
+
+        teardown: function ( detach ) {
+          if ( detach ) a.parentNode.removeChild( a );
+        }
+      };
+    }
+    ```
+
+  * 优点
+
+    * 不需要 Virtual DOM 的 diff/patch 操作，自然可以省去大量代码
+    * 在编译时，如果一个功能没用到，对应的代码就根本不会被编译到结果里去
+
+  * 缺点
+
+    * 项目里的组件越多，代码量的差异就会逐渐缩小，大型项目反而没有优势
+    * 它的更新策略也需要类似 React 的 shouldComponentUpdate 的机制来防止过度更新，比起现在的主流框架并不是质的区别
+    * 享受不到 Virtual DOM 带来的诸多好处，比如基于 render function 的组件的强大抽象能力，基于 vdom 做测试，服务端/原生渲染亲和性
+
+### mockjs
+
+1. 参考链接：
+
+  - [mockjs](http://mockjs.com/)
+
+2. 详解
+
+* 安装
+
+  npm install mockjs
+
+* 使用
+
+  * 基础
+
+    ```js
+    Mock.mock({
+      //规则
+    })
+    ```
+
+  * 数据类型
+
+    String、Number、Boolean、Object、Array、Function、RegExp、Path
+
+  * 规则
+
+    * 递增出现：形如+1
+
+      ```js
+      Mock.mock({
+        "number|+1": 4384//"number": 4282
+      })
+      ```
+
+    * 固定出现次数：形如1
+
+      ```js
+      Mock.mock({
+        "object|2": {
+          "310000": "上海市",
+          "320000": "江苏省",
+          "330000": "浙江省",
+          "340000": "安徽省"
+        }
+      })
+      
+      //{
+      //  "object": {
+      //    "330000": "浙江省",
+      //    "340000": "安徽省"
+      //  }
+      //}
+      ```
+
+    * 范围：形如1-100
+
+      ```js
+      Mock.mock({
+        "number|1-100.1-10": 1 //"number": 68.5741
+      })
+      ```
+
+    * 特殊类型
+
+      ```js
+      Mock.mock({
+        'regexp': /[a-z][A-Z][0-9]/ //"regexp": "dN1"
+      })
+
+      Random.image('200x100', '#894FC4', '#FFF', 'png', '!')
+
+      Mock.mock('@color')
+      ```
+
+    * 占位符
+
+      ```js
+      Random.float(60, 100, 3, 5)//72.0482
+      Mock.mock('@float(60, 100, 3, 5)')//91.74716
+      ```
+
+### 简单实现双向数据绑定mvvm
+
+1. 参考链接：
+
+   [一年半经验，百度，有赞，阿里前端面试总结](https://zhuanlan.zhihu.com/p/83803079)
+
+2. 详解：
+
+   ```js
+   <input id="input" />;
+   const data = {};
+   const input = document.getElementById("input");
+   Object.defineProperty(data, "text", {
+     set(value) {
+       input.value = value;
+       this.value = value;
+     },
+   });
+   input.onchange = function (e) {
+     data.text = e.target.value;
+   };
+   ```
+
+### 便捷的函数与方法
+
+1. 参考链接：
+
+   - [前端常见 20 道高频面试题深入解析](https://mp.weixin.qq.com/s/jx-4p32EA9cHkDzll3BoYQ)
+
+   - [Javascript 实现嵌套数组扁平化](https://www.cnblogs.com/codejoker/p/10370262.html)
+
+   - [前端面试大厂手写源码系列（上）](https://juejin.im/post/5e77888ff265da57187c7278#heading-16)
+
+   - [十道大厂面试题(含答案)总结](https://mp.weixin.qq.com/s/o553cr1FHLz40PpxbO8oOw)
+
+   - [js 对象的扁平化与反扁平化](https://www.cnblogs.com/mengff/p/7097011.html)
+
+   - [11 个 JavaScript 小技巧](https://mp.weixin.qq.com/s/qBuTTXzt7ZNFttXwu5ryMw)
+
+   - [js 去除数组中的空值,假值](https://blog.csdn.net/zzwwjjdj1/article/details/78642552)
+
+   - [js 用 Set 实现并集（Union）、交集（Intersect）和差集（Difference）](https://blog.csdn.net/mhbsoft/article/details/81487826)
+
+   - [JS 的对象数组去重处理(二十)](https://blog.csdn.net/yjltx1234csdn/article/details/93766707)
+
+   - [JavaScript 工具函数大全（持续更新）](https://github.com/Wscats/CV/issues/27)
+
+   - [【适合收藏】为了多点时间陪女朋友，我向BAT大佬跪求了这15条JS技巧](https://juejin.im/post/5f15444df265da22c9671b03)
+
+   - [js实现trim方法](https://www.cnblogs.com/wayowe/p/7779555.html)
+
+   - [实现一个数组（包含对象等类型元素）去重函数](https://mp.weixin.qq.com/s/UAnAMDMt2dAsYMFXYn5G9Q)
+
+   - [JavaScript replace() 方法](https://www.w3school.com.cn/jsref/jsref_replace.asp)
+
+2. 详解
+
+   - 嵌套数组扁平化
+
+     es6 flat(扁平层数)
+
+     ```js
+     var testArr = [10, 2, [3, 4, [5, [55]]]];
+     testArr.flat(Infinity);
+     ```
+
+     toString
+
+     ```js
+     var testArr = [10, 2, [3, 4, [5, [55]]]]
+     [...testArr.toString().split(',')]
+     ```
+
+     join/split/map
+
+     ```js
+     var testArr = [10, 2, [3, 4, [5, [55]]]];
+     testArr.toString().split(",").map(Number);
+     testArr.join().split(",").map(Number);
+     ```
+
+     包含非数字类型
+
+     ```js
+     const flattern = (arr) => {
+       const result = [];
+       arr.forEach((item) => {
+         if (Array.isArray(item)) {
+           result.push(...flattern(item));
+         } else {
+           result.push(item);
+         }
+       });
+       return result;
+     };
+     ```
+
+   - 嵌套对象的扁平化和反扁平化
+
+     扁平化输入
+
+     ```js
+     var obj = {
+       a: {
+         b: {
+           c: {
+             d: 1,
+           },
+         },
+       },
+       aa: 2,
+       c: [1, 2],
+     };
+     ```
+
+     输出
+
+     ```js
+     { 'a.b.c.d': 1, 'aa': 2, 'c[0]': 1, 'c[1]': 2 }
+     ```
+
+     扁平化 1
+
+     ```js
+     let str = "";
+     let o = {};
+     function objFlatten(obj) {
+       Object.keys(obj).map((item) => {
+         if (Object.prototype.toString.call(obj[item]) === "[object Object]") {
+           //如果是对象，记录"item1.item2.",不断递归
+           str += item + ".";
+           objFlatten(obj[item]);
+         } else if (
+           Object.prototype.toString.call(obj[item]) === "[object Array]"
+         ) {
+           //如果是数组，向对象循环添加属性，o.c[0]，o.c[1]
+           obj[item].forEach((ele, index) => (o[item + `[${index}]`] = ele));
+         } else {
+           //如果是基础类型,加入最后的item变为"item1.item2.item3",向o添加str记录的属性并赋值，清空str
+           str += item;
+           o[str] = obj[item];
+           str = "";
+         }
+       });
+     }
+     ```
+
+     扁平化 2
+
+     ```js
+     Object.flatten = function (obj) {
+       var result = {};
+
+       function recurse(src, prop) {
+         var toString = Object.prototype.toString;
+         if (toString.call(src) == "[object Object]") {
+           var isEmpty = true;
+           for (var p in src) {
+             isEmpty = false;
+             recurse(src[p], prop ? prop + "." + p : p);
+           }
+           if (isEmpty && prop) {
+             result[prop] = {};
+           }
+         } else if (toString.call(src) == "[object Array]") {
+           var len = src.length;
+           if (len > 0) {
+             src.forEach(function (item, index) {
+               recurse(item, prop ? prop + ".[" + index + "]" : index);
+             });
+           } else {
+             result[prop] = [];
+           }
+         } else {
+           result[prop] = src;
+         }
+       }
+       recurse(obj, "");
+
+       return result;
+     };
+     ```
+
+     反扁平化 1
+
+     ```js
+     Object.unflatten = function (data) {
+       if (Object(data) !== data || Array.isArray(data)) return data;
+       var regex = /\.?([^.\[\]]+)|\[(\d+)\]/g,
+         resultholder = {};
+       for (var p in data) {
+         var cur = resultholder,
+           prop = "",
+           m;
+         while ((m = regex.exec(p))) {
+           cur = cur[prop] || (cur[prop] = m[2] ? [] : {});
+           prop = m[2] || m[1];
+         }
+         cur[prop] = data[p];
+       }
+       return resultholder[""] || resultholder;
+     };
+     ```
+
+     反扁平化 2
+
+     ```js
+     Object.unflatten2 = function (data) {
+       if (Object(data) !== data || Array.isArray(data)) return data;
+       var result = {},
+         cur,
+         prop,
+         idx,
+         last,
+         temp;
+       for (var p in data) {
+         (cur = result), (prop = ""), (last = 0);
+         do {
+           idx = p.indexOf(".", last);
+           temp = p.substring(last, idx !== -1 ? idx : undefined);
+           cur = cur[prop] || (cur[prop] = !isNaN(parseInt(temp)) ? [] : {});
+           prop = temp;
+           last = idx + 1;
+         } while (idx >= 0);
+         cur[prop] = data[p];
+       }
+       return result[""];
+     };
+     ```
+
+   - 数组去重
+
+     set
+
+     ```js
+     var testArr = [1,2,2,3,4,4]
+     [... new Set(testArr)]
+     ```
+
+     处理对象
+
+     ```js
+     let arr1 = [
+       { id: 1, name: "汤小梦" },
+       { id: 2, name: "石小明" },
+       { id: 3, name: "前端开发" },
+       { id: 1, name: "web前端" },
+     ];
+     const unique = (arr, key) => {
+       return [...new Map(arr.map((item) => [item[key], item])).values()];
+     };
+     console.log(unique(arr1, "id"));
+     ```
+
+   - 合并数组
+
+     es5
+
+     ```js
+     let arr5 = arr3.concat(arr4);
+     ```
+
+     es6
+
+     ```js
+     let arr6 = [...arr3, ...arr4];
+     ```
+
+   - 是否为数组
+
+     instanceof
+
+     ```js
+     console.log(arr instanceof Array);
+     ```
+
+     constructor
+
+     ```js
+     console.log(arr.constructor === Array);
+     ```
+
+     是否数组的方法
+
+     ```js
+     console.log(!!arr.push && !!arr.concat);
+     ```
+
+     toString
+
+     ```js
+     console.log(Object.prototype.toString.call(arr) === "[object Array]");
+     ```
+
+     isArray
+
+     ```js
+     console.log(Array.isArray(arr));
+     ```
+
+   - 交换两个数
+
+     ```js
+     a = a + b;
+     b = a - b;
+     a = a - b;
+     //或
+     a = a ^ b;
+     b = a ^ b;
+     a = a ^ b;
+     ```
+
+   - 快速浮点数转整数
+
+     ```js
+     console.log(23.9 | 0); // Result: 23
+     console.log(-23.9 | 0); // Result: -23
+     ```
+
+   - 删除最后一个数字
+
+     ```js
+     let str = "1553";
+     Number(str.substring(0, str.length - 1));
+
+     console.log((1553 / 10) | 0); // Result: 155
+     console.log((1553 / 100) | 0); // Result: 15
+     console.log((1553 / 1000) | 0); // Result: 1
+     ```
+
+   - 去除数组中的空值,假值
+
+     ```js
+     var u = [undefined, undefined, 1, "", "false", false, true, null, "null"];
+     u.filter((d) => d);
+     ```
+
+   - Set 实现并集（Union）、交集（Intersect）和差集（Difference）
+
+     ```js
+     let a = new Set([1, 2, 3]);
+     let b = new Set([4, 3, 2]);
+
+     // 并集
+     let union = new Set([...a, ...b]);
+     // Set {1, 2, 3, 4}
+
+     // 交集
+     let intersect = new Set([...a].filter((x) => b.has(x))); //ES6
+     var intersect = new Set(
+       [...a].filter(function (x) {
+         return b.has(x);
+       })
+     );
+     // set {2, 3}
+
+     // 差集
+     let difference = new Set([...a].filter((x) => !b.has(x)));
+     // Set {1}
+     ```
+
+   - 对象数组去重
+
+     ```js
+     let arr = [
+       { a: 1, b: 2 },
+       { b: 2, a: 1 },
+       { a: 2, b: 2 },
+       { a: "1", b: "2" },
+     ];
+     let sortObjectByKeys = (obj) => {
+       let keys = Object.keys(obj).sort();
+       let newObj = {};
+       keys.forEach((value, index, array) => {
+         newObj[value] = obj[value];
+       });
+       return newObj;
+     };
+     let uniqueObjectArray = (arr) => {
+       let set = new Set();
+       arr.forEach((value, index, array) => {
+         let newValue = sortObjectByKeys(value);
+         set.add(JSON.stringify(newValue));
+       });
+       let newArr = [...set];
+       newArr.forEach((value, index, array) => {
+         newArr[index] = JSON.parse(value);
+       });
+       return newArr;
+     };
+     console.log(uniqueObjectArray(arr));
+     ```
+
+   - 平滑滚动到页面顶部
+
+     ```js
+     function scrollToTop() {
+       var c = document.documentElement.scrollTop || document.body.scrollTop;
+
+       if (c > 0) {
+         window.requestAnimationFrame(scrollToTop);
+         window.scrollTo(0, c - c / 8);
+       }
+     }
+     ```
+
+   - 日期格式转换
+
+     ```js
+     Date.prototype.format = function (formatStr) {
+       var str = formatStr;
+       var Week = ["日", "一", "二", "三", "四", "五", "六"];
+       str = str.replace(/yyyy|YYYY/, this.getFullYear());
+       str = str.replace(
+         /yy|YY/,
+         this.getYear() % 100 > 9
+           ? (this.getYear() % 100).toString()
+           : "0" + (this.getYear() % 100)
+       );
+       str = str.replace(
+         /MM/,
+         this.getMonth() + 1 > 9
+           ? (this.getMonth() + 1).toString()
+           : "0" + (this.getMonth() + 1)
+       );
+       str = str.replace(/M/g, this.getMonth() + 1);
+       str = str.replace(/w|W/g, Week[this.getDay()]);
+       str = str.replace(
+         /dd|DD/,
+         this.getDate() > 9 ? this.getDate().toString() : "0" + this.getDate()
+       );
+       str = str.replace(/d|D/g, this.getDate());
+       str = str.replace(
+         /hh|HH/,
+         this.getHours() > 9
+           ? this.getHours().toString()
+           : "0" + this.getHours()
+       );
+       str = str.replace(/h|H/g, this.getHours());
+       str = str.replace(
+         /mm/,
+         this.getMinutes() > 9
+           ? this.getMinutes().toString()
+           : "0" + this.getMinutes()
+       );
+       str = str.replace(/m/g, this.getMinutes());
+       str = str.replace(
+         /ss|SS/,
+         this.getSeconds() > 9
+           ? this.getSeconds().toString()
+           : "0" + this.getSeconds()
+       );
+       str = str.replace(/s|S/g, this.getSeconds());
+       return str;
+     };
+
+     // 或
+     Date.prototype.format = function (format) {
+       var o = {
+         "M+": this.getMonth() + 1, //month
+         "d+": this.getDate(), //day
+         "h+": this.getHours(), //hour
+         "m+": this.getMinutes(), //minute
+         "s+": this.getSeconds(), //second
+         "q+": Math.floor((this.getMonth() + 3) / 3), //quarter
+         S: this.getMilliseconds(), //millisecond
+       };
+       if (/(y+)/.test(format))
+         format = format.replace(
+           RegExp.$1,
+           (this.getFullYear() + "").substr(4 - RegExp.$1.length)
+         );
+       for (var k in o) {
+         if (new RegExp("(" + k + ")").test(format))
+           format = format.replace(
+             RegExp.$1,
+             RegExp.$1.length == 1
+               ? o[k]
+               : ("00" + o[k]).substr(("" + o[k]).length)
+           );
+       }
+       return format;
+     };
+
+     alert(new Date().format("yyyy-MM-dd hh:mm:ss"));
+     ```
+
+   - 返回日期数列里与目标数列最近的日期下标
+
+      ```js
+      const getNearestDateIndex = (targetDate, dates) => {
+          if (!targetDate || !dates) {
+              throw new Error('Argument(s) is illegal !')
+          }
+          if (!dates.length) {
+              return -1
+          }
+          const distances = dates.map(date => Math.abs(date - targetDate))
+          return distances.indexOf(Math.min(...distances))
+      }
+
+      // e.g.
+      const targetDate = new Date(2019, 7, 20)
+      const dates = [
+        new Date(2018, 0, 1),
+        new Date(2019, 0, 1),
+        new Date(2020, 0, 1),
+      ]
+      getNearestDateIndex(targetDate, dates) // 2
+      ```
+
+   - 返回日期数列里最小的日期
+
+      ```js
+      const getMinDate = dates => {
+          if (!dates) {
+              throw new Error('Argument(s) is illegal !')
+          }
+          if (!dates.length) {
+              return dates
+        }
+          return new Date(Math.min.apply(null, dates)).toISOString()
+      }
+
+      // e.g.
+      const dates = [
+        new Date(2018, 3, 10),
+        new Date(2019, 3, 10),
+        new Date(2020, 3, 10),
+      ]
+      getMinDate(dates) // 2018-04-09T16:00:00.000Z
+      ```
+
+   - 打乱数组
+
+      ```js
+      const arrayShuffle = array => {
+          if (!Array.isArray(array)) {
+              throw new Error('Argument must be an array')
+        }
+          let end = array.length
+          if (!end) {
+              return array
+          }
+          while (end) {
+              let start = Math.floor(Math.random() * end--);
+              [array[start], array[end]] = [array[end], array[start]]
+          }
+          return array
+      }
+
+      // e.g.
+      arrayShuffle([1, 2, 3])
+      ```
+
+   - 判断是否支持webp图片格式
+
+      ```js
+      const canUseWebp = () => (document.createElement('canvas').toDataURL('image/webp', 0.5).indexOf('data:image/webp') === 0)
+
+      // e.g.
+      canUseWebp() // 新版的chrome里为true，火狐里为false
+      ```
+
+   - 连字符与驼峰互转
+
+      ```js
+      const toCamelCase = (str = '', separator = '-') => {
+          if (typeof str !== 'string') {
+              throw new Error('Argument must be a string')
+          }
+          if (str === '') {
+              return str
+          }
+          const newExp = new RegExp('\\-\(\\w\)', 'g')
+          return str.replace(newExp, (matched, $1) => {
+              return $1.toUpperCase()
+          })
+      }
+
+      // e.g.
+      toCamelCase('hello-world') // helloWorld
+
+      const fromCamelCase = (str = '', separator = '-') => {
+          if (typeof str !== 'string') {
+              throw new Error('Argument must be a string')
+          }
+          if (str === '') {
+              return str
+          }
+          return str.replace(/([A-Z])/g, `${separator}$1`).toLowerCase()
+      }
+
+      // e.g.
+      fromCamelCase('helloWorld') // hello-world
+      ```
+
+   - 等级判断
+
+      ```js
+      const getLevel = (value = 0, ratio = 50, levels = '一二三四五') => {
+          if (typeof value !== 'number') {
+              throw new Error('Argument must be a number')
+          }
+          const levelHash = '一二三四五'.split('')
+        const max = levelHash[levelHash.length - 1]
+        return levelHash[Math.floor(value / ratio)] || max
+      }
+
+      // e.g.
+      getLevel(0) // 一
+      getLevel(40) // 一
+      getLevel(77) // 二
+      ```
+
+   - 判断dom是否相等
+
+      ```js
+      const isEqualNode = (dom1, dom2) => dom1.isEqualNode(dom2)
+      ```
+
+   - 文件尺寸格式化
+
+      ```js
+      const formatSize = size => {
+          if (typeof +size !== 'number') {
+              throw new Error('Argument(s) is illegal !')
+        }
+          const unitsHash = 'B,KB,MB,GB'.split(',')
+          let index = 0
+          while (size > 1024 && index < unitsHash.length) {
+              size /= 1024
+              index++
+          }
+          return Math.round(size * 100) / 100 + unitsHash[index]
+      }
+      formatSize('10240') // 10KB
+      formatSize('10240000') // 9.77MB
+      ```
+
+   - trim与其它去空格方法
+
+      ```js
+      String.prototype.trim = function(){
+          return this.replace(/^(\s*)|(\s*)$/g, '');
+      }
+      '  a aaa bbb  b  c cc  ccc   '.replace(/(\S)\s+(\b)/g,'$1$2'); // "  aaaabbbbcccccc   "
+      ```
+
+   - 复杂类型数组去重
+
+      1. 如传入的数组元素为 [123, "meili", "123", "mogu", 123] ，则输出： [123, "meili", "123", "mogu"]
+      2. 如传入的数组元素为 [123, [1, 2, 3], [1, "2", 3], [1, 2, 3], "meili"] ，则输出： [123, [1, 2, 3], [1, "2", 3], "meili"]
+      3. 如传入的数组元素为 [123, {a: 1}, {a: {b: 1}}, {a: "1"}, {a: {b: 1}}, "meili"] ，则输出： [123, {a: 1}, {a: {b: 1}}, {a: "1"}, "meili"]
+      4. 如传入的数组元素为 [{a:1, b:2}, {b:2, a:1}] ，则输出： [{a: 1, b: 2}]
+
+      * 解决思路：
+
+      一个数组（包含对象等类型元素）去重函数，需要在基础类型判断相等条件下满足以下条件：
+
+      如果元素是数组类型，则需要数组中的每一项相等
+      如果元素是对象类型，则需要对象中的每个键值对相等
+      去重本身就是遍历数组，然后比较数组中的每一项是否相等而已，所以关键步骤有两步：比较、去重
+
+      * 比较：
+
+      首先判断类型是否一致，类型不一致则返回认为两个数组元素是不同的，否则继续
+      如果是数组类型，则递归比较数组中的每个元素是否相等
+      如果是对象类型，则递归比较对象中的每个键值对是否相等
+      否则，直接 === 比较
+      
+      * 去重：
+
+      采用 reduce 去重，初始 accumulator 为 []
+      采用 findIndex 找到 accumulator 是否包含相同元素，如果不包含则加入，否则不加入
+      返回最终的 accumulator ，则为去重后的数组
+
+      ```js
+      // 获取类型
+      const getType = (function() {
+          const class2type = { '[object Boolean]': 'boolean', '[object Number]': 'number', '[object String]': 'string', '[object Function]': 'function', '[object Array]': 'array', '[object Date]': 'date', '[object RegExp]': 'regexp', '[object Object]': 'object', '[object Error]': 'error', '[object Symbol]': 'symbol' }
+
+          return function getType(obj) {
+              if (obj == null) {
+                  return obj + ''
+              }
+              // javascript高级程序设计中提供了一种方法,可以通用的来判断原始数据类型和引用数据类型
+              const str = Object.prototype.toString.call(obj)
+              return typeof obj === 'object' || typeof obj === 'function' ? class2type[str] || 'object' : typeof obj
+          };
+      })();
+
+      /**
+      * 判断两个元素是否相等
+      * @param {any} o1 比较元素
+      * @param {any} o2 其他元素
+      * @returns {Boolean} 是否相等
+      */
+      const isEqual = (o1, o2) => {
+          const t1 = getType(o1)
+          const t2 = getType(o2)
+
+          // 比较类型是否一致
+          if (t1 !== t2) return false
+          
+          // 类型一致
+          if (t1 === 'array') {
+              // 首先判断数组包含元素个数是否相等
+              if (o1.length !== o2.length) return false 
+              // 比较两个数组中的每个元素
+              return o1.every((item, i) => {
+                  // return item === target
+                  return isEqual(item, o2[i])
+              })
+          }
+
+          if (t2 === 'object') {
+              // object类型比较类似数组
+              const keysArr = Object.keys(o1)
+              if (keysArr.length !== Object.keys(o2).length) return false
+              // 比较每一个元素
+              return keysArr.every(k => {
+                  return isEqual(o1[k], o2[k])
+              })
+          }
+
+          return o1 === o2
+      }
+
+      // 数组去重
+      const removeDuplicates = (arr) => {
+          return arr.reduce((accumulator, current) => {
+              const hasIndex = accumulator.findIndex(item => isEqual(current, item))
+              if (hasIndex === -1) {
+                  accumulator.push(current)
+              }
+              return accumulator
+          }, [])
+      }
+
+      // 测试
+      removeDuplicates([123, {a: 1}, {a: {b: 1}}, {a: "1"}, {a: {b: 1}}, "meili", {a:1, b:2}, {b:2, a:1}])
+      // [123, {a: 1}, a: {b: 1}, {a: "1"}, "meili", {a: 1, b: 2}]
+      ```
+
+   - replace正则占位符与函数
+
+    ```js
+    'product_123.html'.replace(/product_(\d+).html/,"/product/detail?id=$1")// /product/detail?id=123
+    "Doe, John".replace(/(\w+)\s*, \s*(\w+)/, "$2 $1");// John, Doe
+    '"a", "b"'.replace(/"([^"]*)"/g, "'$1'")//"'a', 'b'"
+    'aaa bbb ccc'.replace(/\b\w+\b/g, function(word){
+      return word.substring(0,1).toUpperCase()+word.substring(1);
+    }//'Aaa Bbb Ccc'
+    ```
