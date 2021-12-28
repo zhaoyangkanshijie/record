@@ -27,6 +27,7 @@
 - [mockjs](#mockjs)
 - [简单实现双向数据绑定mvvm](#简单实现双向数据绑定mvvm)
 - [便捷的函数与方法](#便捷的函数与方法)
+- [rxjs](#rxjs)
 
 ---
 
@@ -4975,4 +4976,439 @@
     'aaa bbb ccc'.replace(/\b\w+\b/g, function(word){
       return word.substring(0,1).toUpperCase()+word.substring(1);
     }//'Aaa Bbb Ccc'
+    ```
+
+### rxjs
+
+1. 参考链接：
+
+  - [如何快速使用 Rxjs](https://blog.csdn.net/weixin_37625953/article/details/80509827)
+
+  - [异步复杂度要到什么程度才需要用到Rxjs？](https://www.zhihu.com/question/303073602)
+
+  - [rxjs随笔1--rxjs能做什么](https://segmentfault.com/a/1190000020268578)
+
+  - [RxJS快速入门](https://www.cnblogs.com/vcluopeng/p/14010904.html)
+
+  - [RxJS: 简单入门](https://segmentfault.com/a/1190000012252368)
+
+  - [RxJS 初探](https://www.jianshu.com/p/162b73ebc5ca)
+
+  - [RxJS 英文文档](https://rxjs.dev/guide/overview)
+
+  - [RxJS 中文文档](https://cn.rx.js.org/)
+
+  - [Rxjs入门与初步应用](https://www.jianshu.com/p/ba91eebd1cdb)
+
+2. 详解
+
+  * 基本概念
+
+    Rxjs是Promise 的超集。
+
+    RxJS 是一个库，它通过使用 observable 序列来编写异步和基于事件的程序。它提供了一个核心类型 Observable，附属类型 (Observer、 Schedulers、 Subjects) 和 Array 启发的操作符 (map、filter、reduce、every, 等等)，这些数组操作符可以把异步事件作为集合来处理。
+
+    前端的异步有：事件（event）、ajax、动画（animation）、定时器（timer）、WebSocket、Service Worker、requestAnimationFrame。 
+    
+    处理这些的时候常见的问题有：
+    
+    1. 异步的回调地狱（callback hell）
+
+      按照普通的javascript方法写，所有的处理写在某个事件的完成后的回调中，当有多个回调依次执行后1->2->3->4很容易将代码写成火箭形，很大一团根本没发改。
+
+    2. 竞态条件（race condition）
+
+      统出现不恰当的执行时序，而得到不正确的结果。比如搜索框中，每次输入后发送请求获取结果展示在搜索框下面，由于网络或者后端查询的原因有可能导致最后发送的请求比之前的请求更快的完成了，这时最终展现的并不是最后那个请求的结果，而这并不是我们所希望的。
+
+    3. 内存泄漏（memory leak）
+
+      单页面应用切换页面时未在合适的时机移除监听事件造成内存泄漏
+
+    4. 管理复杂状态（manage complex states）
+
+      异步带来了状态的改变，可能会使状态管理变得非常复杂，尤其是某个状态有多个来源时，比如有些应用，一开始有一个默认值，再通过 AJAX 获取初始状态，存储在 localStorage，之后通过 WebSocket 获取更新。这时查询状态可能是同步或者异步的，状态的变更可能是主动获取也可能是被动推送的，如果还有各种排序、筛选，状态管理将会更加复杂。
+
+    5. 错误处理（exception handling）
+
+      javascript中的try catch只能捕获同步的错误，对于异步的错误难以获取。promise中可以使用一个全局的catch。
+
+    6. Promise 有一个缺点
+
+      promise已经解决了很多异步的难点，比如将回调地狱改为了链式调用，统一同步和异步代码，但是promise只有一个结果，并且不可以被提前取消
+    
+      一旦调用了resolve或者是reject之后便返回了,不能再次使用resolve 或者是reject
+
+  * RxJS对项目代码的影响
+
+    1. 与promise相互转化
+
+      ```js
+      const ob = Observable.fromPromise(somePromise); // Promise转为Observable
+      const promise = someObservable.toPromise(); // Observable转为Promise
+      ```
+
+    2. 体积
+
+      RxJS(v5)整个库压缩后约为140KB，由于其模块化可扩展的设计，因此仅需导入所用到的类与操作符即可。导入RxJS常用类与操作符后，打包后的体积约增加30-60KB，具体取决于导入的数量。
+
+      ```js
+      //不要用 import { Observable } from 'rxjs'这种方式导入，这会导入整个rxjs库，按需导入的方式如下：
+      import { Observable } from 'rxjs/Observable' //导入类
+      import 'rxjs/add/operator/map' // 导入实例操作符
+      import 'rxjs/add/observable/forkJoin' // 导入类操作符
+      import { Observable, asapScheduler, SubscriptionLike, PartialObserver, Subject, asapScheduler, pipe, of, from, interval, merge, fromEvent, SubscriptionLike, PartialObserver } from 'rxjs';
+      import { map, filter, scan, take, takeUtil } from 'rxjs/operators';
+      import { webSocket } from 'rxjs/webSocket';
+      import { ajax } from 'rxjs/ajax';
+      ```
+
+  * RxJS的主要成员
+
+    * Observable (可观察对象): 表示一个概念，这个概念是一个可调用的未来值或事件的集合。
+      * of():用于创建简单的Observable，该Observable只发出给定的参数，在发送完这些参数后发出完成通知.
+      * from():从一个数组、类数组对象、promise、迭代器对象或者类Observable对象创建一个Observable.
+      * fromEvent(),:把event转换成Observable.
+      * range():在指定起始值返回指定数量数字.
+      * interval():基于给定时间间隔发出数字序列。返回一个发出无限自增的序列整数，可以选择固定的时间间隔进行发送。
+      * timer():创建一个Observable，该Observable在初始延时之后开始发送并且在每个时间周期后发出自增的数字
+    * Observer (观察者): 一个回调函数的集合，它知道如何去监听由 Observable 提供的值。
+    * Subscription (订阅): 表示 Observable 的执行，主要用于取消 Observable 的执行。
+    * Operators (操作符): 采用函数式编程风格的纯函数 (pure function)，使用像 map、filter、concat、flatMap 等这样的操作符来处理集合。
+      * 把多个数据流以首位相连的方式合并	concat 和 concatAll
+      * 把多个数据流中数据以先到先得方式合并	merge 和 mergeAll
+      * 把多个数据流中的数据以一一对应的方式合并	zip 和 zipAll
+      * 持续合并多个数据流中最新产生的数据	combineLatest、combineAll 和 withLatestFrom
+      * 从多个数据流中选取第一个产生内容的数据流	race
+      * 在数据流前面添加一个指定数据	startWith
+      * 只获取多个数据流最后产生的那个数据	forkJoin
+      * 从高阶数据流中切换数据源	switch 和 exhaust
+      * 统计数据流中产生的所有数据个数	count
+      * 获得数据流中最大或最小的数据	max 和 min
+      * 对数据流中所有数据进行规约操作	reduce
+      * 判断是否所有数据满足某个判定条件	every
+      * 找到第一个满足判定条件的数据	find 和 findIndex
+      * 判断一个数据流是否不包含任何数据	isEmpty
+      * 如果一个数据流为空就默认产生一个指定数据	defaultEmpty
+      * 功能需求	使用的操作符
+      * 过滤掉不满足判定条件的数据	filter
+      * 获得满足判定条件的第一个数据	first
+      * 获得满足判定条件的最后一个数据	last
+      * 从数据流中选取最先出现的若干数据	take
+      * 从数据流中选取最后出现的若干数据	takeLast
+      * 从数据流中选取数据直到某种情况发生	takeWhile 和 takeUntil
+      * 从数据流中忽略最先出现的若干数据	skip
+      * 从数据流中忽略数据直到某种情况发生	skipWhile 和 skipUntil
+      * 基于时间的数据流量筛选	throttleTime、debounceTime 和 auditTime
+      * 基于数据内容的数据流量筛选	throttle、debounce 和 audit
+      * 基于采样方式的数据流量筛选	sample 和 sampleTime
+      * 删除重复的数据	distinct
+      * 删除重复的连续数据	distinctUntil 和 distinctUntilKeyChange
+      * 忽略数据流中的所有数据	ignoreElement
+      * 只选取指定出现位置的数据	elementAt
+      * 判断是否只有一个数据满足判定条件	single
+      * 将每个元素用映射函数产生新的数据	map
+      * 将数据流中每个元素映射为同一数据	mapTo
+      * 提取数据流中每个数据的某个字段	pluck
+      * 产生高阶 Observable 对象	windowTime、windowCount、windowToggle 和window
+      * 产生数组构成的数据流	bufferTime、BufferCount、bufferWhen、bufferToggle 和 buffer
+      * 映射产生高阶 Observable 对象然后合并	concatMap、mergeMap（flatMap）、switchMap、exhaustMap
+      * 产生规约运算结果组成的数据流	scan 和 mergeScan
+    * Subject (主体): 相当于 EventEmitter，并且是将值或事件多路推送给多个 Observer 的唯一方式。
+    * Schedulers (调度器): 用来控制并发并且是中央集权的调度员，允许我们在发生计算时进行协调，例如 setTimeout 或 requestAnimationFrame 或其他。
+      * queue	Sync同步的方式	scheduler.schedule(task, delay) scheduler.flush()
+      * asap	Async(异步微任务)	Promise.resolve().then(() => task)
+      * async	Async(异步宏任务)	id = setInterval(task, delay) clearInterval(id)
+      * animationFrame	Async	id = requestAnimationFrame(task) cancelAnimationFrame(id)
+
+  * 使用样例
+
+    1. Observable
+
+    ```js
+    const Observable1 = new Observable(subscriber => {
+        try {
+            subscriber.next(1);
+            subscriber.next(2);
+            subscriber.next(3);
+            setTimeout(() => {
+                subscriber.next(4);
+                subscriber.complete();
+            }, 1000);
+        } catch (err) {
+            subscriber.error(err);	//传递一个错误对象，如果捕捉到异常的话。
+        }
+    });
+    const Observable2 = from([
+        { name: 'Dave', age: 34, salary: 2000 },
+        { name: 'Nick', age: 37, salary: 32000 },
+        { name: 'Howie', age: 40, salary: 26000 },
+        { name: 'Brian', age: 40, salary: 30000 },
+        { name: 'Kevin', age: 47, salary: 24000 },
+    ]);
+    const Observable3 = of("Dave", "Nick");//把所有参数组合到数组,逐个提供给消费者
+    const Observable4 = range(1, 10);
+    const Observable5 = interval(3000);//从零开始每3000毫秒自增并提供给消费者
+    const Observable6 = timer(3000, 1000);//等待3000毫秒后,从零开始每1000毫秒自增并提供给消费者
+
+    Observable1.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });// 1 2 3 (1s) 4 Streaming is over.
+    Observable2.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });
+    // { name: 'Dave', age: 34, salary: 2000 },
+    // { name: 'Nick', age: 37, salary: 32000 }
+    // { name: 'Howie', age: 40, salary: 26000 }
+    // { name: 'Brian', age: 40, salary: 30000 }
+    // { name: 'Kevin', age: 47, salary: 24000 }
+    // Streaming is over.
+    Observable3.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });
+    // Dave
+    // Nick
+    // Streaming is over.
+    Observable4.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });
+    // 1 2 3 4 5 6 7 8 9 10 Streaming is over.
+    Observable5.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });
+    // 0 (3s) 1 (3s) 2 (3s) 3 (3s) 4...
+    Observable6.subscribe({
+        next: num => {
+            console.log(num);
+        },
+        error: err => console.log(err),
+        complete: () => console.log("Streaming is over.")
+    });
+    // (3s) 0 (1s) 1 (1s) 2 (1s) 3 (1s) 4...
+    ```
+
+    2. Subject
+
+    ```js
+    let subject1 = new Subject();
+    subject1.subscribe({
+        next: (v) => console.log('observerA: ' + v)
+    });
+    subject1.subscribe({
+        next: (v) => console.log('observerB: ' + v)
+    });
+    subject1.next(1);
+    subject1.next(2);
+    // observerA: 1
+    // observerB: 1
+    // observerA: 2
+    // observerB: 2
+
+    let subject2 = new Subject();
+    subject2.subscribe({
+        next: (v) => console.log('observerC: ' + v)
+    });
+    subject2.subscribe({
+        next: (v) => console.log('observerD: ' + v)
+    });
+    let observable = from(['a', 'b', 'c']);
+    observable.subscribe(subject2);
+    // observerC: a
+    // observerD: a
+    // observerC: b
+    // observerD: b
+    // observerC: c
+    // observerD: c
+    ```
+
+    multicasted
+    ```js
+    const source = timer(1000, 2500).pipe(take(5));
+    const subject = new Subject();
+    subject.subscribe({
+        next: (v) => console.log('observerA: ' + v)
+    });
+    subject.subscribe({
+        next: (v) => console.log('observerB: ' + v)
+    });
+    const multicasted = source.pipe(share({ connector: () => new Subject() }));
+    multicasted.subscribe({
+        next: (v) => console.log('observerC: ' + v)
+    });
+    multicasted.subscribe({
+        next: (v) => console.log('observerD: ' + v)
+    });
+    source.subscribe(subject);
+    // observerC: 0
+    // observerD: 0
+    // observerA: 0
+    // observerB: 0
+    // observerC: 1
+    // observerD: 1
+    // observerA: 1
+    // observerB: 1
+    // ...
+    // observerC: 4
+    // observerD: 4
+    // observerA: 4
+    // observerB: 4
+    ```
+
+    pipe+operator
+    ```js
+    const ob = interval(1000).pipe(take(3)).pipe(map(n => n * 2)).pipe(filter(n => n > 0));
+    ob.subscribe(n => console.log(n));
+    // 2 4
+    ```
+
+    其它
+    ```txt
+    创建操作符:
+    ajax/bindCallback/bindNodeCallback/defer/empty/from/fromEvent/fromEventPattern/generate/interval/of/range/throwError/timer/iif
+    连接创建操作符:
+    combineLatest/concat/forkJoin/merge/partition/race/zip
+    转换操作符:
+    buffer/bufferCount/bufferTime/bufferToggle/bufferWhen/concatMap/concatMapTo/exhaust/exhaustMap/expand/groupBy/map/mapTo/mergeMap/mergeMapTo/mergeScan/pairwise/partition/pluck/scan/switchMap/switchMapTo/window/windowCount/windowTime/windowToggle/windowWhen
+    过滤操作符:
+    audit/auditTime/debounce/debounceTime/distinct/distinctKey/distinctUntilChanged/distinctUntilKeyChanged/elementAt/filter/first/ignoreElements/last/sample/sampleTime/single/skip/skipLast/skipUntil/skipWhile/take/takeLast/takeUntil/takeWhile/throttle/throttleTime
+    组合操作符:
+    combineAll/concatAll/exhaust/mergeAll/startWith/withLatestFrom
+    多播操作符:
+    multicast/publish/publishBehavior/publishLast/publishReplay/share
+    错误处理操作符:
+    catchError/retry/retryWhen
+    工具操作符:
+    tap/delay/delayWhen/dematerialize/materialize/observeOn/subscribeOn/timeInterval/timestamp/timeout/timeoutWith/toArray
+    条件和布尔操作符:
+    defaultIfEmpty/every/find/findIndex/isEmpty
+    数学和聚合操作符:
+    count/max/min/reduce
+    ```
+
+  * 代码优化对比
+
+    基于 websocket 的在线聊天室，不可能每次 ws 收到新消息，都立刻渲染出来，这样在很多人同时说话的时候，一般会有渲染性能问题。
+
+    需要收集一段时间的消息，然后把它们一起渲染出来，例如每一秒批量渲染一次。
+
+    原生 JS 伪代码
+    ```js
+    let messagePool = []
+    ws.on('message', (message) => {
+        messagePool.push(message)
+    })
+
+    setInterval(() => {
+        render(messagePool)
+        messagePool = []
+    }, 1000)
+    ```
+
+    rxjs 伪代码
+    ```js
+    Rx.Observable
+        .fromEvent(ws, 'message')
+        .bufferTime(1000)
+        .subscribe(messages => render(messages))
+    ```
+
+  * 实际场景
+
+    测试鼠标按住时间
+    ```js
+    const buttonDom = document.getElementById('button');
+    const mouseDown$ = fromEvent(buttonDom, 'mousedown');
+    const mouseUp$ = fromEvent(buttonDom, 'mouseup');
+    const holdTime$ = mouseUp$.pipe(timestamp()).pipe(withLatestFrom(mouseDown$.pipe(timestamp()), (mouseUpEvent, mouseDownEvent) => {
+        return mouseUpEvent.timestamp - mouseDownEvent.timestamp;
+    }));
+    holdTime$.subscribe((ms) => {
+        document.getElementById('holdTime').innerText = ms;
+    });
+    ```
+
+    统计5秒内用户点击数
+    ```js
+    const click$ = fromEvent(document, 'click');
+    click$.pipe(bufferWhen(() => interval(5000))).subscribe(arr => console.log(arr.length))
+    ```
+
+    防抖和节流
+    ```js
+    let foo$ = fromEvent(document, 'click');
+    foo$.pipe(debounceTime(2000)).subscribe({
+        next: () => console.log('click'),
+        error: null,
+        complete: () => console.log('complete')
+    });
+    ```
+    ```js
+    let foo$ = fromEvent(document, 'click');
+    foo$.pipe(throttleTime(2000)).subscribe({
+        next: () => console.log('click'),
+        error: null,
+        complete: () => console.log('complete')
+    });
+    ```
+
+    转化
+    ```js
+    // scan 和 reduce 的区别
+    // reduce需要数据结束才能输出结果
+    // scan可以输出中间状态
+    let foo$ = interval(1000);
+    // acc 为上次返回值
+    // cur 更新的值，此处由foo$提供
+    foo$.pipe(scan((acc, cur) => {
+        return cur * 2
+    }, 0)).subscribe((data) => console.log(data));
+    ```
+
+    判断连续输入是否正确
+    ```js
+    import _ from 'lodash'
+
+    const code = [
+        "ArrowUp",
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        "ArrowLeft",
+        "ArrowRight",
+        "KeyB",
+        "KeyA",
+        "KeyB",
+        "KeyA"
+    ]
+
+    fromEvent(document, 'keyup')
+        .pipe(map(e => e.code))
+        .pipe(bufferCount(12, 1))
+        .subscribe(last12key => {
+            console.log(last12key);
+            if (_.isEqual(last12key, code)) {//lodash
+                console.log('隐藏的彩蛋 \(^o^)/~')
+            }
+        });
     ```
