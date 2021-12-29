@@ -20,7 +20,7 @@
 * [vue2新手详解](./vue2新手详解.md)
 * [vue简结](./vue简结.md)
 * [vue源码解读](./vue源码解读.md)
-* [vueSSR简结](./vueSSR简结.md)
+* [next](https://github.com/zhaoyangkanshijie/nextExample)
 * [nuxt](https://github.com/zhaoyangkanshijie/nuxtExample)
 * [umi](https://github.com/zhaoyangkanshijie/umiExample)
 * [chartjsExample](https://github.com/zhaoyangkanshijie/chartjsExample)
