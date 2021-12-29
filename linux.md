@@ -7,7 +7,8 @@
 * [包管理器](#包管理器)
 * [网络管理](#网络管理)
 * [进程管理](#进程管理)
-* [其它](#其它)
+* [排序](#排序)
+* [crond定时任务](#crond定时任务)
 
 ## 文件属性
 
@@ -379,7 +380,7 @@ rz
     CMD：下达的指令
     ```
 
-## 其它
+## 排序
 
 * sort
     * 参考链接：
@@ -402,3 +403,59 @@ rz
         * +<起始栏位>-<结束栏位> 以指定的栏位来排序，范围由起始栏位到结束栏位的前一栏位。
         * --help 显示帮助。
         * --version 显示版本信息。
+
+## crond定时任务
+
+参考链接：[ps -ef|grep详解](https://www.cnblogs.com/freinds/p/8074651.html)
+
+crond进程每分钟会定期检查是否有要执行的任务，如果有要执行的任务，则自动执行该任务。
+
+* 系统任务调度
+
+系统周期性所要执行的工作，比如写缓存数据到硬盘、日志清理等。
+
+在/etc目录下有一个crontab文件，这个就是系统任务调度的配置文件。/etc/crontab文件包括下面几行：
+
+```shell
+SHELL=/bin/bash #指定了系统要使用哪个shell，这里是bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin #指定了系统执行命令的路径
+MAILTO="root" #指定了crond的任务执行信息将通过电子邮件发送给root用户，如果MAILTO变量的值为空，则表示不发送任务执行信息给用户
+HOME=/ #指定了在执行命令或者脚本时使用的主目录
+# run-parts
+
+#minute hour day month week command
+#星号（*）：代表所有可能的值，例如month字段如果是星号，则表示在满足其它字段的制约条件后每月都执行该命令操作。
+#逗号（,）：可以用逗号隔开的值指定一个列表范围，例如，“1,2,5,7,8,9”
+#中杠（-）：可以用整数之间的中杠表示一个整数范围，例如“2-6”表示“2,3,4,5,6”
+#正斜线（/）：可以用正斜线指定时间的间隔频率，例如“0-23/2”表示每两小时执行一次。同时正斜线可以和星号一起使用，例如*/10，如果用在minute字段，表示每十分钟执行一次。
+
+51 * * * * root run-parts /etc/cron.hourly
+24 7 * * * root run-parts /etc/cron.daily
+22 4 * * 0 root run-parts /etc/cron.weekly
+42 4 1 * * root run-parts /etc/cron.monthly
+```
+
+* 用户任务调度
+
+用户定期要执行的工作，比如用户数据备份、定时邮件提醒等。
+
+所有用户定义的crontab 文件都被保存在 /var/spool/cron目录中。其文件名与用户名一致。
+
+文件：/etc/cron.deny 该文件中所列用户不允许使用crontab命令
+
+文件：/etc/cron.allow 该文件中所列用户允许使用crontab命令
+
+文件：/var/spool/cron/ 所有用户crontab文件存放的目录,以用户名命名
+
+* crond服务
+
+```shell
+yum install crontabs
+/sbin/service crond start   #启动服务
+/sbin/service crond stop    #关闭服务
+/sbin/service crond restart #重启服务
+/sbin/service crond reload  #重新载入配置
+service crond status # 查看crontab服务状态
+ntsysv #查看crontab服务是否已设置为开机启动
+chkconfig –level 35 crond on #加入开机自动启动
+```
