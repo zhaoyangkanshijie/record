@@ -5637,9 +5637,7 @@ console.log(c.value); // 重新调用计算方法
 
   头头比对，尾尾对比，中间使用最长稳定序列作为基准，原地复用，仅对需要移动或已经patch的节点进行操作，最大限度地提升替换效率，相比于Vue2版本是质的提升
 
-  方法源码
-
-  图解见：[详解vue3.0 diff算法的使用(超详细)](https://www.jb51.net/article/189862.htm)
+  方法源码:[解析Vue3.0的dom-diff核心算法——最长递增子序列](https://zhuanlan.zhihu.com/p/355576164)
 
   ```txt
        0 1 2 3 4 5
@@ -5700,110 +5698,49 @@ console.log(c.value); // 重新调用计算方法
   }
   ```
 
-  LeetCode 真题 300. 最长上升子序列
-
-  1. 动态规划,时间复杂度：O(n^2),空间复杂度：O(n)
-
-    ```js
-    let lis = (nums) => {
-      let len = nums.length;
-      if (len == 0) return 0;
-      let dp = new Array(len).fill(1);
-      let pos = [];
-      let res = 0;
-      //i表示最新的一位数
-      for (let i = 0; i < nums.length; i++) {
-        //j表示i前面的所有数
-        for (let j = 0; j < i; j++) {
-          //找出i前比i小的位置的最长递增子序列的最大值（找到以nums[i]结尾的最长递增子序列），虽然此处不一定是整个数组中的最大值
-          if (nums[j] < nums[i]) {
-            //改变运算符可变型为最长不减子序列，最长下降子序列等
-            dp[i] = Math.max(dp[i], dp[j] + 1); //状态转移方程
+  翻译，更详细注释见 algorithmByJS-算法简介-动态规划-最长上升子序列-题目变型:vue3最长不减子序列(索引)
+  ```js
+  var getSequence = function (nums) {
+    let result = [],
+      preIndex = []
+    for (let i = 0; i < nums.length; i++) {
+      let last = nums[result[result.length - 1]],
+        current = nums[i]
+      if (current > last || last === undefined) {
+        // 当前项大于最后一项
+        preIndex[i] = result[result.length - 1]
+        result.push(i)
+      } else {
+        // 当前项小于最后一项，二分查找+替换
+        let start = 0,
+          end = result.length - 1,
+          middle
+        while (start < end) { // 重合就说明找到了 对应的值,时间复杂度O(logn)
+          middle = Math.floor((start + end) / 2)// 找到中间位置的前一个
+          if (nums[result[middle]] > current) {
+            end = middle
+          } else {
+            start = middle + 1
           }
         }
-        //找出整个数组中的最大值
-        res = Math.max(res,dp[i]);
+  ​
+        // 如果相同 或者 比当前的还大就不换了
+        if (current < nums[result[start]]) {
+          preIndex[i] = result[start - 1] // 要将他替换的前一个记住
+          result[start] = i
+        }
       }
-      console.log(dp);
-      //[1, 1, 2, 3, 4, 5, 2, 3, 3, 4, 6, 5, 6, 7, 8, 5, 9, 10, 3]
-      //dp必然出现1~res的连续整数，从后向前找出res,res-1,res-2...所在位置代表的数即可
-      return res;//10
-    };
-
-    $(() => {
-      let numbers = [5, 1, 3, 6, 7, 9, 2, 4, 3, 4, 10, 5, 6, 7, 8, 5, 9, 10, 3];
-      console.log(lis(numbers)); //10
-    });
-    ```
-
-  2. 贪心+二分,时间复杂度：O(nlogn),空间复杂度：O(n)
-
-    ```js
-    const lengthOfLIS = function(nums) {
-        let len = nums.length;
-        if (len <= 1) {
-            return len;
-        }
-        let tails = [nums[0]];
-        for (let i = 0; i < len; i++) {
-            // 当前遍历元素 nums[i] 大于 前一个递增子序列的 尾元素时，追加到后面即可
-            if (nums[i] > tails[tails.length - 1]) {
-                tails.push(nums[i]);
-            } else {
-                // 否则，查找递增子序列中第一个大于当前值的元素，用当前遍历元素 nums[i] 替换它
-                // 递增序列，可以使用二分查找
-                let left = 0;
-                let right = tails.length - 1;
-                while (left < right) {
-                    let mid = (left + right) >> 1;
-                    if (tails[mid] < nums[i]) {
-                        left = mid + 1;
-                    } else {
-                        right = mid;
-                    }
-                }
-                tails[left] = nums[i];
-            }
-        }
-        return tails.length;
-    };
-    ```
-    ```js
-    let lis = (nums) => {
-       let top = new Array(nums.length);
-       let piles = 0; // 牌堆数初始化为 0
-       for (let i = 0; i < nums.length; i++) {
-         let poker = nums[i]; // 要处理的扑克牌
-         //二分查找:决定新来的牌插入哪一个牌堆(插入到刚好比这牌大的牌堆中)
-         //牌堆顶：1 2 3 4 5 6 7 8 -> 新牌：3
-         //1 2 3 4
-         //3 4
-         //4
-         //牌堆顶：1 2 3 3 5 6 7 8 -> 替换
-
-         //牌堆顶：1 2 3 3 5 6 7 8 -> 新牌：9
-         //5 6 7 8
-         //7 8
-         //8
-         //牌堆顶：1 2 3 3 5 6 7 8 9 -> 新建
-         let left = 0,
-           right = piles;
-         while (left < right) {
-           let mid = parseInt((left + right) / 2);
-           if (top[mid] >= poker) {
-             right = mid;
-           } else {
-             left = mid + 1;
-           }
-         }
-         console.log("left:" + left, "piles:" + piles);
-         if (left == piles) piles++; // 没找到合适的牌堆，新建一堆
-         top[left] = poker; // 把这张牌放到牌堆顶
-         console.log("poker top", top);
-       }
-       return piles; //最后牌堆数即为最长递增子序列长度，非空元素即为LIS序列
-    };
-    ```
+    }
+    // 利用前驱节点重新计算result
+    let length = result.length, //总长度
+      prev = result[length - 1] // 最后一项
+    while (length-- > 0) {// 根据前驱节点一个个向前查找
+      result[length] = prev
+      prev = preIndex[result[length]]
+    }
+    return result
+  }
+  ```
 
 ## Vue Composition API 和 React Hooks
 
