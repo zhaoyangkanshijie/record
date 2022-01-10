@@ -33,6 +33,7 @@
 - [裁切响应式布局](#裁切响应式布局)
 - [background-attachment与毛玻璃](#background-attachment与毛玻璃)
 - [css解决height:auto动画问题](#css解决height:auto动画问题)
+- [mask](#mask)
 
 ---
 
@@ -3654,3 +3655,95 @@
       <p>testtesttesttesttesttesttesttesttesttest</p>
     </div>
     ```
+
+### mask
+
+1. 参考链接：
+
+  - [mask](https://developer.mozilla.org/zh-CN/docs/Web/CSS/mask)
+  - [简单说 CSS中的mask—好好利用mask-image](https://segmentfault.com/a/1190000011838367)
+  - [浅谈图片蒙版效果-webkit-mask](https://www.cnblogs.com/luozhihao/p/4785076.html)
+
+2. 详解
+
+* 作用
+
+  mask通过遮罩或者裁切特定区域的图片的方式来隐藏一个元素的部分或者全部可见区域。
+
+* 兼容性
+
+  只有webkit内核的浏览器支持mask属性，需在域名下生效
+
+* 场景
+
+  特效专题
+
+* 用法
+
+  ```css
+  /* Keyword values */
+  mask: none;
+
+  /* Image values */
+  mask: url(mask.png);                       /* 使用位图来做遮罩 */
+  mask: url(masks.svg#star);                 /* 使用 SVG 图形中的形状来做遮罩 */
+
+  /* Combined values */
+  mask: url(masks.svg#star) luminance;       /* Element within SVG graphic used as luminance mask */
+  mask: url(masks.svg#star) 40px 20px;       /* 使用 SVG 图形中的形状来做遮罩并设定它的位置：离上边缘40px，离左边缘20px */
+  mask: url(masks.svg#star) 0 0/50px 50px;   /* 使用 SVG 图形中的形状来做遮罩并设定它的位置和大小：长宽都是50px */
+  mask: url(masks.svg#star) repeat-x;        /* Element within SVG graphic used as horizontally repeated mask */
+  mask: url(masks.svg#star) stroke-box;      /* Element within SVG graphic used as mask extending to the box enclosed by the stroke */
+  mask: url(masks.svg#star) exclude;         /* Element within SVG graphic used as mask and combined with background using non-overlapping parts */
+
+  /* Global values */
+  mask: inherit;
+  mask: initial;
+  mask: unset;
+
+  mask-image: none
+  mask-mode: match-source
+  mask-repeat: no-repeat
+  mask-position (en-US): center
+  mask-clip (en-US): border-box
+  mask-origin (en-US): border-box
+  mask-size (en-US): auto
+  mask-composite (en-US): add
+  ```
+
+* 使用样例
+
+  图片蒙版
+  ```css
+  .demo1 {
+      background : url("images/logo.png") no-repeat;
+      -webkit-mask : url("images/mask.png");
+  }
+  ```
+
+  渐变蒙版
+  ```CSS
+  .demo1 {
+      background : url("images/logo.png") no-repeat;
+      -webkit-mask : -webkit-gradient(linear, left top, right bottom, from(rgba(0,0,0,1)), to(rgba(0,0,0,0)));
+  }
+  ```
+
+  配合动画
+  ```css
+  @keyframes mask{
+      0% {-webkit-mask-position:0px 0px;}
+      25% {-webkit-mask-position:619px 0px;}
+      50% {-webkit-mask-position:0px 0px;}
+      75% {-webkit-mask-position:308px 0px;-webkit-mask-size:100%;}
+      100% {-webkit-mask-size:1000%;}
+    }
+
+  .mask{
+      width:700px;
+      height:392px;
+      background:black url("http://www.kkkk1000.com/images/mask-image/1534750163.jpg");
+      -webkit-mask-image:url("http://www.kkkk1000.com/images/mask-image/1534750222.jpg");
+      animation:mask 5s linear infinite forwards;
+  }
+  ```
