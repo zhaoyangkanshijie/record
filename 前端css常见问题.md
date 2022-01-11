@@ -5,7 +5,7 @@
 - [三角形](#三角形)
 - [flexible 与高清屏](#flexible与高清屏)
 - [css 并列自适应布局](#css并列自适应布局)
-- [css 旋转、拖拽、手势移动](#css旋转、拖拽、手势移动)
+- [transform](#transform)
 - [css 伪类和伪元素](#css伪类和伪元素)
 - [css 幽灵空白节点](#css幽灵空白节点)
 - [flex](#flex)
@@ -1210,7 +1210,7 @@
    ```
 
 
-### css 旋转、拖拽、手势移动
+### transform
 
 1. 参考链接：
 
@@ -1222,6 +1222,12 @@
 
    [特效属性「Transform」+ 矩阵 matrix](https://www.jianshu.com/p/f943e2014c39)
 
+   [透视投影矩阵推导](https://www.cnblogs.com/AirGuanZ/p/6365702.html)
+
+   [旋转变换（一）旋转矩阵](https://www.cnblogs.com/zhoug2020/p/7842808.html)
+
+   [CSS3 matrix3d矩阵变换和动画变换](https://www.jianshu.com/p/c37cf06d5b92)
+
 2. 详解：
 
   关键词：transform,translate,scale,rotate,skew(倾斜度数),transition,animation,@keyframes,drag 系列事件,cursor
@@ -1231,6 +1237,10 @@
   1. transition 是 css 过渡效果，需要和 hover 等事件配合，由事件触发。动画过程中所有样式属性都要一起变化
   2. animation 基于帧动画，配合 keyframes 使用，可以设定每一帧的单一样式变化和时间以及循环次数。
 
+  * transform坐标系
+
+    x轴正半轴向右，y轴正半轴向下，z轴正半轴指向屏幕
+
   * transform:matrix
 
     transform: matrix(a,b,c,d,e,f)
@@ -1239,13 +1249,13 @@
     a c e   x   ax+cy+e
     b d f . y = bx+dy+f
     0 0 1   1   0+0+1
-    x' = ax + cy +  e   // 即：x坐标
-    y' = bx + dy + f    // 即：y坐标
+    x' = ax + cy + e   // 即：x坐标
+    y' = bx + dy + f   // 即：y坐标
     ```
 
     纯平移:transform: matrix(1, 0, 0, 1, x轴偏移量，y轴偏移量)
     ```txt
-    x' = ax + cy +  e  = 1*0 + 0*0 + 30 = 30
+    x' = ax + cy + e = 1*0 + 0*0 + 30 = 30
     y' = bx + dy + f = 0*1 + 1*0 + 30 = 30
     ```
 
@@ -1268,6 +1278,45 @@
     y' = x*tan(θy)+y+0 = x*tan(θy)+y
     对应于skew(θx + "deg"，θy+ "deg")
     ```
+
+  * transform:matrix3d
+
+    transform: matrix3d(a00, a10, a20, a30, a01, a11, a21, a31, a02, a12, a22, a32, a03, a13, a23, a33)
+
+    ```txt
+    a00 a01 a02 a03   x   a00x+a01y+a02z+a03
+    a10 a11 a12 a13 . y = a10x+a11y+a12z+a13
+    a20 a21 a22 a23   z   a20x+a21y+a22z+a23
+     0   0   0   1    1   0+0+0+1
+    x' = a00x+a01y+a02z+a03   // 即：x坐标
+    y' = a10x+a11y+a12z+a13   // 即：y坐标
+    z' = a20x+a21y+a22z+a23   // 即：z坐标
+    ```
+
+    纯平移:transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, x轴偏移量, y轴偏移量, z轴偏移量, 1)
+    
+    纯缩放:transform: matrix3d(x轴纯缩量, 0, 0, 0, 0, y轴纯缩量, 0, 0, 0, 0, 0, z轴纯缩量, 0, 0, 0, 1)
+
+    x轴纯旋转:transform: matrix3d(1, 0, 0, 0, 0, cosθ, -sinθ, 0, 0, sinθ, cosθ, 0, 0, 0, 0, 1)
+
+    y轴纯旋转:transform: matrix3d(cosθ, 0, sinθ, 0, 0, 1, 0, 0, -sinθ, 0, cosθ, 0, 0, 0, 0, 1)
+
+    z轴纯旋转:transform: matrix3d(cosθ, -sinθ, 0, 0, sinθ, cosθ, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+
+    绕任意轴u旋转的旋转矩阵:[旋转变换（一）旋转矩阵](https://www.cnblogs.com/zhoug2020/p/7842808.html)
+
+    纯拉伸:transform: matrix3d(1, tan(θx), 0, 0, tan(θx), 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+
+    透视矩阵(建模自小孔成像原理的透视摄像机是常用的摄像机模型)
+    ```txt
+    2n/(r-l)    0      (r+l)/(r-l)    0
+      0      2n/(t-b)  (t+b)/(t-b)    0
+      0         0      (n+f)/(n-f) 2fn/(n-f)
+      0         0          -1         0
+    t、b、l、r 分别代表camera投影面的上下左右，camera指向-z方向（指向屏幕内），n为近景距离，f为远景距离。
+    ```
+
+    推导过程:[透视投影矩阵推导](https://www.cnblogs.com/AirGuanZ/p/6365702.html)
 
   * 视距
 
