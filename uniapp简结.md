@@ -61,6 +61,7 @@
 * [原生nvue相关](#原生nvue相关)
 * [手机模拟器调试](#手机模拟器调试)
 * [关于ssr](#关于ssr)
+* [支付](#支付)
 
 ---
 
@@ -3764,3 +3765,57 @@ cli创建项目时若选择hello uni-app模板，可看到其中已经自带部�
     seo目前简单的方案是服务端识别爬虫ua，自动重定向到一个新接口，吐出静态html内容，这个页面不给用户看只供爬虫读内容，所以页面开发也会很简单。
 
     这种方式不会被搜索引擎降权或者惩罚，根源毕竟是百度爬虫不智能造成的。
+
+## 支付
+
+1. 参考链接
+
+    [前端都应该掌握的微信小程序和公众号的开发知识汇总](https://juejin.cn/post/7036922110203133966)
+
+2. 详解
+
+    请求示例 uniapp
+    ```js
+    // #ifdef MP
+    uni.requestPayment({
+        "timeStamp": res.data.timeStamp,
+        "nonceStr": res.data.nonceStr,
+        "package": res.data.packageValue,
+        "signType": res.data.signType,
+        "paySign": res.data.paySign,
+        "success": function(res) {
+            callbackQueryOrder(orderId).then(res => {
+                if (res.status === 'OK') {
+                    _this.$store.dispatch('saveCurrPayOrder', {...currPayOrder, status: 'success'})
+                    _this.$util.Tips({
+                        title: '支付成功',
+                        icon: 'success'
+                    }, {
+                        tab: 4,
+                        url: toPages
+                    })
+                }
+            }).catch(err => console.log(err))
+        },
+        "fail": function(res) {
+            _this.$store.dispatch('saveCurrPayOrder', {...currPayOrder, status: 'fail'})
+            _this.$util.Tips({
+                title: '取消支付'
+            }, {
+                tab: 4,
+                url: toPages
+            });
+        },
+        "complete": function(res) {
+            uni.hideLoading();
+            //关闭当前页面跳转至订单状态
+            if (res.errMsg == 'requestPayment:cancel') return that.$util.Tips({
+                title: '取消支付'
+            }, {
+                tab: 4,
+                url: goPages
+            });
+        }
+    })
+    // #endif
+    ```

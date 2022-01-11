@@ -6,10 +6,10 @@
 - [flexible 与高清屏](#flexible与高清屏)
 - [css 并列自适应布局](#css并列自适应布局)
 - [transform](#transform)
-- [css 伪类和伪元素](#css伪类和伪元素)
-- [css 幽灵空白节点](#css幽灵空白节点)
+- [css伪类和伪元素](#css伪类和伪元素)
+- [css幽灵空白节点](#css幽灵空白节点)
 - [flex](#flex)
-- [overflow:hidden 清除浮动的原理](#overflow:hidden清除浮动的原理)
+- [overflow:hidden清除浮动的原理](#overflow:hidden清除浮动的原理)
 - [css样式穿透](#css样式穿透)
 - [grid](#grid)
 - [css比较函数](#css比较函数)
@@ -1432,7 +1432,7 @@
   </style>
   ```
 
-### css 伪类和伪元素
+### css伪类和伪元素
 
 1. 参考链接：
 
@@ -1492,7 +1492,7 @@
          - :nth-of-type 先选中前方指定的选择器的所有元素，再看是第几个
 
 
-### css 幽灵空白节点
+### css幽灵空白节点
 
 1. 参考链接：
 
@@ -1686,7 +1686,7 @@
           }
           ```
 
-### overflow:hidden 清除浮动的原理
+### overflow:hidden清除浮动的原理
 
 1. 参考链接：
 

@@ -4415,6 +4415,13 @@ configeWebpack: (config) => {
 
 v-model是用来在表单控件或者组件上创建双向绑定的,本质是v-bind和v-on的语法糖,在一个组件上使用v-model，默认会为组件绑定名为value的prop和名为input的事件
 
+v-model在组件上使用
+```html
+<GetCustomer v-model="isShow"></GetCustomer>
+等同于
+<GetCustomer :value="isShow" @input="isShow=$event.target.value"></GetCustomer>
+```
+
 ## 虚拟Dom以及key属性的作用
 
 * 由于在浏览器中操作DOM是很昂贵的。频繁的操作DOM，会产生一定的性能问题。这就是虚拟Dom的产生原因。
