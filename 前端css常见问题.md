@@ -34,6 +34,7 @@
 - [background-attachment与毛玻璃](#background-attachment与毛玻璃)
 - [css解决height:auto动画问题](#css解决height:auto动画问题)
 - [mask](#mask)
+- [clip-path](#clip-path)
 
 ---
 
@@ -3795,4 +3796,165 @@
       -webkit-mask-image:url("http://www.kkkk1000.com/images/mask-image/1534750222.jpg");
       animation:mask 5s linear infinite forwards;
   }
+  ```
+
+### clip-path
+
+1. 参考链接：
+
+  - [CSS3:clip-path具体解释](https://www.cnblogs.com/mfrbuaa/p/5337949.html)
+  - [CSS3剪贴路径（Clip-path）在线生成器工具](http://tools.jb51.net/code/css3path)
+  - [clip-path](https://developer.mozilla.org/zh-CN/docs/Web/CSS/clip-path)
+  - [使用CSS3的clip-path(裁剪路径)实现剪贴区域的显示以及实例实现图片渐变](https://www.cnblogs.com/moqiutao/p/10547330.html)
+
+2. 详解
+
+* 作用
+
+  使用裁剪方式创建元素的可显示区域。区域内的部分显示，区域外的隐藏。
+
+* 兼容性
+
+  Chrome55+,Firefox54+,IE10+
+
+* 场景
+
+  特效专题
+
+* 用法
+
+  ```css
+  /* Keyword values */
+  clip-path: none;
+
+  /* <clip-source> values */
+  clip-path: url(resources.svg#c1);
+
+  /* <geometry-box> values */
+  clip-path: margin-box;
+  clip-path: border-box;
+  clip-path: padding-box;
+  clip-path: content-box;
+  clip-path: fill-box;/*利用对象边界框作为引用框*/
+  clip-path: stroke-box;/*使用笔触边界框（stroke bounding box）作为引用框*/
+  clip-path: view-box;/*使用最近的 SVG 视口（viewport）作为引用框*/
+
+  /* <basic-shape> values */
+  clip-path: inset(100px 50px);/*带上右下左圆角inset(top right bottom left round top-radius right-radius bottom-radius left-radius)*/
+  clip-path: circle(50px at 0 100px);/*(radius at x-axis y-axis)*/
+  clip-path: ellipse(30% 20% at 50% 50%);/*椭圆ellipse(x-rad y-rad at x-axis y-axis)*/
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);/*(x-axis y-axis, x-axis y-axis, … )*/
+  clip-path: path('M0.5,1 C0.5,1,0,0.7,0,0.3 A0.25,0.25,1,1,1,0.5,0.3 A0.25,0.25,1,1,1,1,0.3 C1,0.7,0.5,1,0.5,1 Z');
+
+  /* Box and shape values combined */
+  clip-path: padding-box circle(50px at 0 100px);
+
+  /* Global values */
+  clip-path: inherit;
+  clip-path: initial;
+  clip-path: unset;
+
+  /* 三角形 */
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  /* 梯形 */
+  clip-path: polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%);
+  /* 平行四边形 */
+  clip-path: polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%);
+  /* 菱形 */
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  /* 五边形 */
+  clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  /* 六边形 */
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  /* 槽口形 */
+  clip-path: polygon(0% 15%, 15% 15%, 15% 0%, 85% 0%, 85% 15%, 100% 15%, 100% 85%, 85% 85%, 85% 100%, 15% 100%, 15% 85%, 0% 85%);
+  /* 左箭头 */
+  clip-path: polygon(40% 0%, 40% 20%, 100% 20%, 100% 80%, 40% 80%, 40% 100%, 0% 50%);
+  /* 右箭头 */
+  clip-path: polygon(0% 20%, 60% 20%, 60% 0%, 100% 50%, 60% 100%, 60% 80%, 0% 80%);
+  /* 星形 */
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  /* 十字形 */
+  clip-path: polygon(10% 25%, 35% 25%, 35% 0%, 65% 0%, 65% 25%, 90% 25%, 90% 50%, 65% 50%, 65% 100%, 35% 100%, 35% 50%, 10% 50%);
+  /* 消息窗口 */
+  clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%);
+  /* 关闭按钮 */
+  clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
+  /* 空心框 */
+  clip-path: polygon(0% 0%, 0% 100%, 25% 100%, 25% 25%, 75% 25%, 75% 75%, 25% 75%, 25% 100%, 100% 100%, 100% 0%);
+  ```
+
+* 使用样例
+
+  图片渐变
+  ```html
+  <!doctype html>
+  <html lang="en">
+
+  <head>
+      <title>test</title>
+      <meta charset="UTF-8">
+
+      <style>
+          * {
+              padding: 0;
+              margin: 0;
+          }
+
+          .img,.img2 {
+              width: 630px;
+              height: 630px;
+          }
+
+          img {
+              display: block;
+              width: 100%;
+          }
+
+          .img {
+              overflow: hidden;
+              clip-path: polygon(0 0, 0 0, 100% 0, 100% 0);
+              opacity: 0;
+              transition: opacity 1.1s ease 167ms, clip-path 1.1s cubic-bezier(.19, 1, .22, 1);
+              transition: clip-path 1.1s cubic-bezier(.19, 1, .22, 1), opacity 1.1s ease 167ms;
+              transition: clip-path 1.1s cubic-bezier(.19, 1, .22, 1), opacity 1.1s ease 167ms, clip-path 1.1s cubic-bezier(.19, 1, .22, 1);
+          }
+
+          .img.current {
+              opacity: 1;
+              clip-path: polygon(0 0, 0 100%, 100% 100%, 100% 0);
+          }
+
+          .img2 {
+              overflow: hidden;
+              clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+              opacity: 0;
+              transition: opacity 1.1s ease 167ms, clip-path 1.1s cubic-bezier(.19, 1, .22, 1);
+              transition: clip-path 1.1s cubic-bezier(.19, 1, .22, 1), opacity 1.1s ease 167ms;
+              transition: clip-path 1.1s cubic-bezier(.19, 1, .22, 1), opacity 1.1s ease 167ms, clip-path 1.1s cubic-bezier(.19, 1, .22, 1);
+          }
+
+          .img2.current2 {
+              opacity: 1;
+              clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+          }
+      </style>
+  </head>
+
+  <body>
+      <div class="img">
+          <img src="https://www.tp-link.com.cn/content/images2017/gallery/TL-XTR6690-3840px.jpg" />
+      </div>
+      <div class="img2">
+          <img src="https://www.tp-link.com.cn/content/images2017/gallery/TL-XTR6690-3840px.jpg" />
+      </div>
+      <script>
+          window.onload = function () {
+              document.querySelector('.img').classList.add('current');
+              document.querySelector('.img2').classList.add('current2');
+          }
+      </script>
+  </body>
+
+  </html>
   ```
