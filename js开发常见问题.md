@@ -35,45 +35,54 @@
 
 1. 参考链接：
 
-   [Unicode 和 UTF-8 字符串编码解码原理](https://blog.csdn.net/Enl0ve/article/details/82844484)
+  [Unicode 和 UTF-8 字符串编码解码原理](https://blog.csdn.net/Enl0ve/article/details/82844484)
 
-   [Unicode 和 UTF-8、UTF-16 之间的区别](https://blog.csdn.net/zengchen__acmer/article/details/75332190)
+  [Unicode 和 UTF-8、UTF-16 之间的区别](https://blog.csdn.net/zengchen__acmer/article/details/75332190)
 
-   [【编码】ASCII、Unicode、GBK 和 UTF-8 字符编码的区别联系](https://blog.csdn.net/u010262331/article/details/46013905)
+  [【编码】ASCII、Unicode、GBK 和 UTF-8 字符编码的区别联系](https://blog.csdn.net/u010262331/article/details/46013905)
 
-   [各种常见编码的转换算法](https://blog.csdn.net/xiaolongwang2010/article/details/10311397)
+  [各种常见编码的转换算法](https://blog.csdn.net/xiaolongwang2010/article/details/10311397)
+
+  [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
 
 2. 详解：
 
-   Unicode 是字符集，而 UTF-8 是编码规则
+  Unicode 是字符集，而 UTF-8 是编码规则
 
-   字符集为每一个字符分配一个唯一的 ID(学名为码位/码点/Code Point)，而「编码规则」则是将「码位」转换为字节序列的规则。
+  字符集为每一个字符分配一个唯一的 ID(学名为码位/码点/Code Point)，而「编码规则」则是将「码位」转换为字节序列的规则。
 
-   起初 Unicode 规定每个字符都是用 2 个字节来表示，但是由于英文字符等只需要一个字节就可以表，那就造成了在保存英文文本时，就会浪费一倍的空间。
+  起初 Unicode 规定每个字符都是用 2 个字节来表示，但是由于英文字符等只需要一个字节就可以表，那就造成了在保存英文文本时，就会浪费一倍的空间。
 
-   UTF-8 是一种变长的编码方式。它可以使用 1~4 个字节表示一个符号，根据不同的符号而变化字节长度，当字符在 ASCII 码的范围时，就用一个字节表示，保留了 ASCII 字符一个字节的编码做为它的一部分，注意的是 unicode 一个中文字符占 2 个字节，而 UTF-8 一个中文字符占 3 个字节。从 unicode 到 uft-8 并不是直接的对应，而是要过一些算法和规则来转换。
+  UTF-8 是一种变长的编码方式。它可以使用 1~4 个字节表示一个符号，根据不同的符号而变化字节长度，当字符在 ASCII 码的范围时，就用一个字节表示，保留了 ASCII 字符一个字节的编码做为它的一部分，注意的是 unicode 一个中文字符占 2 个字节，而 UTF-8 一个中文字符占 3 个字节。从 unicode 到 uft-8 并不是直接的对应，而是要过一些算法和规则来转换。
 
-   ```txt
-   例如「田」的码位是30000，记作U+7530(30000的16进制为0x7530)。
-   U+ 0000 ~ U+ 007F: 0XXXXXXX
-   U+ 0080 ~ U+ 07FF: 110XXXXX 10XXXXXX
-   U+ 0800 ~ U+ FFFF: 1110XXXX 10XXXXXX 10XXXXXX
-   U+10000 ~ U+1FFFF: 11110XXX 10XXXXXX 10XXXXXX 10XXXXXX
+  ```txt
+  例如「田」的码位是30000，记作U+7530(30000的16进制为0x7530)。
+  U+ 0000 ~ U+ 007F: 0XXXXXXX
+  U+ 0080 ~ U+ 07FF: 110XXXXX 10XXXXXX
+  U+ 0800 ~ U+ FFFF: 1110XXXX 10XXXXXX 10XXXXXX
+  U+10000 ~ U+1FFFF: 11110XXX 10XXXXXX 10XXXXXX 10XXXXXX
 
-   根据上表中的编码规则，之前的「田」字的码位 U+7530 属于第三行的范围：
+  根据上表中的编码规则，之前的「田」字的码位 U+7530 属于第三行的范围：
 
-       7    5    3    0
-       0111 0101 0011 0000    二进制的 7530
-   --------------------------
-       0111   011111   100101 二进制的 77E5
-   1110XXXX 10XXXXXX 10XXXXXX 模版（上表第三行）
-   11100111 10010100 10110000 代入模版
-   E   7    9   4    B   0
+      7    5    3    0
+      0111 0101 0011 0000    二进制的 7530
+  --------------------------
+      0111   011111   100101 二进制的 77E5
+  1110XXXX 10XXXXXX 10XXXXXX 模版（上表第三行）
+  11100111 10010100 10110000 代入模版
+  E   7    9   4    B   0
 
-   这就是将 U+7530 按照 UTF-8 编码为字节序列 E794B0 的过程。反之亦然。
-   ```
+  这就是将 U+7530 按照 UTF-8 编码为字节序列 E794B0 的过程。反之亦然。
+  ```
 
-   UTF-8 就是每次 8 个位传输数据，而 UTF-16 就是每次 16 个位。
+  UTF-8 就是每次 8 个位传输数据，而 UTF-16 就是每次 16 个位。
+
+  * 总结:Unicode、UTF-8、UTF-16、UTF-32有什么区别？
+
+    * Unicode 是编码字符集（字符集），而UTF-8、UTF-16、UTF-32是字符集编码（编码规则）；
+    * UTF-16 使用变长码元序列的编码方式，相较于定长码元序列的UTF-32算法更复杂，甚至比同样是变长码元序列的UTF-8也更为复杂，因为其引入了独特的代理对这样的代理机制；
+    * UTF-8需要判断每个字节中的开头标志信息，所以如果某个字节在传送过程中出错了，就会导致后面的字节也会解析出错；而UTF-16不会判断开头标志，即使错也只会错一个字符，所以容错能力教强；
+    * 如果字符内容全部英文或英文与其他文字混合，但英文占绝大部分，那么用UTF-8就比UTF-16节省了很多空间；而如果字符内容全部是中文这样类似的字符或者混合字符中中文占绝大多数，那么UTF-16就占优势了，可以节省很多空间；
 
 ### base64 和二进制的不同
 
@@ -1781,231 +1790,231 @@
     
     * 代理模式
     
-        * 使用条件
-    
-            1. 模块职责单一且可复用
-            2. 两个模块间的交互需要一定限制关系
-    
-        为一个对象找一个替代对象，以便对原对象进行访问限制
-        ```js
-        //虚拟代理是把一些开销很大的对象，延迟到真正需要它的时候才去创建执行
-        // 图片懒加载
-        var myImage = (function(){
-            var imgNode = document.createElement('img')
-            document.body.appendChild(imgNode)
-            return {
-                setSrc: function(src) {
-                    imgNode.src = src
-                }
-            }
-        })();
-        var proxyImage = (function() {
-            var img = new Image();
-            img.onload = function() {
-                myImage.setSrc(this.src)
-            }
-            return {
-                setSrc: function(src) {
-                    myImage.setSrc('blank.gif');//设置等待时的图片
-                    img.src = src;//onload时才设置图片路径，实现懒加载
-                }
-            }
-        })();
-        proxyImage.setSrc('http://seopic.699pic.com/photo/40006/7735.jpg_wh1200.jpg')
-    
-        //缓存代理可以为一些开销大的运算结果提供暂时的存储，下次运算时，如果传递进来参数跟之前一致，则可以直接返回前面存储的运算结果。
-        const getFib = (number) => {
-            if (number <= 2) {
-                return 1;
-            }
-            else {
-                return getFib(number - 1) + getFib(number - 2);
-            }
-        }
-        const getCacheProxy = (fn, cache = new Map()) => {
-            //
-            return new Proxy(fn, {
-                apply(target, context, args) {
-                    console.log(target, context, args)
-                    //target为fn函数
-                    //fn内没有属性，context为undefined
-                    //args为传入的参数
-                    const argsString = args.join(' ');
-                    if (cache.has(argsString)) {
-                        // 如果有缓存,直接返回缓存数据
-                        return cache.get(argsString);
-                    }
-                    const result = fn(...args);
-                    cache.set(argsString, result);
-    
-                    return result;
-                }
-            })
-        }
-        const getFibProxy = getCacheProxy(getFib);
-        getFibProxy(40);
-        ```
-    
-        附Proxy使用方法：
-        * Proxy(代理对象，对象(属性为自定义代理函数))
-        * 代理函数：(target为要代理的对象,propKey为对象属性值,value为值,receiver为Proxy或继承Proxy的对象)
-            * get(target, propKey, receiver)：拦截对象属性的读取，比如proxy.foo和proxy['foo']。
-            * set(target, propKey, value, receiver)：拦截对象属性的设置，比如proxy.foo = v或proxy['foo'] = v，返回一个布尔值。
-            * has(target, propKey)：拦截propKey in proxy的操作，返回一个布尔值。
-            * deleteProperty(target, propKey)：拦截delete proxy[propKey]的操作，返回一个布尔值。
-            * ownKeys(target)：拦截Object.getOwnPropertyNames(proxy)Object.getOwnPropertySymbols(proxy)、Object.keys(proxy)、for...in循环，返回一个数组。该方法返回目标对象所有自身的属性的属性名，而Object.keys()的返回结果仅包括目标对象自身的可遍历属性。
-            * getOwnPropertyDescriptor(target, propKey)：拦截Object.getOwnPropertyDescriptor(proxy, propKey)，返回属性的描述对象。
-            * defineProperty(target, propKey, propDesc)：拦截Object.defineProperty(proxy, propKey, propDesc）、Object.defineProperties(proxy, propDescs)，返回一个布尔值。
-            * preventExtensions(target)：拦截Object.preventExtensions(proxy)，返回一个布尔值。
-            * getPrototypeOf(target)：拦截Object.getPrototypeOf(proxy)，返回一个对象。
-            * isExtensible(target)：拦截Object.isExtensible(proxy)，返回一个布尔值。
-            * setPrototypeOf(target, proto)：拦截Object.setPrototypeOf(proxy, proto)，返回一个布尔值。如果目标对象是函数，那么还有两种额外操作可以拦截。
-            * apply(target, object, args)：拦截 Proxy 实例作为函数调用的操作，比如proxy(...args)、proxy.call(object, ...args)、proxy.apply(...)。
-            * construct(target, args)：拦截 Proxy 实例作为构造函数调用的操作，比如new proxy(...args)。
-        * 样例
-            ```js
-            var obj = new Proxy({}, {
-                get: function (target, propKey, receiver) {
-                    console.log(`getting ${propKey}!`);
-                    //让Object操作都变成函数行为
-                    //Reflect对象的方法与Proxy对象的方法一一对应，只要是Proxy对象的方法，就能在Reflect对象上找到对应的方法。这就让Proxy对象可以方便地调用对应的Reflect方法。
-                    return Reflect.get(target, propKey, receiver);
-                },
-                set: function (target, propKey, value, receiver) {
-                    console.log(`setting ${propKey}!`);
-                    return Reflect.set(target, propKey, value, receiver);
-                }
-            });
-            obj.count = 1
-            //  setting count!
-            ++obj.count
-            //  getting count!
-            //  setting count!
-            //  2
-            ```
-    
-        proxy与defineProperty对比
-        * Proxy可以直接监听对象而非属性，Proxy可以劫持整个对象,并返回一个新对象
-        * Proxy可以直接监听数组的变化，对数组进行操作(push、shift、splice等)时，会触发对应的方法名称和length的变化
-        * Proxy有多达13种拦截方法,不限于apply、ownKeys、deleteProperty、has
-        * Proxy时es6语法，不兼容低版本浏览器，如ie9
-
-        proxy polyfill
-        ```js
-        if(!this.Proxy){
-          (function(window){
-            var seq=0;
-            var dfGetter=function(target, property, receiver){
-              return target[property];
-            };
-            var dfSetter=function(target, property, value,  receiver){
-              target[property]=value;
-            };
-            var afterRevoke=function(){
-              throw "illegal operation attempted on a revoked proxy";
-            };
-            if(Object.defineProperties){
-              window.Proxy=function(target, handler){
-                var me=this;
-                if(!handler.get){
-                  handler.get=dfGetter;
-                }
-                if(!handler.set){
-                  handler.set=dfSetter;
-                }
-                Object.keys(target).forEach(function(key){
-                  Object.defineProperty(me,key,{
-                    enumerable:true,
-                    get:function(){
-                      return handler.get(target,key,me);
-                    },
-                    set:function(value){
-                      if(handler.set(target,key,value,me)===false){
-                        throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
-                      }
-                    }
-                  });
-                });
-              };
-            }else if(window.execScript){
-              //从avalon学到的方式，通过VB
-              window.VBProxySetter=function(target, property, value, receiver, handler){
-                if(handler.set(target, property, value, receiver)===false){
-                  throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
-                }
-              };
-              window.VBProxyGetter=function(target,property, receiver, handler){
-                return handler.get(target,property, receiver);
-              };
-              window.VBProxyPool=new Map();
-              window.VBProxyFactory=function(target,handler){
-                var className=VBProxyPool.get(target);
-                if(!className){
-                  className="VBClass_"+(seq++);
-                  VBProxyPool.set(target,className);
-                  var buffer=["Class "+className];
-                  buffer.push('Public [__target__]');
-                  buffer.push('Public [__handler__]');
-                  Object.keys(target).forEach(function(key){
-                    if(key.match(/[a-zA-Z0-9_$]/)){
-                      buffer.push(
-                        'Public Property Let ['+key+'](var)',
-                        '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
-                        'End Property',
-                        'Public Property Set ['+key+'](var)',
-                        '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
-                        'End Property',
-                        'Public Property Get ['+key+']',
-                        '	On Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
-                        '	Set ['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
-                        '	If Err.Number <> 0 Then',
-                        '		['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
-                        '	End If',
-                        '	On Error Goto 0',
-                        'End Property');
-                    }
-                  });
-                  buffer.push('End Class');
-                  buffer.push(
-                    'Function '+className+'_Factory(target,handler)',
-                    '	Dim o',
-                    '	Set o = New '+className,
-                    '	Set o.[__target__]=target',
-                    '	Set o.[__handler__]=handler',
-                    '	Set '+className+'_Factory=o',
-                    'End Function'
-                  );
-                  try{
-                    window.execScript(buffer.join('\n'), 'VBScript');
-                  }catch(e){
-                    alert(buffer.join('\n'));
+      * 使用条件
+  
+          1. 模块职责单一且可复用
+          2. 两个模块间的交互需要一定限制关系
+  
+      为一个对象找一个替代对象，以便对原对象进行访问限制
+      ```js
+      //虚拟代理是把一些开销很大的对象，延迟到真正需要它的时候才去创建执行
+      // 图片懒加载
+      var myImage = (function(){
+          var imgNode = document.createElement('img')
+          document.body.appendChild(imgNode)
+          return {
+              setSrc: function(src) {
+                  imgNode.src = src
+              }
+          }
+      })();
+      var proxyImage = (function() {
+          var img = new Image();
+          img.onload = function() {
+              myImage.setSrc(this.src)
+          }
+          return {
+              setSrc: function(src) {
+                  myImage.setSrc('blank.gif');//设置等待时的图片
+                  img.src = src;//onload时才设置图片路径，实现懒加载
+              }
+          }
+      })();
+      proxyImage.setSrc('http://seopic.699pic.com/photo/40006/7735.jpg_wh1200.jpg')
+  
+      //缓存代理可以为一些开销大的运算结果提供暂时的存储，下次运算时，如果传递进来参数跟之前一致，则可以直接返回前面存储的运算结果。
+      const getFib = (number) => {
+          if (number <= 2) {
+              return 1;
+          }
+          else {
+              return getFib(number - 1) + getFib(number - 2);
+          }
+      }
+      const getCacheProxy = (fn, cache = new Map()) => {
+          //
+          return new Proxy(fn, {
+              apply(target, context, args) {
+                  console.log(target, context, args)
+                  //target为fn函数
+                  //fn内没有属性，context为undefined
+                  //args为传入的参数
+                  const argsString = args.join(' ');
+                  if (cache.has(argsString)) {
+                      // 如果有缓存,直接返回缓存数据
+                      return cache.get(argsString);
                   }
-                }
-                return window[className+'_Factory'](target,handler); //得到其产品
-              };
-              window.Proxy=function(target, handler){
-                if(!handler.get){
-                  handler.get=dfGetter;
-                }
-                if(!handler.set){
-                  handler.set=dfSetter;
-                }
-                var me=VBProxyFactory(target,handler);
-                return me;
-              };
-            }
-            Proxy.revocable=function(target,handler){
-              var r={};
-              r.proxy=new Proxy(target,handler);
-              r.revoke=function(){
-                handler.get=handler.set=afterRevoke;
-              };
-              return r;
+                  const result = fn(...args);
+                  cache.set(argsString, result);
+  
+                  return result;
+              }
+          })
+      }
+      const getFibProxy = getCacheProxy(getFib);
+      getFibProxy(40);
+      ```
+  
+      附Proxy使用方法：
+      * Proxy(代理对象，对象(属性为自定义代理函数))
+      * 代理函数：(target为要代理的对象,propKey为对象属性值,value为值,receiver为Proxy或继承Proxy的对象)
+          * get(target, propKey, receiver)：拦截对象属性的读取，比如proxy.foo和proxy['foo']。
+          * set(target, propKey, value, receiver)：拦截对象属性的设置，比如proxy.foo = v或proxy['foo'] = v，返回一个布尔值。
+          * has(target, propKey)：拦截propKey in proxy的操作，返回一个布尔值。
+          * deleteProperty(target, propKey)：拦截delete proxy[propKey]的操作，返回一个布尔值。
+          * ownKeys(target)：拦截Object.getOwnPropertyNames(proxy)Object.getOwnPropertySymbols(proxy)、Object.keys(proxy)、for...in循环，返回一个数组。该方法返回目标对象所有自身的属性的属性名，而Object.keys()的返回结果仅包括目标对象自身的可遍历属性。
+          * getOwnPropertyDescriptor(target, propKey)：拦截Object.getOwnPropertyDescriptor(proxy, propKey)，返回属性的描述对象。
+          * defineProperty(target, propKey, propDesc)：拦截Object.defineProperty(proxy, propKey, propDesc）、Object.defineProperties(proxy, propDescs)，返回一个布尔值。
+          * preventExtensions(target)：拦截Object.preventExtensions(proxy)，返回一个布尔值。
+          * getPrototypeOf(target)：拦截Object.getPrototypeOf(proxy)，返回一个对象。
+          * isExtensible(target)：拦截Object.isExtensible(proxy)，返回一个布尔值。
+          * setPrototypeOf(target, proto)：拦截Object.setPrototypeOf(proxy, proto)，返回一个布尔值。如果目标对象是函数，那么还有两种额外操作可以拦截。
+          * apply(target, object, args)：拦截 Proxy 实例作为函数调用的操作，比如proxy(...args)、proxy.call(object, ...args)、proxy.apply(...)。
+          * construct(target, args)：拦截 Proxy 实例作为构造函数调用的操作，比如new proxy(...args)。
+      * 样例
+          ```js
+          var obj = new Proxy({}, {
+              get: function (target, propKey, receiver) {
+                  console.log(`getting ${propKey}!`);
+                  //让Object操作都变成函数行为
+                  //Reflect对象的方法与Proxy对象的方法一一对应，只要是Proxy对象的方法，就能在Reflect对象上找到对应的方法。这就让Proxy对象可以方便地调用对应的Reflect方法。
+                  return Reflect.get(target, propKey, receiver);
+              },
+              set: function (target, propKey, value, receiver) {
+                  console.log(`setting ${propKey}!`);
+                  return Reflect.set(target, propKey, value, receiver);
+              }
+          });
+          obj.count = 1
+          //  setting count!
+          ++obj.count
+          //  getting count!
+          //  setting count!
+          //  2
+          ```
+  
+      proxy与defineProperty对比
+      * Proxy可以直接监听对象而非属性，Proxy可以劫持整个对象,并返回一个新对象
+      * Proxy可以直接监听数组的变化，对数组进行操作(push、shift、splice等)时，会触发对应的方法名称和length的变化
+      * Proxy有多达13种拦截方法,不限于apply、ownKeys、deleteProperty、has
+      * Proxy时es6语法，不兼容低版本浏览器，如ie9
+
+      proxy polyfill
+      ```js
+      if(!this.Proxy){
+        (function(window){
+          var seq=0;
+          var dfGetter=function(target, property, receiver){
+            return target[property];
+          };
+          var dfSetter=function(target, property, value,  receiver){
+            target[property]=value;
+          };
+          var afterRevoke=function(){
+            throw "illegal operation attempted on a revoked proxy";
+          };
+          if(Object.defineProperties){
+            window.Proxy=function(target, handler){
+              var me=this;
+              if(!handler.get){
+                handler.get=dfGetter;
+              }
+              if(!handler.set){
+                handler.set=dfSetter;
+              }
+              Object.keys(target).forEach(function(key){
+                Object.defineProperty(me,key,{
+                  enumerable:true,
+                  get:function(){
+                    return handler.get(target,key,me);
+                  },
+                  set:function(value){
+                    if(handler.set(target,key,value,me)===false){
+                      throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
+                    }
+                  }
+                });
+              });
             };
-          })(this);
-        }
-        ```
-    
+          }else if(window.execScript){
+            //从avalon学到的方式，通过VB
+            window.VBProxySetter=function(target, property, value, receiver, handler){
+              if(handler.set(target, property, value, receiver)===false){
+                throw new TypeError("'set' on proxy: trap returned falsish for property '"+key+"'");
+              }
+            };
+            window.VBProxyGetter=function(target,property, receiver, handler){
+              return handler.get(target,property, receiver);
+            };
+            window.VBProxyPool=new Map();
+            window.VBProxyFactory=function(target,handler){
+              var className=VBProxyPool.get(target);
+              if(!className){
+                className="VBClass_"+(seq++);
+                VBProxyPool.set(target,className);
+                var buffer=["Class "+className];
+                buffer.push('Public [__target__]');
+                buffer.push('Public [__handler__]');
+                Object.keys(target).forEach(function(key){
+                  if(key.match(/[a-zA-Z0-9_$]/)){
+                    buffer.push(
+                      'Public Property Let ['+key+'](var)',
+                      '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
+                      'End Property',
+                      'Public Property Set ['+key+'](var)',
+                      '	Call VBProxySetter([__target__],"'+key+'",var,Me,[__handler__])',
+                      'End Property',
+                      'Public Property Get ['+key+']',
+                      '	On Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
+                      '	Set ['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
+                      '	If Err.Number <> 0 Then',
+                      '		['+key+']=VBProxyGetter([__target__],"'+key+'",Me,[__handler__])',
+                      '	End If',
+                      '	On Error Goto 0',
+                      'End Property');
+                  }
+                });
+                buffer.push('End Class');
+                buffer.push(
+                  'Function '+className+'_Factory(target,handler)',
+                  '	Dim o',
+                  '	Set o = New '+className,
+                  '	Set o.[__target__]=target',
+                  '	Set o.[__handler__]=handler',
+                  '	Set '+className+'_Factory=o',
+                  'End Function'
+                );
+                try{
+                  window.execScript(buffer.join('\n'), 'VBScript');
+                }catch(e){
+                  alert(buffer.join('\n'));
+                }
+              }
+              return window[className+'_Factory'](target,handler); //得到其产品
+            };
+            window.Proxy=function(target, handler){
+              if(!handler.get){
+                handler.get=dfGetter;
+              }
+              if(!handler.set){
+                handler.set=dfSetter;
+              }
+              var me=VBProxyFactory(target,handler);
+              return me;
+            };
+          }
+          Proxy.revocable=function(target,handler){
+            var r={};
+            r.proxy=new Proxy(target,handler);
+            r.revoke=function(){
+              handler.get=handler.set=afterRevoke;
+            };
+            return r;
+          };
+        })(this);
+      }
+      ```
+  
     * 责任链模式
     
         * 定义

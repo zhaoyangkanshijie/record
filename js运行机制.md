@@ -11,6 +11,10 @@
 - [前端路由原理](#前端路由原理)
 - [抽象语法树 AST 与 babel](#抽象语法树AST与babel)
 - [判断js运行环境](#判断js运行环境)
+- [let、const、var的区别](#let、const、var的区别)
+- [箭头函数与普通函数](#箭头函数与普通函数)
+- [rest扩展运算符](#rest扩展运算符)
+- [map和weakMap](#map和weakMap)
 
 ---
 
@@ -195,15 +199,64 @@
 
    [「万字总结」熬夜总结50个JS的高级知识点，全都会你就是神！！！](https://juejin.cn/post/7022795467821940773)
 
+   [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
 2. 详解：
 
    - js 数据类型
 
-     原始值（primitives）：undefined， null， booleans， numbers，strings， symbol（es6）
+     原始值（primitives）：undefined， null， booleans， numbers，strings， symbol（es6），BigInt（es6）
 
      对象值（objects）：Object
 
      对象键支持的类型：string,symbol
+
+   - 数据类型检测
+
+      typeof
+      ```js
+      console.log(typeof 2);               // number
+      console.log(typeof true);            // boolean
+      console.log(typeof 'str');           // string
+      console.log(typeof []);              // object    
+      console.log(typeof function(){});    // function
+      console.log(typeof {});              // object
+      console.log(typeof undefined);       // undefined
+      console.log(typeof null);            // object
+      ```
+
+      instanceof
+      ```js
+      console.log(2 instanceof Number);                    // false
+      console.log(true instanceof Boolean);                // false 
+      console.log('str' instanceof String);                // false 
+      console.log([] instanceof Array);                    // true
+      console.log(function(){} instanceof Function);       // true
+      console.log({} instanceof Object);                   // true
+      ```
+
+      constructor
+      ```js
+      console.log((2).constructor === Number); // true
+      console.log((true).constructor === Boolean); // true
+      console.log(('str').constructor === String); // true
+      console.log(([]).constructor === Array); // true
+      console.log((function() {}).constructor === Function); // true
+      console.log(({}).constructor === Object); // true
+      ```
+
+      Object.prototype.toString.call()
+      ```js
+      var a = Object.prototype.toString;
+      console.log(a.call(2));//[object Number]
+      console.log(a.call(true));//[object Boolean]
+      console.log(a.call('str'));//[object String]
+      console.log(a.call([]));//[object Array]
+      console.log(a.call(function(){}));//[object Function]
+      console.log(a.call({}));//[object Object]
+      console.log(a.call(undefined));//[object Undefined]
+      console.log(a.call(null));//[object Null]
+      ```
 
    - symbol
 
@@ -300,6 +353,33 @@
       //创建一个 BigInt 的时候，参数必须为整数
       BigInt(1.2) // Uncaught RangeError: The number 1.2 cannot be converted to a BigInt because it is not an integer
       ```
+
+   - null 和 undefined
+
+      Undefined 和 Null 都是基本数据类型，这两个基本数据类型分别都只有一个值，就是 undefined 和 null
+
+      undefined 代表的含义是未定义，null 代表的含义是空对象。一般变量声明了但还没有定义的时候会返回 undefined，null主要用于赋值给一些可能会返回对象的变量，作为初始化。
+
+      typeof null 的结果是Object，typeof undefined 的结果是undefined
+
+      因为 undefined 是一个标识符，所以可以被当作变量来使用和赋值，但是这样会影响 undefined 的正常判断。表达式 void ___ 没有返回值，因此返回结果是 undefined。void 并不改变表达式的结果，只是让表达式不返回值。因此可以用 void 0 来获得 undefined。
+
+   - 内置对象
+
+      1. 值属性，这些全局属性返回一个简单值，这些值没有自己的属性和方法。例如 Infinity、NaN、undefined、null 字面量
+      2. 函数属性，全局函数可以直接调用，不需要在调用时指定所属对象，执行结束后会将结果直接返回给调用者。例如 eval()、parseFloat()、parseInt() 等
+      3. 基本对象，基本对象是定义或使用其他对象的基础。基本对象包括一般对象、函数对象和错误对象。例如 Object、Function、Boolean、Symbol、Error 等
+      4. 数字和日期对象，用来表示数字、日期和执行数学计算的对象。例如 Number、Math、Date
+      5. 字符串，用来表示和操作字符串的对象。例如 String、RegExp
+      6. 可索引的集合对象，这些对象表示按照索引值来排序的数据集合，包括数组和类型数组，以及类数组结构的对象。例如 Array
+      7. 使用键的集合对象，这些集合对象在存储数据时会使用到键，支持按照插入顺序来迭代元素。例如 Map、Set、WeakMap、WeakSet
+      8. 矢量集合，SIMD 矢量集合中的数据会被组织为一个数据序列。例如 SIMD 等
+      9. 结构化数据，这些对象用来表示和操作结构化的缓冲区数据，或使用 JSON 编码的数据。例如 JSON 等
+      10. 控制抽象对象。例如 Promise、Generator 等
+      11. 反射。例如 Reflect、Proxy
+      12. 国际化，为了支持多语言处理而加入 ECMAScript 的对象。例如 Intl、Intl.Collator 等
+      13. WebAssembly
+      14. 其他。例如 arguments
 
    - 变量储存形式
 
@@ -596,6 +676,8 @@
       官方解释：window.requestAnimationFrame()告诉浏览器——你希望执行一个动画，并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。该方法需要传入一个回调函数作为参数，该回调函数会在浏览器下一次重绘之前执行。
 
       requestAnimationFrame它不需要你去手动设置执行间隔时间，它是跟随系统的屏幕刷新频率走的，如果屏幕刷新频率是60Hz，那么它的执行间隔就是16.7ms(1000/60≈16.7)，如果屏幕刷新频率是100Hz，那么它的执行间隔就是10ms(1000/100=10)，这样就能够保证它的执行与屏幕的刷新频率保持一致，从而避免丢帧现象。
+
+      requestAnimationFrame的回调不会通过任务队列去排队，因为在浏览器离开本标签页之后，requestAnimationFrame回调函数直接停止运行。
 
    - 事件优先级：同步任务>异步任务(微任务>宏任务(取决于延时时间))
 
@@ -939,284 +1021,299 @@
 
 1. 参考链接：
 
-   [JS 闭包异步获取数据并缓存](https://blog.csdn.net/weixin_43820866/article/details/87107035)
+  [JS 闭包异步获取数据并缓存](https://blog.csdn.net/weixin_43820866/article/details/87107035)
 
-   [js async await 终极异步解决方案](https://www.cnblogs.com/CandyManPing/p/9384104.html)
+  [js async await 终极异步解决方案](https://www.cnblogs.com/CandyManPing/p/9384104.html)
 
-   [闭包+内存泄露+垃圾回收](https://blog.csdn.net/yushuangyushuang/article/details/79301694)
+  [闭包+内存泄露+垃圾回收](https://blog.csdn.net/yushuangyushuang/article/details/79301694)
 
-   [从 4 个面试题了解「浏览器的垃圾回收」](https://mp.weixin.qq.com/s/vbG24Ogc5qMpTz-_Hz61KQ)
+  [从 4 个面试题了解「浏览器的垃圾回收」](https://mp.weixin.qq.com/s/vbG24Ogc5qMpTz-_Hz61KQ)
 
-   [js的内存泄漏场景、监控以及分析](https://www.cnblogs.com/dasusu/p/12200176.html)
+  [js的内存泄漏场景、监控以及分析](https://www.cnblogs.com/dasusu/p/12200176.html)
+
+  [「2021」高频前端面试题汇总之JavaScript篇（下）](https://juejin.cn/post/6941194115392634888)
 
 2. 详解：
 
-   - 闭包的形成原理
+  - 闭包的形成原理
 
-     活动对象被引用着无法被销毁而导致的
+    活动对象被引用着无法被销毁而导致的
 
-   - 闭包 2 个作用
+  - 闭包 2 个作用
 
-     1. 内层函数可通过作用域链访问外层函数变量
-     2. 缓存机制(垃圾回收机制)：函数执行完会释放内存，但如果内层函数被引用，则不会释放内存，所以可能会造成内存泄露
+    1. 内层函数可通过作用域链访问外层函数变量
+    2. 缓存机制(垃圾回收机制)：函数执行完会释放内存，但如果内层函数被引用，则不会释放内存，所以可能会造成内存泄露
 
-        - 注意：闭包指向同一处内存才能共享数据
+      - 注意：闭包指向同一处内存才能共享数据
 
-        ```js
-        function F() {
-          let i = 0;
-          return function () {
-            console.log(i++);
-          };
-        }
-
-        let f1 = new F();
-        let f2 = new F();
-        f1(); //0
-        f1(); //1
-        f2(); //0
-        ```
-
-   - 优点
-
-     1. 避免全局变量被污染
-     2. 方便调用上下文的局部变量
-     3. 加强封装性
-
-   - 缺点
-
-     1. 闭包常驻内存，内存消耗很大
-     2. 可能导致内存泄露
-
-        例子
-
-        ```js
-        window.onload = function () {
-          var el = document.getElementById("id");
-          el.onclick = function () {
-            alert(el.id);
-          };
+      ```js
+      function F() {
+        let i = 0;
+        return function () {
+          console.log(i++);
         };
-        ```
+      }
 
-        解决方法
+      let f1 = new F();
+      let f2 = new F();
+      f1(); //0
+      f1(); //1
+      f2(); //0
+      ```
 
-        ```js
-        window.onload = function () {
-          var el = document.getElementById("id");
-          var id = el.id; //解除循环引用
-          el.onclick = function () {
-            alert(id);
-          };
-          el = null; // 将闭包引用的外部函数中活动对象清除
+  - 优点
+
+    1. 避免全局变量被污染
+    2. 方便调用上下文的局部变量
+    3. 加强封装性
+
+  - 缺点
+
+    1. 闭包常驻内存，内存消耗很大
+    2. 可能导致内存泄露
+
+      例子
+
+      ```js
+      window.onload = function () {
+        var el = document.getElementById("id");
+        el.onclick = function () {
+          alert(el.id);
         };
-        ```
+      };
+      ```
 
-   - 例子
+      解决方法
 
-   向接口请求数据时，数据多次使用，但不想保存在全局变量中，就需要将数据存储在缓存中。查找数据时，如果缓存找不到，则调用 API，然后设置缓存，如果找到，直接返回查找到的值即可。闭包正好可以做到这一点，且不会释放外部的引用，从而函数内部的值可以得以保留。
+      ```js
+      window.onload = function () {
+        var el = document.getElementById("id");
+        var id = el.id; //解除循环引用
+        el.onclick = function () {
+          alert(id);
+        };
+        el = null; // 将闭包引用的外部函数中活动对象清除
+      };
+      ```
 
-   ```js
-   const getList = (function() {
-       // 闭包存储data
-       let data = {};
-       const getData = () => {
-           return new Promise((resolve, reject) => {
-               $.ajax({
-                   url: '/your/api',
-                   data: {
-                       normal: 1
-                   },
-                   success: function (result) {
-                       data = result.data;
-                       resolve();
-                   }
-               });
-           })
-       }
-       // 异步函数，当调用一个 async 函数时，会返回一个 Promise 对象。
-       const result = async function (type) {
-           if (JONS.stringify(data) === '{}') {
-               //await 只能出现在 async 函数中。
-               await getData();//等待异步操作执行完成，再执行后面的操作，相当于把后面的代码写在success里，但用await会比较简洁
-               //如果 async 函数没有返回值，它会返回 Promise.resolve(undefined)。如果有返回值data，就会resolve(data),把data传入then
-               //当 async 函数抛出异常时，Promise 的 reject 方法也会传递这个异常值。
-               return data;
-           } else {
-               return data;
-           }
-       }
+  - 例子
 
-       return result;
-   })();
+  向接口请求数据时，数据多次使用，但不想保存在全局变量中，就需要将数据存储在缓存中。查找数据时，如果缓存找不到，则调用 API，然后设置缓存，如果找到，直接返回查找到的值即可。闭包正好可以做到这一点，且不会释放外部的引用，从而函数内部的值可以得以保留。
 
-   // 第一次调用通过api请求数据
-   getList().then(res => {
-       console.log(res);
+  ```js
+  const getList = (function() {
+      // 闭包存储data
+      let data = {};
+      const getData = () => {
+          return new Promise((resolve, reject) => {
+              $.ajax({
+                  url: '/your/api',
+                  data: {
+                      normal: 1
+                  },
+                  success: function (result) {
+                      data = result.data;
+                      resolve();
+                  }
+              });
+          })
+      }
+      // 异步函数，当调用一个 async 函数时，会返回一个 Promise 对象。
+      const result = async function (type) {
+          if (JONS.stringify(data) === '{}') {
+              //await 只能出现在 async 函数中。
+              await getData();//等待异步操作执行完成，再执行后面的操作，相当于把后面的代码写在success里，但用await会比较简洁
+              //如果 async 函数没有返回值，它会返回 Promise.resolve(undefined)。如果有返回值data，就会resolve(data),把data传入then
+              //当 async 函数抛出异常时，Promise 的 reject 方法也会传递这个异常值。
+              return data;
+          } else {
+              return data;
+          }
+      }
 
-       // 第二次调用则直接拿取缓存数据
-       getList().then(res => {
-           console.log(res);
-       }
-   });
-   ```
+      return result;
+  })();
 
-    - 浏览器
+  // 第一次调用通过api请求数据
+  getList().then(res => {
+      console.log(res);
 
-      * 什么是垃圾数据？
+      // 第二次调用则直接拿取缓存数据
+      getList().then(res => {
+          console.log(res);
+      }
+  });
+  ```
 
-        不再被引用的数据
+  - 浏览器
 
-      * 垃圾回收算法
+    * 什么是垃圾数据？
 
-        可以将这个过程想象成从根溢出一个巨大的油漆桶，它从一个根节点出发将可到达的对象标记染色， 然后移除未标记的。
+      不再被引用的数据
 
-        1. 标记空间中「可达」值。
+    * 垃圾回收算法
 
-          从根节点（Root）出发，遍历所有的对象,可以遍历到的对象，是可达的（reachable）,没有被遍历到的对象，不可达的（unreachable）
+      可以将这个过程想象成从根溢出一个巨大的油漆桶，它从一个根节点出发将可到达的对象标记染色， 然后移除未标记的。
 
-          在浏览器环境下，根节点有很多，主要包括这几种:全局变量 window，位于每个 iframe 中,文档 DOM 树,存放在栈上的变量
+      1. 标记空间中「可达」值。
 
-        2. 回收「不可达」的值所占据的内存。
+        从根节点（Root）出发，遍历所有的对象,可以遍历到的对象，是可达的（reachable）,没有被遍历到的对象，不可达的（unreachable）
 
-          在所有的标记完成之后，统一清理内存中所有不可达的对象
+        在浏览器环境下，根节点有很多，主要包括这几种:全局变量 window，位于每个 iframe 中,文档 DOM 树,存放在栈上的变量
 
-        3. 做内存整理
+      2. 回收「不可达」的值所占据的内存。
 
-          在频繁回收对象后，内存中就会存在大量不连续空间，专业名词叫「内存碎片」。
+        在所有的标记完成之后，统一清理内存中所有不可达的对象
 
-          当内存中出现了大量的内存碎片，如果需要分配较大的连续内存时，就有可能出现内存不足的情况。
+      3. 做内存整理
 
-          所以最后一步是整理内存碎片。(但这步其实是可选的，因为有的垃圾回收器不会产生内存碎片，比如接下来我们要介绍的副垃圾回收器。)
+        在频繁回收对象后，内存中就会存在大量不连续空间，专业名词叫「内存碎片」。
 
-      * 什么时候垃圾回收？
+        当内存中出现了大量的内存碎片，如果需要分配较大的连续内存时，就有可能出现内存不足的情况。
 
-        浏览器进行垃圾回收的时候，会暂停 JavaScript 脚本，等垃圾回收完毕再继续执行。
+        所以最后一步是整理内存碎片。(但这步其实是可选的，因为有的垃圾回收器不会产生内存碎片，比如接下来我们要介绍的副垃圾回收器。)
 
-        对于普通应用这样没什么问题，但对于 JS 游戏、动画对连贯性要求比较高的应用，如果暂停时间很长就会造成页面卡顿。
+    * 什么时候垃圾回收？
 
-        什么时候进行垃圾回收，可以避免长时间暂停?
+      浏览器进行垃圾回收的时候，会暂停 JavaScript 脚本，等垃圾回收完毕再继续执行。
 
-        * 分代收集
+      对于普通应用这样没什么问题，但对于 JS 游戏、动画对连贯性要求比较高的应用，如果暂停时间很长就会造成页面卡顿。
 
-          将堆分为新生代与老生代，多回收新生代，少回收老生代。
+      什么时候进行垃圾回收，可以避免长时间暂停?
 
-          这样就减少了每次需遍历的对象，从而减少每次垃圾回收的耗时。
+      * 分代收集
 
-          浏览器将数据分为两种，一种是「临时」对象，一种是「长久」对象。
+        将堆分为新生代与老生代，多回收新生代，少回收老生代。
 
-          1. 临时对象：
+        这样就减少了每次需遍历的对象，从而减少每次垃圾回收的耗时。
 
-            大部分对象在内存中存活的时间很短。
+        浏览器将数据分为两种，一种是「临时」对象，一种是「长久」对象。
 
-            比如函数内部声明的变量，或者块级作用域中的变量。当函数或者代码块执行结束时，作用域中定义的变量就会被销毁。
+        1. 临时对象：
 
-            这类对象很快就变得不可访问，应该快点回收。
+          大部分对象在内存中存活的时间很短。
 
-          2. 长久对象：
+          比如函数内部声明的变量，或者块级作用域中的变量。当函数或者代码块执行结束时，作用域中定义的变量就会被销毁。
 
-            生命周期很长的对象，比如全局的 window、DOM、Web API 等等。
+          这类对象很快就变得不可访问，应该快点回收。
 
-            这类对象可以慢点回收。
-            
-            这两种对象对应不同的回收策略，所以，V8 把堆分为新生代和老生代两个区域， 新生代中存放临时对象，老生代中存放持久对象。
+        2. 长久对象：
 
-            并且让副垃圾回收器、主垃圾回收器，分别负责新生代、老生代的垃圾回收。
+          生命周期很长的对象，比如全局的 window、DOM、Web API 等等。
 
-          * 主垃圾回收器
+          这类对象可以慢点回收。
+          
+          这两种对象对应不同的回收策略，所以，V8 把堆分为新生代和老生代两个区域， 新生代中存放临时对象，老生代中存放持久对象。
 
-            负责老生代的垃圾回收，有两个特点：
+          并且让副垃圾回收器、主垃圾回收器，分别负责新生代、老生代的垃圾回收。
 
-            1. 对象占用空间大。
-            2. 对象存活时间长。
+        * 主垃圾回收器
 
-            它使用「标记-清除」的算法执行垃圾回收。
+          负责老生代的垃圾回收，有两个特点：
 
-            * 首先是标记。
+          1. 对象占用空间大。
+          2. 对象存活时间长。
 
-              从一组根元素开始，递归遍历这组根元素。
+          它使用「标记-清除」的算法执行垃圾回收。
 
-              在这个遍历过程中，能到达的元素称为活动对象，没有到达的元素就可以判断为垃圾数据。
+          * 首先是标记。
 
-            * 然后是垃圾清除。
+            从一组根元素开始，递归遍历这组根元素。
 
-              多次标记-清除后，会产生大量不连续的内存碎片，需要进行内存整理。
+            在这个遍历过程中，能到达的元素称为活动对象，没有到达的元素就可以判断为垃圾数据。
 
-          * 副垃圾回收器
+          * 然后是垃圾清除。
 
-            负责新生代的垃圾回收，通常只支持 1~8 M 的容量。
+            多次标记-清除后，会产生大量不连续的内存碎片，需要进行内存整理。
 
-            新生代被分为两个区域：一般是对象区域，一半是空闲区域。
+        * 副垃圾回收器
 
-            新加入的对象都被放入对象区域，等对象区域快满的时候，会执行一次垃圾清理。
+          负责新生代的垃圾回收，通常只支持 1~8 M 的容量。
 
-            1. 先给对象区域所有垃圾做标记。
-            2. 标记完成后，存活的对象被复制到空闲区域，并且将他们有序的排列一遍。
+          新生代被分为两个区域：一般是对象区域，一半是空闲区域。
 
-              这就回到我们前面留下的问题 -- 副垃圾回收器没有碎片整理。因为空闲区域里此时是有序的，没有碎片，也就不需要整理了。
+          新加入的对象都被放入对象区域，等对象区域快满的时候，会执行一次垃圾清理。
 
-            3. 复制完成后，对象区域会和空闲区域进行对调。将空闲区域中存活的对象放入对象区域里。
+          1. 先给对象区域所有垃圾做标记。
+          2. 标记完成后，存活的对象被复制到空闲区域，并且将他们有序的排列一遍。
 
-            这样，就完成了垃圾回收。
+            这就回到我们前面留下的问题 -- 副垃圾回收器没有碎片整理。因为空闲区域里此时是有序的，没有碎片，也就不需要整理了。
 
-            因为副垃圾回收器操作比较频繁，所以为了执行效率，一般新生区的空间会被设置得比较小。
+          3. 复制完成后，对象区域会和空闲区域进行对调。将空闲区域中存活的对象放入对象区域里。
 
-            一旦检测到空间装满了，就执行垃圾回收。
+          这样，就完成了垃圾回收。
 
-        * 增量收集
+          因为副垃圾回收器操作比较频繁，所以为了执行效率，一般新生区的空间会被设置得比较小。
 
-          如果脚本中有许多对象，引擎一次性遍历整个对象，会造成一个长时间暂停。
+          一旦检测到空间装满了，就执行垃圾回收。
 
-          所以引擎将垃圾收集工作分成更小的块，每次处理一部分，多次处理。
+      * 增量收集
 
-          这样就解决了长时间停顿的问题。
+        如果脚本中有许多对象，引擎一次性遍历整个对象，会造成一个长时间暂停。
 
-        * 闲时收集
+        所以引擎将垃圾收集工作分成更小的块，每次处理一部分，多次处理。
 
-          垃圾收集器只会在 CPU 空闲时尝试运行，以减少可能对代码执行的影响。
+        这样就解决了长时间停顿的问题。
 
-      * 哪些情况会导致内存泄露？
+      * 闲时收集
 
-        以 Vue 为例，通常有这些情况：
+        垃圾收集器只会在 CPU 空闲时尝试运行，以减少可能对代码执行的影响。
 
-          * 监听在 window/body 等事件没有解绑
-          * 绑在 EventBus 的事件没有解绑
-          * Vuex 的 $store，watch 了之后没有 unwatch
-          * 使用第三方库创建，没有调用正确的销毁函数
+    * 如何减少垃圾回收？
 
-        解决办法：beforeDestroy 中及时销毁
+      虽然浏览器可以进行垃圾自动回收，但是当代码比较复杂时，垃圾回收所带来的代价比较大，所以应该尽量减少垃圾回收。
 
-          * 绑定了 DOM/BOM 对象中的事件 addEventListener ，removeEventListener。
-          * 观察者模式 $on，$off处理。
-          * 如果组件中使用了定时器，应销毁处理。
-          * 如果在 mounted/created 钩子中使用了第三方库初始化，对应的销毁。
-          * 使用弱引用 weakMap、weakSet。
+      * 对数组进行优化： 在清空一个数组时，最简单的方法就是给其赋值为[ ]，但是与此同时会创建一个新的空对象，可以将数组的长度设置为0，以此来达到清空数组的目的。
+      * 对object进行优化： 对象尽量复用，对于不再使用的对象，就将其设置为null，尽快被回收。
+      * 对函数进行优化： 在循环中的函数表达式，如果可以复用，尽量放在函数的外面。
 
-    - 内存泄露监控
+    * 哪些情况会导致内存泄露？
 
-      通过chrome控制台-performance-memory监控指定时间内存，观察图形/jsHeap等指标
+      * 意外的全局变量： 由于使用未声明的变量，而意外的创建了一个全局变量，而使这个变量一直留在内存中无法被回收。
+      * 被遗忘的计时器或回调函数： 设置了 setInterval 定时器，而忘记取消它，如果循环函数有对外部变量的引用的话，那么这个变量会被一直留在内存中，而无法被回* 收。
+      * 脱离 DOM 的引用： 获取一个 DOM 元素的引用，而后面这个元素被删除，由于一直保留了对这个元素的引用，所以它也无法被回收。
+      * 闭包： 不合理的使用闭包，从而导致某些变量一直被留在内存当中。
 
-      1. 场景一：在某个函数内申请一块内存，然后该函数在短时间内不断被调用
+      以 Vue 为例，通常有这些情况：
 
-        函数执行时，发现内存不足，垃圾回收机制工作，回收上一个函数申请的内存，因为上个函数已经执行结束了，内存无用可被回收了
+        * 监听在 window/body 等事件没有解绑
+        * 绑在 EventBus 的事件没有解绑
+        * Vuex 的 $store，watch 了之后没有 unwatch
+        * 使用第三方库创建，没有调用正确的销毁函数
 
-        所以图中呈现内存使用量的图表就是一条横线过去，中间出现多处竖线，其实就是表示内存清空，再申请，清空再申请
+      解决办法：beforeDestroy 中及时销毁
 
-      2. 场景二：在某个函数内申请一块内存，然后该函数在短时间内不断被调用，但每次申请的内存，有一部分被外部持有
+        * 绑定了 DOM/BOM 对象中的事件 addEventListener ，removeEventListener。
+        * 观察者模式 $on，$off处理。
+        * 如果组件中使用了定时器，应销毁处理。
+        * 如果在 mounted/created 钩子中使用了第三方库初始化，对应的销毁。
+        * 使用弱引用 weakMap、weakSet。
 
-        此时不再是一条横线了，而且横线中的每个竖线的底部也不是同一水平，可以判断出是内存泄露了
+  - 内存泄露监控
 
-        每次函数执行完，这部分被外部持有的数组内存也依旧回收不了，所以每次只能回收一部分内存
-        
-        梯状上升的就是发生内存泄漏了，每次函数调用，总有一部分数据被外部持有导致无法回收
+    通过chrome控制台-performance-memory监控指定时间内存，观察图形/jsHeap等指标
 
-    - 如何分析内存泄漏，找出有问题的代码
+    1. 场景一：在某个函数内申请一块内存，然后该函数在短时间内不断被调用
 
-      可以抓取两份快照，两份快照中间进行内存泄漏操作，最后再比对两份快照的区别，查看增加的对象是什么，回收的对象又是哪些
+      函数执行时，发现内存不足，垃圾回收机制工作，回收上一个函数申请的内存，因为上个函数已经执行结束了，内存无用可被回收了
 
-      还可以从垃圾回收机制角度出发，查看从 GC root 根节点出发，可达的对象里，哪些对象占用大量内存
+      所以图中呈现内存使用量的图表就是一条横线过去，中间出现多处竖线，其实就是表示内存清空，再申请，清空再申请
 
-      当有嫌疑对象时，可以利用多次内存快照间比对，中间手动强制 GC 下，看下该回收的对象有没有被回收
+    2. 场景二：在某个函数内申请一块内存，然后该函数在短时间内不断被调用，但每次申请的内存，有一部分被外部持有
+
+      此时不再是一条横线了，而且横线中的每个竖线的底部也不是同一水平，可以判断出是内存泄露了
+
+      每次函数执行完，这部分被外部持有的数组内存也依旧回收不了，所以每次只能回收一部分内存
+      
+      梯状上升的就是发生内存泄漏了，每次函数调用，总有一部分数据被外部持有导致无法回收
+
+  - 如何分析内存泄漏，找出有问题的代码
+
+    可以抓取两份快照，两份快照中间进行内存泄漏操作，最后再比对两份快照的区别，查看增加的对象是什么，回收的对象又是哪些
+
+    还可以从垃圾回收机制角度出发，查看从 GC root 根节点出发，可达的对象里，哪些对象占用大量内存
+
+    当有嫌疑对象时，可以利用多次内存快照间比对，中间手动强制 GC 下，看下该回收的对象有没有被回收
 
 ### DOM 树解析和更改与遍历
 
@@ -2440,3 +2537,326 @@
   ```js
   this === window ? console.log('browser') : console.log('node');
   ```
+
+### let、const、var的区别
+
+1. 参考链接：
+
+  - [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
+2. 详解
+
+* 块级作用域
+
+  块作用域由 { }包括，let和const具有块级作用域，var不存在块级作用域。块级作用域解决了ES5中的两个问题：
+
+  * 内层变量可能覆盖外层变量
+  * 用来计数的循环变量泄露为全局变量
+
+* 变量提升
+
+  var存在变量提升，let和const不存在变量提升，即在变量只能在声明之后使用，否在会报错。
+
+* 给全局添加属性
+
+  浏览器的全局对象是window，Node的全局对象是global。var声明的变量为全局变量，并且会将该变量添加为全局对象的属性，但是let和const不会。
+
+* 重复声明
+
+  var声明变量时，可以重复声明变量，后声明的同名变量会覆盖之前声明的遍历。const和let不允许重复声明变量。
+
+* 暂时性死区
+
+  在使用let、const命令声明变量之前，该变量都是不可用的。这在语法上，称为暂时性死区。使用var声明的变量不存在暂时性死区。
+
+* 初始值设置
+
+  在变量声明时，var 和 let 可以不用设置初始值。而const声明变量必须设置初始值。
+
+* 指针指向
+
+  let和const都是ES6新增的用于创建变量的语法。 let创建的变量是可以更改指针指向（可以重新赋值）。但const声明的变量是不允许改变指针的指向。
+
+### 箭头函数与普通函数
+
+1. 参考链接：
+
+  - [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
+2. 详解
+
+* 区别
+
+  1. 箭头函数比普通函数更加简洁
+
+    * 如果没有参数，就直接写一个空括号即可
+    * 如果只有一个参数，可以省去参数的括号
+    * 如果有多个参数，用逗号分割
+    * 如果函数体的返回值只有一句，可以省略大括号
+    * 如果函数体不需要返回值，且只有一句话，可以给这个语句前面加一个void关键字。最常见的就是调用一个函数：
+
+      ```js
+      let fn = () => void doesNotReturn();
+      ```
+
+  2. 箭头函数没有自己的this
+
+  箭头函数不会创建自己的this， 所以它没有自己的this，它只会在自己作用域的上一层继承this。所以箭头函数中this的指向在它在定义时已经确定了，之后不会改变。
+
+  3. 箭头函数继承来的this指向永远不会改变
+
+  ```js
+  var id = 'GLOBAL';
+  var obj = {
+    id: 'OBJ',
+    a: function(){
+      console.log(this.id);
+    },
+    b: () => {
+      console.log(this.id);
+    }
+  };
+  obj.a();    // 'OBJ'
+  obj.b();    // 'GLOBAL'
+  new obj.a()  // undefined
+  new obj.b()  // Uncaught TypeError: obj.b is not a constructor
+  ```
+
+  对象obj的方法b是使用箭头函数定义的，这个函数中的this就永远指向它定义时所处的全局执行环境中的this，即便这个函数是作为对象obj的方法调用，this依旧指向Window对象。需要注意，定义对象的大括号{}是无法形成一个单独的执行环境的，它依旧是处于全局执行环境中。
+
+  4. call()、apply()、bind()等方法不能改变箭头函数中this的指向
+
+  ```js
+  var id = 'Global';
+  let fun1 = () => {
+      console.log(this.id)
+  };
+  fun1();                     // 'Global'
+  fun1.call({id: 'Obj'});     // 'Global'
+  fun1.apply({id: 'Obj'});    // 'Global'
+  fun1.bind({id: 'Obj'})();   // 'Global'
+  ```
+
+  5. 箭头函数不能作为构造函数使用
+
+  构造函数在new的步骤在上面已经说过了，实际上第二步就是将函数中的this指向该对象。 但是由于箭头函数时没有自己的this的，且this指向外层的执行环境，且不能改变指向，所以不能当做构造函数使用。
+
+  6. 箭头函数没有自己的arguments
+
+  箭头函数没有自己的arguments对象。在箭头函数中访问arguments实际上获得的是它外层函数的arguments值。
+
+  7. 箭头函数没有prototype
+
+  8. 箭头函数不能用作Generator函数，不能使用yeild关键字
+
+* new一个箭头函数的会怎么样
+
+  箭头函数是ES6中的提出来的，它没有prototype，也没有自己的this指向，更不可以使用arguments参数，所以不能New一个箭头函数。
+  
+  Uncaught TypeError: a is not a constructor
+
+  * new操作符的实现步骤如下：
+
+    1. 创建一个对象
+    2. 将构造函数的作用域赋给新对象（也就是将对象的__proto__属性指向构造函数的prototype属性）
+    3. 指向构造函数中的代码，构造函数中的this指向该对象（也就是为这个对象添加属性和方法）
+    4. 返回新的对象
+
+  所以，上面的第二、三步，箭头函数都是没有办法执行的。
+
+* 箭头函数的this指向
+
+  箭头函数不同于传统JavaScript中的函数，箭头函数并没有属于⾃⼰的this，它所谓的this是捕获其所在上下⽂的 this 值，作为⾃⼰的 this 值，并且由于没有属于⾃⼰的this，所以是不会被new调⽤的，这个所谓的this也不会被改变。
+
+  Babel
+  ```js
+  // ES6 
+  const obj = { 
+    getArrow() { 
+      return () => { 
+        console.log(this === obj); 
+      }; 
+    } 
+  }
+  // ES5，由 Babel 转译
+  var obj = { 
+    getArrow: function getArrow() { 
+      var _this = this; 
+      return function () { 
+          console.log(_this === obj); 
+      }; 
+    } 
+  };
+  ```
+
+### rest扩展运算符
+
+1. 参考链接：
+
+  - [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
+2. 详解
+
+  1. 对象扩展运算符
+
+  对象的扩展运算符(...)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中。
+
+  ```js
+  let bar = { a: 1, b: 2 };
+  let baz = { ...bar }; // { a: 1, b: 2 }
+  //上述方法实际上等价于:
+  let bar = { a: 1, b: 2 };
+  let baz = Object.assign({}, bar); // { a: 1, b: 2 }
+  ```
+
+  Object.assign方法用于对象的合并，将源对象（source）的所有可枚举属性，复制到目标对象（target）。Object.assign方法的第一个参数是目标对象，后面的参数都是源对象。(如果目标对象与源对象有同名属性，或多个源对象有同名属性，则后面的属性会覆盖前面的属性)。
+
+  同样，如果用户自定义的属性，放在扩展运算符后面，则扩展运算符内部的同名属性会被覆盖掉。
+  ```js
+  let bar = {a: 1, b: 2};
+  let baz = {...bar, ...{a:2, b: 4}};  // {a: 2, b: 4}
+  ```
+
+  利用上述特性就可以很方便的修改对象的部分属性。在redux中的reducer函数规定必须是一个纯函数，reducer中的state对象要求不能直接修改，可以通过扩展运算符把修改路径的对象都复制一遍，然后产生一个新的对象返回。
+
+  需要注意：扩展运算符对对象实例的拷贝属于浅拷贝。
+
+  2. 数组扩展运算符
+
+  数组的扩展运算符可以将一个数组转为用逗号分隔的参数序列，且每次只能展开一层数组。
+  ```js
+  console.log(...[1, 2, 3])
+  // 1 2 3
+  console.log(...[1, [2, 3, 4], 5])
+  // 1 [2, 3, 4] 5
+  ```
+
+    * 数组的扩展运算符的应用
+
+      将数组转换为参数序列
+      ```js
+      function add(x, y) {
+        return x + y;
+      }
+      const numbers = [1, 2];
+      add(...numbers) // 3
+      ```
+
+      复制数组
+      ```js
+      const arr1 = [1, 2];
+      const arr2 = [...arr1];
+      ```
+
+      扩展运算符(…)用于取出参数对象中的所有可遍历属性，拷贝到当前对象之中，这里参数对象是个数组，数组里面的所有对象都是基础数据类型，将所有基础数据类型重新拷贝到新的数组中。
+
+      合并数组
+      ```js
+      const arr1 = ['two', 'three'];const arr2 = ['one', ...arr1, 'four', 'five'];// ["one", "two", "three", "four", "five"]
+      ```
+
+      扩展运算符与解构赋值结合起来，用于生成数组
+      ```js
+      const [first, ...rest] = [1, 2, 3, 4, 5];first // 1rest  // [2, 3, 4, 5]
+      ```
+      需要注意：如果将扩展运算符用于数组赋值，只能放在参数的最后一位，否则会报错。
+      ```js
+      const [...rest, last] = [1, 2, 3, 4, 5];         // 报错const [first, ...rest, last] = [1, 2, 3, 4, 5];  // 报错
+      ```
+
+      将字符串转为真正的数组
+      ```js
+      [...'hello']    // [ "h", "e", "l", "l", "o" ]
+      ```
+
+      任何 Iterator 接口的对象，都可以用扩展运算符转为真正的数组，比较常见的应用是可以将某些数据结构转为数组：
+      ```js
+      // arguments对象
+      function foo() {
+        const args = [...arguments];//用于替换es5中的Array.prototype.slice.call(arguments)写法。
+      }
+      ```
+
+      使用Math函数获取数组中特定的值
+      ```js
+      const numbers = [9, 4, 7, 1];
+      Math.min(...numbers); // 1
+      Math.max(...numbers); // 9
+      ```
+
+### map和weakMap
+
+1. 参考链接：
+
+  - [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
+2. 详解
+
+  * Map
+
+    map本质上就是键值对的集合，但是普通的Object中的键值对中的键只能是字符串。而ES6提供的Map数据结构类似于对象，但是它的键不限制范围，可以是任意类型，是一种更加完善的Hash结构。如果Map的键是一个原始数据类型，只要两个键严格相同，就视为是同一个键。
+
+    实际上Map是一个数组，它的每一个数据也都是一个数组，其形式如下：
+    ```js
+    const map = [
+        ["name","张三"],
+        ["age",18],
+    ]
+    ```
+
+    * Map数据结构有以下操作方法
+
+      * size： map.size 返回Map结构的成员总数。
+      * set(key,value)：设置键名key对应的键值value，然后返回整个Map结构，如果key已经有值，则键值会被更新，否则就新生成该键。（因为返回的是当前Map对象，所以可以链式调用）
+      * get(key)：该方法读取key对应的键值，如果找不到key，返回undefined。
+      * has(key)：该方法返回一个布尔值，表示某个键是否在当前Map对象中。
+      * delete(key)：该方法删除某个键，返回true，如果删除失败，返回false。
+      * clear()：map.clear()清除所有成员，没有返回值。
+
+    * Map结构原生提供是三个遍历器生成函数和一个遍历方法
+
+      * keys()：返回键名的遍历器。
+      * values()：返回键值的遍历器。
+      * entries()：返回所有成员的遍历器。
+      * forEach()：遍历Map的所有成员。
+
+      ```js
+      const map = new Map([
+          ["foo",1],
+          ["bar",2],
+      ])
+      for(let key of map.keys()){
+          console.log(key);  // foo bar
+      }
+      for(let value of map.values()){
+          console.log(value); // 1 2
+      }
+      for(let items of map.entries()){
+          console.log(items);  // ["foo",1]  ["bar",2]
+      }
+      map.forEach( (value,key,map) => {
+          console.log(key,value); // foo 1    bar 2
+      })
+      ```
+
+  * WeakMap
+
+    WeakMap 对象也是一组键值对的集合，其中的键是弱引用的。其键必须是对象，原始数据类型不能作为key值，而值可以是任意的。
+
+    * WeakMap有以下几种方法：
+
+      * set(key,value)：设置键名key对应的键值value，然后返回整个Map结构，如果key已经有值，则键值会被更新，否则就新生成该键。（因为返回的是当前Map对象，所以可以链式调用）
+      * get(key)：该方法读取key对应的键值，如果找不到key，返回undefined。
+      * has(key)：该方法返回一个布尔值，表示某个键是否在当前Map对象中。
+      * delete(key)：该方法删除某个键，返回true，如果删除失败，返回false。
+
+      其clear()方法已经被弃用，所以可以通过创建一个空的WeakMap并替换原对象来实现清除。
+
+      WeakMap的设计目的在于，有时想在某个对象上面存放一些数据，但是这会形成对于这个对象的引用。一旦不再需要这两个对象，就必须手动删除这个引用，否则垃圾回收机制就不会释放对象占用的内存。
+
+      而WeakMap的键名所引用的对象都是弱引用，即垃圾回收机制不将该引用考虑在内。因此，只要所引用的对象的其他引用都被清除，垃圾回收机制就会释放该对象所占用的内存。也就是说，一旦不再需要，WeakMap 里面的键名对象和所对应的键值对会自动消失，不用手动删除引用。
+
+  * 总结
+
+  1. Map 数据结构。它类似于对象，也是键值对的集合，但是“键”的范围不限于字符串，各种类型的值（包括对象）都可以当作键。
+  2. WeakMap 结构与 Map 结构类似，也是用于生成键值对的集合。但是 WeakMap 只接受对象作为键名（ null 除外），不接受其他类型的值作为键名。而且 WeakMap 的键名所指向的对象，不计入垃圾回收机制。

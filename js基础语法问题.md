@@ -36,258 +36,292 @@
 
 1. 参考链接：
 
-   [持久化存储与 HTTP 缓存](https://www.jianshu.com/p/71163b408940)
+  [持久化存储与 HTTP 缓存](https://www.jianshu.com/p/71163b408940)
 
-   [理解 cookie、session、localStorage、sessionStorage 之不同](https://blog.csdn.net/qq_35585701/article/details/81393361)
+  [理解 cookie、session、localStorage、sessionStorage 之不同](https://blog.csdn.net/qq_35585701/article/details/81393361)
 
-   [浏览器数据库 IndexedDB 入门教程](http://www.ruanyifeng.com/blog/2018/07/indexeddb.html)
+  [浏览器数据库 IndexedDB 入门教程](http://www.ruanyifeng.com/blog/2018/07/indexeddb.html)
+
+  [「2021」高频前端面试题汇总之浏览器原理篇](https://juejin.cn/post/6916157109906341902/)
 
 2. 详解：
 
-   - LocalStorage
+  - LocalStorage
 
-     关闭浏览器后，数据不会丢失
+    关闭浏览器后，数据不会丢失
 
-     ```js
-     //1. 添加键、值
-     localStorage.setItem(key, value);
-     //2. 获得键、值
-     localStorage.getItem(key);
-     //3.清空localStorage
-     localStorage.clear();
-     ```
+    ```js
+    //1. 添加键、值
+    localStorage.setItem(key, value);
+    //2. 获得键、值
+    localStorage.getItem(key);
+    //3.清空localStorage
+    localStorage.clear();
+    ```
 
-     特点：
+    特点：
 
-     - LocalStorage 跟 HTTP 无关，发送请求不会带上 LocalStorage 的值
-     - 只有相同域名的页面才能互相读取 LocalStorage
-     - 每个域名 localStorage 最大存储量为 5Mb 左右（每个浏览器不一样）
-     - 常用场景：浏览器端储存数据（不能记录密码等敏感信息）
-     - LocalStorage 永久有效，除非用户清理缓存
+    - LocalStorage 跟 HTTP 无关，发送请求不会带上 LocalStorage 的值
+    - 只有相同域名的页面才能互相读取 LocalStorage
+    - 每个域名 localStorage 最大存储量为 5Mb 左右（每个浏览器不一样）
+    - 常用场景：浏览器端储存数据（不能记录密码等敏感信息）
+    - LocalStorage 永久有效，除非用户清理缓存
 
-   - SessionStorage
+  - SessionStorage
 
-     会话结束后，数据丢失
+    会话结束后，数据丢失
 
-     ```js
-     //1. 添加键、值
-     sessionStorage.setItem(key, value);
-     //2. 获得键、值
-     sessionStorage.getItem(key);
-     //3.清空sessionStorage
-     sessionStorage.clear();
-     ```
+    ```js
+    //1. 添加键、值
+    sessionStorage.setItem(key, value);
+    //2. 获得键、值
+    sessionStorage.getItem(key);
+    //3.清空sessionStorage
+    sessionStorage.clear();
+    ```
 
-     特点同上
+    特点同上
 
-   - indexdb
+  - indexdb
 
-     - 描述
+    - 描述
 
-       IndexedDB 就是浏览器提供的本地数据库，它可以被网页脚本创建和操作。IndexedDB 允许储存大量数据，提供查找接口，还能建立索引。这些都是 LocalStorage 所不具备的。就数据库类型而言，IndexedDB 不属于关系型数据库（不支持 SQL 查询语句），更接近 NoSQL 数据库。
+      IndexedDB 就是浏览器提供的本地数据库，它可以被网页脚本创建和操作。IndexedDB 允许储存大量数据，提供查找接口，还能建立索引。这些都是 LocalStorage 所不具备的。就数据库类型而言，IndexedDB 不属于关系型数据库（不支持 SQL 查询语句），更接近 NoSQL 数据库。
 
-     - 特点
+    - 特点
 
-       1. 键值对储存
-       2. 异步
-       3. 支持事务（transaction）
-       4. 同源限制
-       5. 储存空间大
-       6. 支持二进制储存
+      1. 键值对储存
 
-     - 储存路径
+        IndexedDB 内部采用对象仓库（object store）存放数据。所有类型的数据都可以直接存入，包括 JavaScript 对象。对象仓库中，数据以"键值对"的形式保存，每一个数据记录都有对应的主键，主键是独一无二的，不能有重复，否则会抛出一个错误。
 
-       1. windows 版本
+      2. 异步
 
-       C:\Users\用户\AppData\Local\Google\Chrome\User Data\Default\IndexedDB
+        IndexedDB 操作时不会锁死浏览器，用户依然可以进行其他操作，这与 LocalStorage 形成对比，后者的操作是同步的。异步设计是为了防止大量数据的读写，拖慢网页的表现。
 
-       2. linux 版本
+      3. 支持事务（transaction）
 
-       /home/用户/.config/google-chrome/Default/IndexedDB/
+        IndexedDB 支持事务（transaction），这意味着一系列操作步骤之中，只要有一步失败，整个事务就都取消，数据库回滚到事务发生之前的状态，不存在只改写一部分数据的情况。
 
-     - 操作
+      4. 同源限制
 
-       ```js
-       //打开数据库
-       var request = window.indexedDB.open(databaseName, version);
-       request.onerror = function (event) {
-         console.log("数据库打开报错");
-       };
-       var db;
-       request.onsuccess = function (event) {
-         db = request.result;
-         console.log("数据库打开成功");
-       };
-       var db;
-       //如果指定的版本号，大于数据库的实际版本号，就会发生数据库升级事件(数据库从无到有的新建过程也触发此事件)
-       request.onupgradeneeded = function (event) {
-         //新建数据库
-         db = event.target.result;
-         //新建表
-         var objectStore;
-         if (!db.objectStoreNames.contains("person")) {
-           objectStore = db.createObjectStore(
-             "person",
-             { keyPath: "id" }, //主键是id
-             { autoIncrement: true } //自增
-           );
-           //创建索引
-           objectStore.createIndex("name", "name", { unique: false });
-           objectStore.createIndex("email", "email", { unique: true });
-         }
-       };
-       //通过事务添加数据
-       function add() {
-         var request = db
-           .transaction(["person"], "readwrite")
-           .objectStore("person")
-           .add({
-             id: 1,
-             name: "张三",
-             age: 24,
-             email: "zhangsan@example.com",
-           });
+        IndexedDB 受到同源限制，每一个数据库对应创建它的域名。网页只能访问自身域名下的数据库，而不能访问跨域的数据库。
 
-         request.onsuccess = function (event) {
-           console.log("数据写入成功");
-         };
+      5. 储存空间大
 
-         request.onerror = function (event) {
-           console.log("数据写入失败");
-         };
-       }
-       //读取数据
-       function read() {
-         var transaction = db.transaction(["person"]);
-         var objectStore = transaction.objectStore("person");
-         var request = objectStore.get(1);
+        IndexedDB 的储存空间比 LocalStorage 大得多，一般来说不少于 250MB，甚至没有上限。
 
-         request.onerror = function (event) {
-           console.log("事务失败");
-         };
+      6. 支持二进制储存
 
-         request.onsuccess = function (event) {
-           if (request.result) {
-             console.log("Name: " + request.result.name);
-             console.log("Age: " + request.result.age);
-             console.log("Email: " + request.result.email);
-           } else {
-             console.log("未获得数据记录");
-           }
-         };
-       }
-       //遍历数据
-       function readAll() {
-         var objectStore = db.transaction("person").objectStore("person");
+        IndexedDB 不仅可以储存字符串，还可以储存二进制数据（ArrayBuffer 对象和 Blob 对象）。
 
-         objectStore.openCursor().onsuccess = function (event) {
-           var cursor = event.target.result;
+    - 储存路径
 
-           if (cursor) {
-             console.log("Id: " + cursor.key);
-             console.log("Name: " + cursor.value.name);
-             console.log("Age: " + cursor.value.age);
-             console.log("Email: " + cursor.value.email);
-             cursor.continue();
-           } else {
-             console.log("没有更多数据了！");
-           }
-         };
-       }
-       //更新数据
-       function update() {
-         var request = db
-           .transaction(["person"], "readwrite")
-           .objectStore("person")
-           .put({ id: 1, name: "李四", age: 35, email: "lisi@example.com" });
+      1. windows 版本
 
-         request.onsuccess = function (event) {
-           console.log("数据更新成功");
-         };
+      C:\Users\用户\AppData\Local\Google\Chrome\User Data\Default\IndexedDB
 
-         request.onerror = function (event) {
-           console.log("数据更新失败");
-         };
-       }
-       //删除数据
-       function remove() {
-         var request = db
-           .transaction(["person"], "readwrite")
-           .objectStore("person")
-           .delete(1);
+      2. linux 版本
 
-         request.onsuccess = function (event) {
-           console.log("数据删除成功");
-         };
-       }
-       //使用索引
-       var transaction = db.transaction(["person"], "readonly");
-       var store = transaction.objectStore("person");
-       var index = store.index("name");
-       var request = index.get("李四");
+      /home/用户/.config/google-chrome/Default/IndexedDB/
 
-       request.onsuccess = function (e) {
-         var result = e.target.result;
-         if (result) {
-           // ...
-         } else {
-           // ...
-         }
-       };
-       ```
+    - 操作
 
-   - Cookie
+      ```js
+      //打开数据库
+      var request = window.indexedDB.open(databaseName, version);
+      request.onerror = function (event) {
+        console.log("数据库打开报错");
+      };
+      var db;
+      request.onsuccess = function (event) {
+        db = request.result;
+        console.log("数据库打开成功");
+      };
+      var db;
+      //如果指定的版本号，大于数据库的实际版本号，就会发生数据库升级事件(数据库从无到有的新建过程也触发此事件)
+      request.onupgradeneeded = function (event) {
+        //新建数据库
+        db = event.target.result;
+        //新建表
+        var objectStore;
+        if (!db.objectStoreNames.contains("person")) {
+          objectStore = db.createObjectStore(
+            "person",
+            { keyPath: "id" }, //主键是id
+            { autoIncrement: true } //自增
+          );
+          //创建索引
+          objectStore.createIndex("name", "name", { unique: false });
+          objectStore.createIndex("email", "email", { unique: true });
+        }
+      };
+      //通过事务添加数据
+      function add() {
+        var request = db
+          .transaction(["person"], "readwrite")
+          .objectStore("person")
+          .add({
+            id: 1,
+            name: "张三",
+            age: 24,
+            email: "zhangsan@example.com",
+          });
 
-     Cookie 是存放在浏览器端的数据，每次都随请求发送给 Server。存储 cookie 是浏览器提供的功能。cookie 其实是存储在浏览器中的纯文本，浏览器的安装目录下会专门有一个 cookie 文件夹来存放各个域下设置的 cookie。
+        request.onsuccess = function (event) {
+          console.log("数据写入成功");
+        };
 
-     特点：
+        request.onerror = function (event) {
+          console.log("数据写入失败");
+        };
+      }
+      //读取数据
+      function read() {
+        var transaction = db.transaction(["person"]);
+        var objectStore = transaction.objectStore("person");
+        var request = objectStore.get(1);
 
-     - 服务器通过 Set-Cookie 头给客户端一串字符串
-     - 客户端每次访问相同域名的网页时，必须带上这段字符串
-     - 客户端要在一段时间内保存这个 Cookie
-     - Cookie 默认在用户关闭页面后就失效，代码可以任意设置 Cookie 的过期时间，max-age 和 Expires
-     - 大小大概在 4kb 以内
+        request.onerror = function (event) {
+          console.log("事务失败");
+        };
 
-     ```js
-     function setCookie(cname, cvalue, exdays) {
-       var d = new Date();
-       d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
-       var expires = "expires=" + d.toGMTString();
-       document.cookie = cname + "=" + cvalue + "; " + expires;
-     }
+        request.onsuccess = function (event) {
+          if (request.result) {
+            console.log("Name: " + request.result.name);
+            console.log("Age: " + request.result.age);
+            console.log("Email: " + request.result.email);
+          } else {
+            console.log("未获得数据记录");
+          }
+        };
+      }
+      //遍历数据
+      function readAll() {
+        var objectStore = db.transaction("person").objectStore("person");
 
-     function getCookie(cname) {
-       var name = cname + "=";
-       var ca = document.cookie.split(";");
-       for (var i = 0; i < ca.length; i++) {
-         var c = ca[i].trim();
-         if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
-       }
-       return "";
-     }
+        objectStore.openCursor().onsuccess = function (event) {
+          var cursor = event.target.result;
 
-     function delete(cname) {
-       var date = new Date();
-       date.setTime(date.getTime() - 10000);
-       document.cookie = cname + "=; expires =" + date.toGMTString();
-     }
-     ```
+          if (cursor) {
+            console.log("Id: " + cursor.key);
+            console.log("Name: " + cursor.value.name);
+            console.log("Age: " + cursor.value.age);
+            console.log("Email: " + cursor.value.email);
+            cursor.continue();
+          } else {
+            console.log("没有更多数据了！");
+          }
+        };
+      }
+      //更新数据
+      function update() {
+        var request = db
+          .transaction(["person"], "readwrite")
+          .objectStore("person")
+          .put({ id: 1, name: "李四", age: 35, email: "lisi@example.com" });
 
-   - Session
+        request.onsuccess = function (event) {
+          console.log("数据更新成功");
+        };
 
-     Session 是基于 Cookie 实现的，它利用一个 sessionId 把用户的敏感数据隐藏起来，在 Set-Cookie 上，使用随机数来做 sessionId,最终只是把这串随机数暴露给外界，而真正的信息却保存在了服务器端的 sessions 对象里面。它就像一个密码簿一样，有效的信息与 sessionId 一一对应,当下次用户访问该网站的其他页面的时候，就会带着登录时服务器给的这个 sessionId。
+        request.onerror = function (event) {
+          console.log("数据更新失败");
+        };
+      }
+      //删除数据
+      function remove() {
+        var request = db
+          .transaction(["person"], "readwrite")
+          .objectStore("person")
+          .delete(1);
 
-     特点：
+        request.onsuccess = function (event) {
+          console.log("数据删除成功");
+        };
+      }
+      //使用索引
+      var transaction = db.transaction(["person"], "readonly");
+      var store = transaction.objectStore("person");
+      var index = store.index("name");
+      var request = index.get("李四");
 
-     - 将 SessionID（随机数）通过 Cookie 发给客户端
-     - 客户端访问服务器时，服务器读取 SessionID
-     - 服务器有一块内存（哈希表）保存了所有 session
-     - 通过 SessionID 可以得到对应用户的隐私信息
-     - 这块内存（哈希表）就是服务器上的所有 session
+      request.onsuccess = function (e) {
+        var result = e.target.result;
+        if (result) {
+          // ...
+        } else {
+          // ...
+        }
+      };
+      ```
 
-   - 注意
+  - Cookie
 
-     cookie、localstorage、sessionstorage 不可跨域：在不同同源 url 下，获取到不同的数据，只有同源 url 才共享数据。
+    Cookie 是存放在浏览器端的数据，每次都随请求发送给 Server。存储 cookie 是浏览器提供的功能。cookie 其实是存储在浏览器中的纯文本，浏览器的安装目录下会专门有一个 cookie 文件夹来存放各个域下设置的 cookie。
+
+    * 特点：
+
+    - 服务器通过 Set-Cookie 头给客户端一串字符串
+    - 客户端每次访问相同域名的网页时，必须带上这段字符串
+    - 客户端要在一段时间内保存这个 Cookie
+    - Cookie 默认在用户关闭页面后就失效，代码可以任意设置 Cookie 的过期时间，max-age 和 Expires
+    - 大小大概在 4kb 以内
+
+    * Cookie字段组成：
+
+      * Name：cookie的名称
+      * Value：cookie的值，对于认证cookie，value值包括web服务器所提供的访问令牌；
+      * Size： cookie的大小
+      * Path：可以访问此cookie的页面路径。 比如domain是abc.com，path是/test，那么只有/test路径下的页面可以读取此cookie。
+      * Secure： 指定是否使用HTTPS安全协议发送Cookie。使用HTTPS安全协议，可以保护Cookie在浏览器和Web服务器间的传输过程中不被窃取和篡改。该方法也可用于Web站点的身份鉴别，即在HTTPS的连接建立阶段，浏览器会检查Web网站的SSL证书的有效性。但是基于兼容性的原因（比如有些网站使用自签署的证书）在检测到SSL证书无效时，浏览器并不会立即终止用户的连接请求，而是显示安全风险信息，用户仍可以选择继续访问该站点。
+      * Domain：可以访问该cookie的域名，Cookie 机制并未遵循严格的同源策略，允许一个子域可以设置或获取其父域的 Cookie。当需要实现单点登录方案时，Cookie 的上述特性非常有用，然而也增加了 Cookie受攻击的危险，比如攻击者可以借此发动会话定置攻击。因而，浏览器禁止在 Domain 属性中设置.org、.com 等通用顶级域名、以及在国家及地区顶级域下注册的二级域名，以减小攻击发生的范围。
+      * HTTP： 该字段包含HTTPOnly 属性 ，该属性用来设置cookie能否通过脚本来访问，默认为空，即可以通过脚本访问。在客户端是不能通过js代码去设置一个httpOnly类型的cookie的，这种类型的cookie只能通过服务端来设置。该属性用于防止客户端脚本通过document.cookie属性访问Cookie，有助于保护Cookie不被跨站脚本攻击窃取或篡改。但是，HTTPOnly的应用仍存在局限性，一些浏览器可以阻止客户端脚本对Cookie的读操作，但允许写操作；此外大多数浏览器仍允许通过XMLHTTP对象读取HTTP响应中的Set-Cookie头。
+      * Expires/Max-size ： 此cookie的超时时间。若设置其值为一个时间，那么当到达此时间后，此cookie失效。不设置的话默认值是Session，意思是cookie会和session一起失效。当浏览器关闭(不是浏览器标签页，而是整个浏览器) 后，此cookie失效。
+
+    * 总结
+
+      服务器端可以使用 Set-Cookie 的响应头部来配置 cookie 信息。一条cookie 包括了5个属性值 expires、domain、path、secure、HttpOnly。其中 expires 指定了 cookie 失效的时间，domain 是域名、path是路径，domain 和 path 一起限制了 cookie 能够被哪些 url 访问。secure 规定了 cookie 只能在确保安全的情况下传输，HttpOnly 规定了这个 cookie 只能被服务器访问，不能使用 js 脚本访问。
+
+    ```js
+    function setCookie(cname, cvalue, exdays) {
+      var d = new Date();
+      d.setTime(d.getTime() + exdays * 24 * 60 * 60 * 1000);
+      var expires = "expires=" + d.toGMTString();
+      document.cookie = cname + "=" + cvalue + "; " + expires;
+    }
+
+    function getCookie(cname) {
+      var name = cname + "=";
+      var ca = document.cookie.split(";");
+      for (var i = 0; i < ca.length; i++) {
+        var c = ca[i].trim();
+        if (c.indexOf(name) == 0) return c.substring(name.length, c.length);
+      }
+      return "";
+    }
+
+    function delete(cname) {
+      var date = new Date();
+      date.setTime(date.getTime() - 10000);
+      document.cookie = cname + "=; expires =" + date.toGMTString();
+    }
+    ```
+
+  - Session
+
+    Session 是基于 Cookie 实现的，它利用一个 sessionId 把用户的敏感数据隐藏起来，在 Set-Cookie 上，使用随机数来做 sessionId,最终只是把这串随机数暴露给外界，而真正的信息却保存在了服务器端的 sessions 对象里面。它就像一个密码簿一样，有效的信息与 sessionId 一一对应,当下次用户访问该网站的其他页面的时候，就会带着登录时服务器给的这个 sessionId。
+
+    特点：
+
+    - 将 SessionID（随机数）通过 Cookie 发给客户端
+    - 客户端访问服务器时，服务器读取 SessionID
+    - 服务器有一块内存（哈希表）保存了所有 session
+    - 通过 SessionID 可以得到对应用户的隐私信息
+    - 这块内存（哈希表）就是服务器上的所有 session
+
+  - 注意
+
+    cookie、localstorage、sessionstorage 不可跨域：在不同同源 url 下，获取到不同的数据，只有同源 url 才共享数据。
 
 ### for-in,for-of,foreach 区别
 
@@ -4321,7 +4355,15 @@
 
   [12 道腾讯前端面试真题及答案整理](https://mp.weixin.qq.com/s/mouL2lrCvttHpMwP4iesKw)
 
+  [「2021」高频前端面试题汇总之JavaScript篇（上）](https://juejin.cn/post/6940945178899251230)
+
 2. 详解
+
+  NaN 指“不是一个数字”（not a number），NaN 是一个“警戒值”（sentinel value，有特殊用途的常规值），用于指出数字类型中的错误情况，即“执行数学运算没有成功，这是失败后返回的结果”。
+
+  typeof NaN;是"number"
+
+  NaN 是一个特殊值，它和自身不相等，是唯一一个非自反（自反，reflexive，即 x === x 不成立）的值。而 NaN !== NaN 为 true。
 
   * isNaN:传入任何非数字值均为NaN
   * Number.isNaN:先判断是否数字，再判断NaN

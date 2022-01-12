@@ -1,12 +1,12 @@
 # vue 简结
 
-* [vue 自带指令](#vue自带指令)
-* [vue 自定义指令](#vue自定义指令)
-* [vue 生命周期](#vue生命周期)
+* [vue自带指令](#vue自带指令)
+* [vue自定义指令](#vue自定义指令)
+* [vue生命周期](#vue生命周期)
 * [自定义指令生命周期](#自定义指令生命周期)
 * [vue 双向数据绑定原理](#vue双向数据绑定原理)
 * [请求后台资源](#请求后台资源)
-* [路由 vue-router](#路由vue-router)
+* [路由vue-router](#路由vue-router)
 * [自定义组件(创建组件步骤)](#自定义组件(创建组件步骤))
 * [父子组件通信](#父子组件通信)
 * [兄弟组件通信](#兄弟组件通信)
@@ -73,10 +73,11 @@
 * [props校验](#props校验)
 * [createElement](#createElement)
 * [vue3.2script-setup语法糖](#vue3.2script-setup语法糖)
+* [子组件和父组件执行顺序](#子组件和父组件执行顺序)
 
 ---
 
-## vue 自带指令
+## vue自带指令
 
 1. v-if 控制 dom 结构的显示隐藏，dom 结构消失
 2. v-show 控制 dom 结构的显示隐藏，dom 结构不消失
@@ -87,7 +88,7 @@
 7. v-once 只渲染元素或组件一次。dom 再次更新时会被当成静态内容跳过。
 8. v-html 代码按 html 格式显示
 
-## vue 自定义指令
+## vue自定义指令
 
 参考：[分享8个非常实用的Vue自定义指令](https://juejin.cn/post/6906028995133833230)
 
@@ -561,7 +562,7 @@ export default draggable
 </template>
 ```
 
-## vue 生命周期
+## vue生命周期
 
 * 创建前/后：
 
@@ -839,7 +840,7 @@ patch(url, [body], [options]);
   * emulateHTTP(bool,发送 put,patch,delete 请求时以 post 发送，请求头：X-HTTP-Method-Override)
   * emulateJSON(bool,body 以 application/x-www-form-urlencoded content type 发送)
 
-## 路由 vue-router
+## 路由vue-router
 
 * 链接跳转
 
@@ -1067,6 +1068,79 @@ export default {
 };
 ```
 
+4. 父传子refs
+
+5. 父传孙$attrs / $listeners
+
+C组件中能直接触发test的原因在于 B组件调用C组件时 使用 v-on 绑定了$listeners 属性
+
+在B组件中通过v-bind 绑定$attrs属性，C组件可以直接获取到A组件中传递下来的props（除了B组件中props声明的）
+
+A组件 APP.vue
+```html
+<template>
+    <div id="app">
+        //此处监听了两个事件，可以在B组件或者C组件中直接触发 
+        <child1 :p-child1="child1" :p-child2="child2" @test1="onTest1" @test2="onTest2"></child1>
+    </div>
+</template>
+<script>
+import Child1 from './Child1.vue';
+export default {
+    components: { Child1 },
+    methods: {
+        onTest1() {
+            console.log('test1 running');
+        },
+        onTest2() {
+            console.log('test2 running');
+        }
+    }
+};
+</script>
+```
+
+B组件 Child1.vue
+```html
+<template>
+    <div class="child-1">
+        <p>props: {{pChild1}}</p>
+        <p>$attrs: {{$attrs}}</p>
+        <child2 v-bind="$attrs" v-on="$listeners"></child2>
+    </div>
+</template>
+<script>
+import Child2 from './Child2.vue';
+export default {
+    props: ['pChild1'],
+    components: { Child2 },
+    inheritAttrs: false,
+    mounted() {
+        this.$emit('test1'); // 触发APP.vue中的test1方法
+    }
+};
+</script>
+```
+
+C 组件 Child2.vue
+```html
+<template>
+    <div class="child-2">
+        <p>props: {{pChild2}}</p>
+        <p>$attrs: {{$attrs}}</p>
+    </div>
+</template>
+<script>
+export default {
+    props: ['pChild2'],
+    inheritAttrs: false,
+    mounted() {
+        this.$emit('test2');// 触发APP.vue中的test2方法
+    }
+};
+</script>
+```
+
 ## 兄弟组件通信
 
 1. 父元素中介
@@ -1179,177 +1253,187 @@ Store 是 Vuex 的一个仓库。组件一般在计算属性（computed）获取
 * mutations：实际改变状态(state) 的唯一方式是通过提交(commit) 一个 mutation。mutations 下的函数接收 state 作为参数，接收 payload（载荷）作为第二个参数，用来记录开发者使用该函数的一些信息，如提交了什么，提交的东西用来干什么，包含多个字段，所以载荷一般是对象，mutations 方法必须是同步方法。
 * actions：mutations 只能处理同步函数，actions 处理异步函数。actions 提交的是 mutations，而不是直接变更状态。actions 可以包含任意异步操作：ajax、setTimeout、setInterval。actions 通过 store.dispatch(方法名) 触发
 
-问题：vuex 为什么用 action 进行异步操作，而不在 mutation 一起处理？
+* 问题：vuex 为什么用 action 进行异步操作，而不在 mutation 一起处理？
 
-1. vuex 文档说法
+  1. vuex 文档说法
 
-   一条重要的原则就是要记住 mutation 必须是同步函数。
+    一条重要的原则就是要记住 mutation 必须是同步函数。
 
-   ```js
-     mutations: {
-       someMutation (state) {
-         api.callAsyncMethod(() => {
-           state.count++
-         })
-       }
-     }
-   ```
-
-   现在想象，我们正在 debug 一个 app 并且观察 devtool 中的 mutation 日志。每一条 mutation 被记录，devtools 都需要捕捉到前一状态和后一状态的快照。然而，在上面的例子中 mutation 中的异步函数中的回调让这不可能完成：因为当 mutation 触发的时候，回调函数还没有被调用，devtools 不知道什么时候回调函数实际上被调用——实质上任何在回调函数中进行的状态的改变都是不可追踪的。
-
-   在 mutation 中混合异步调用会导致你的程序很难调试。例如，当你调用了两个包含异步回调的 mutation 来改变状态，你怎么知道什么时候回调和哪个先回调呢？这就是为什么我们要区分这两个概念。在 Vuex 中，mutation 都是同步事务。
-
-2. 尤雨溪(vue 作者)说法
-
-   中文翻译可能有些偏差（不是我翻的）。区分 actions 和 mutations 并不是为了解决竞态问题，而是为了能用 devtools 追踪状态变化。
-
-   事实上在 vuex 里面 actions 只是一个架构性的概念，并不是必须的，说到底只是一个函数，你在里面想干嘛都可以，只要最后触发 mutation 就行。异步竞态怎么处理那是用户自己的事情。vuex 真正限制你的只有 mutation 必须是同步的这一点（在 redux 里面就好像 reducer 必须同步返回下一个状态一样）。
-
-   同步的意义在于这样每一个 mutation 执行完成后都可以对应到一个新的状态（和 reducer 一样），这样 devtools 就可以打个 snapshot 存下来，然后就可以随便 time-travel 了。
-
-   如果你开着 devtool 调用一个异步的 action，你可以清楚地看到它所调用的 mutation 是何时被记录下来的，并且可以立刻查看它们对应的状态。其实我有个点子一直没时间做，那就是把记录下来的 mutations 做成类似 rx-marble 那样的时间线图，对于理解应用的异步状态变化很有帮助。
-
-问题2：Vuex和单纯的全局对象有什么区别
-
-1. Vuex 的状态存储是响应式的。当 Vue 组件从 store 中读取状态的时候，若 store 中的状态发生变化，那么相应的组件也会相应地得到高效更新。
-
-2. 不能直接改变 store 中的状态。改变 store 中的状态的唯一途径就是显式地提交 (commit) mutation。这样使得我们可以方便地跟踪每一个状态的变化，从而让我们能够实现一些工具帮助我们更好地了解我们的应用。
-
-```js
-import Vue from "vue";
-import Vuex from "vuex";
-
-Vue.use(Vuex);
-
-const state = {
-  count: 1,
-};
-
-const getters = {
-  count: (state) => state.count,
-};
-
-const actions = {
-  count(context) {
-    context.commit("count");
-  },
-};
-
-const mutations = {
-  add(state, n) {
-    state.count += n;
-  },
-  reduce(state) {
-    state.count -= 1;
-  },
-};
-
-export default new Vuex.Store({
-  state,
-  getters,
-  actions,
-  mutations,
-});
-```
-
-由于使用单一状态树，应用的所有状态会集中到一个比较大的对象。当应用变得非常复杂时，store 对象就有可能变得相当臃肿。
-
-为了解决以上问题，Vuex 允许我们将 store 分割成模块（module）。每个模块拥有自己的 state、mutation、action、getter、甚至是嵌套子模块——从上至下进行同样方式的分割
-
-```js
-const moduleA = {
-  state: { ... },
-  mutations: { ... },
-  actions: { ... },
-  getters: { ... }
-}
-
-const moduleB = {
-  state: { ... },
-  mutations: { ... },
-  actions: { ... }
-}
-
-const store = new Vuex.Store({
-  modules: {
-    a: moduleA,
-    b: moduleB
-  }
-})
-
-store.state.a // -> moduleA 的状态
-store.state.b // -> moduleB 的状态
-```
-
-命名空间
-
-```js
-const store = new Vuex.Store({
-  modules: {
-    account: {
-      namespaced: true,
-
-      // 模块内容（module assets）
-      state: { ... }, // 模块内的状态已经是嵌套的了，使用 `namespaced` 属性不会对其产生影响
-      getters: {
-        isAdmin () { ... } // -> getters['account/isAdmin']
-      },
-      actions: {
-        login () { ... } // -> dispatch('account/login')
-      },
+    ```js
       mutations: {
-        login () { ... } // -> commit('account/login')
-      },
+        someMutation (state) {
+          api.callAsyncMethod(() => {
+            state.count++
+          })
+        }
+      }
+    ```
 
-      // 嵌套模块
-      modules: {
-        // 继承父模块的命名空间
-        myPage: {
-          state: { ... },
-          getters: {
-            profile () { ... } // -> getters['account/profile']
-          }
+    现在想象，我们正在 debug 一个 app 并且观察 devtool 中的 mutation 日志。每一条 mutation 被记录，devtools 都需要捕捉到前一状态和后一状态的快照。然而，在上面的例子中 mutation 中的异步函数中的回调让这不可能完成：因为当 mutation 触发的时候，回调函数还没有被调用，devtools 不知道什么时候回调函数实际上被调用——实质上任何在回调函数中进行的状态的改变都是不可追踪的。
+
+    在 mutation 中混合异步调用会导致你的程序很难调试。例如，当你调用了两个包含异步回调的 mutation 来改变状态，你怎么知道什么时候回调和哪个先回调呢？这就是为什么我们要区分这两个概念。在 Vuex 中，mutation 都是同步事务。
+
+  2. 尤雨溪(vue 作者)说法
+
+    中文翻译可能有些偏差（不是我翻的）。区分 actions 和 mutations 并不是为了解决竞态问题，而是为了能用 devtools 追踪状态变化。
+
+    事实上在 vuex 里面 actions 只是一个架构性的概念，并不是必须的，说到底只是一个函数，你在里面想干嘛都可以，只要最后触发 mutation 就行。异步竞态怎么处理那是用户自己的事情。vuex 真正限制你的只有 mutation 必须是同步的这一点（在 redux 里面就好像 reducer 必须同步返回下一个状态一样）。
+
+    同步的意义在于这样每一个 mutation 执行完成后都可以对应到一个新的状态（和 reducer 一样），这样 devtools 就可以打个 snapshot 存下来，然后就可以随便 time-travel 了。
+
+    如果你开着 devtool 调用一个异步的 action，你可以清楚地看到它所调用的 mutation 是何时被记录下来的，并且可以立刻查看它们对应的状态。其实我有个点子一直没时间做，那就是把记录下来的 mutations 做成类似 rx-marble 那样的时间线图，对于理解应用的异步状态变化很有帮助。
+
+* 问题2：Vuex和单纯的全局对象有什么区别
+
+  1. Vuex 的状态存储是响应式的。当 Vue 组件从 store 中读取状态的时候，若 store 中的状态发生变化，那么相应的组件也会相应地得到高效更新。
+
+  2. 不能直接改变 store 中的状态。改变 store 中的状态的唯一途径就是显式地提交 (commit) mutation。这样使得我们可以方便地跟踪每一个状态的变化，从而让我们能够实现一些工具帮助我们更好地了解我们的应用。
+
+  ```js
+  import Vue from "vue";
+  import Vuex from "vuex";
+
+  Vue.use(Vuex);
+
+  const state = {
+    count: 1,
+  };
+
+  const getters = {
+    count: (state) => state.count,
+  };
+
+  const actions = {
+    count(context) {
+      context.commit("count");
+    },
+  };
+
+  const mutations = {
+    add(state, n) {
+      state.count += n;
+    },
+    reduce(state) {
+      state.count -= 1;
+    },
+  };
+
+  export default new Vuex.Store({
+    state,
+    getters,
+    actions,
+    mutations,
+  });
+  ```
+
+  由于使用单一状态树，应用的所有状态会集中到一个比较大的对象。当应用变得非常复杂时，store 对象就有可能变得相当臃肿。
+
+  为了解决以上问题，Vuex 允许我们将 store 分割成模块（module）。每个模块拥有自己的 state、mutation、action、getter、甚至是嵌套子模块——从上至下进行同样方式的分割
+
+  ```js
+  const moduleA = {
+    state: { ... },
+    mutations: { ... },
+    actions: { ... },
+    getters: { ... }
+  }
+
+  const moduleB = {
+    state: { ... },
+    mutations: { ... },
+    actions: { ... }
+  }
+
+  const store = new Vuex.Store({
+    modules: {
+      a: moduleA,
+      b: moduleB
+    }
+  })
+
+  store.state.a // -> moduleA 的状态
+  store.state.b // -> moduleB 的状态
+  ```
+
+  命名空间
+
+  ```js
+  const store = new Vuex.Store({
+    modules: {
+      account: {
+        namespaced: true,
+
+        // 模块内容（module assets）
+        state: { ... }, // 模块内的状态已经是嵌套的了，使用 `namespaced` 属性不会对其产生影响
+        getters: {
+          isAdmin () { ... } // -> getters['account/isAdmin']
+        },
+        actions: {
+          login () { ... } // -> dispatch('account/login')
+        },
+        mutations: {
+          login () { ... } // -> commit('account/login')
         },
 
-        // 进一步嵌套命名空间
-        posts: {
-          namespaced: true,
+        // 嵌套模块
+        modules: {
+          // 继承父模块的命名空间
+          myPage: {
+            state: { ... },
+            getters: {
+              profile () { ... } // -> getters['account/profile']
+            }
+          },
 
-          state: { ... },
-          getters: {
-            popular () { ... } // -> getters['account/posts/popular']
+          // 进一步嵌套命名空间
+          posts: {
+            namespaced: true,
+
+            state: { ... },
+            getters: {
+              popular () { ... } // -> getters['account/posts/popular']
+            }
           }
         }
       }
     }
-  }
-})
-```
+  })
+  ```
 
-动态注册
+  动态注册
 
-```js
-// 注册模块 `myModule`
-store.registerModule("myModule", {
-  // ...
-});
-// 注册嵌套模块 `nested/myModule`
-store.registerModule(["nested", "myModule"], {
-  // ...
-});
-```
+  ```js
+  // 注册模块 `myModule`
+  store.registerModule("myModule", {
+    // ...
+  });
+  // 注册嵌套模块 `nested/myModule`
+  store.registerModule(["nested", "myModule"], {
+    // ...
+  });
+  ```
 
-问题3：vuex与v-model是否冲突？
+* 问题3：vuex与v-model是否冲突？
 
-v-model会去修改state的值，但是vuex数据修改又必须经过mutation，这样就冲突了
+  v-model会去修改state的值，但是vuex数据修改又必须经过mutation，这样就冲突了
 
-解决办法：拆开v-model语法糖，在@input中使用commit提交数据
+  解决办法：拆开v-model语法糖，在@input中使用commit提交数据
 
-问题4：什么场景下使用vuex，而不是localstorage？
+  问题4：什么场景下使用vuex，而不是localstorage？
 
-Vuex 的状态存储是响应式的，当多个组件拥有同一个状态的时候，vuex能够很好的帮我们处理
+  Vuex 的状态存储是响应式的，当多个组件拥有同一个状态的时候，vuex能够很好的帮我们处理
 
-Vuex 可以很好的使用vue开发者工具调试vuex的状态 这些优势是localStorage不能够很好的模拟的
+  Vuex 可以很好的使用vue开发者工具调试vuex的状态 这些优势是localStorage不能够很好的模拟的
+
+* 问题4：Vuex的严格模式
+
+  在严格模式下，无论何时发生了状态变更且不是由mutation函数引起的，将会抛出错误。这能保证所有的状态变更都能被调试工具跟踪到。
+
+  ```js
+  const store = new Vuex.Store({
+      strict:true,
+  })
+  ```
 
 ## 小型vuex:Vue.observable
 
@@ -5147,7 +5231,7 @@ this.$emit('update:bar',newValue);
 
 * 依赖收集与监听
 
-  1. 调用 observer()，作用是遍历对象属性进行双向绑定
+  1. 调用 observer()，作用是遍历对象属性进行双向绑定(把组件data数据的对象变成响应式)
   2. 在 observer 过程中会注册Object.defineProperty的 get 方法进行依赖收集，依赖收集是将Watcher 对象的实例放入 Dep 中；
   3. Object.defineProperty的 set 会调用Dep 对象的 notify 方法通知它内部所有的 Watcher 对象调用对应的 update()进行视图更新；
 
@@ -7456,3 +7540,32 @@ https://juejin.cn/post/7036389587991658533
   }
 </script>
 ```
+
+## 子组件和父组件执行顺序
+
+[「2021」高频前端面试题汇总之Vue篇 （上）](https://juejin.cn/post/6919373017218809864)
+
+* 加载渲染过程：
+
+  * 父组件 beforeCreate
+  * 父组件 created
+  * 父组件 beforeMount
+  * 子组件 beforeCreate
+  * 子组件 created
+  * 子组件 beforeMount
+  * 子组件 mounted
+  * 父组件 mounted
+
+* 更新过程：
+
+  * 父组件 beforeUpdate
+  * 子组件 beforeUpdate
+  * 子组件 updated
+  * 父组件 updated
+
+* 销毁过程：
+
+  * 父组件 beforeDestroy
+  * 子组件 beforeDestroy
+  * 子组件 destroyed
+  * 父组件 destoryed

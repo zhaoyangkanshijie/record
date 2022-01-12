@@ -1582,6 +1582,8 @@
 
     [redux](https://www.yuque.com/chenzilong/rglnod/tie55t)
 
+    [「2021」高频前端面试题汇总之JavaScript篇（下）](https://juejin.cn/post/6941194115392634888)
+
 2. 详解
 
     * 依赖：redux、react-redux、redux-devtools
@@ -1637,6 +1639,16 @@
         1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
         2. Vuex： view——>commit——>mutations——>state变化——>view变化（同步操作） 
         3. Vuex： view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
+
+        * 相同
+
+            redux与vuex都是对mvvm思想的服务，将数据从视图中抽离的一种方案; 形式上：vuex借鉴了redux，将store作为全局的数据中心，进行mode管理;
+
+        * 不同
+
+            * Vuex改进了Redux中的Action和Reducer函数，以mutations变化函数取代Reducer，无需switch，只需在对应的mutation函数里改变state值即可
+            * Vuex由于Vue自动重新渲染的特性，无需订阅重新渲染函数，只要生成新的State即可
+            * Vuex数据流的顺序是∶View调用store.commit提交对应的请求到Store中对应的mutation函数->store改变（vue检测到数据变化自动渲染）
 
     * 简写 Redux
 
@@ -3416,20 +3428,69 @@
 
     [前端面试题全面整理-带解析 涵盖CSS、JS、浏览器、Vue、React、移动web、前端性能、算法、Node](https://mp.weixin.qq.com/s/YrKGMORhB_POmfWZVWRkHg)
 
+    [「2021」高频前端面试题汇总之Vue篇 （上）](https://juejin.cn/post/6919373017218809864)
+
 2. 详解
 
-    数据是否可变: react整体是函数式的思想，把组件设计成纯组件，状态和逻辑通过参数传入，所以在react中，是单向数据流，推崇结合immutable来实现数据不可变; vue的思想是响应式的，也就是基于是数据可变的，通过对每一个属性建立Watcher来监听，当属性变化的时候，响应式的更新对应的虚拟dom。总之，react的性能优化需要手动去做，而vue的性能优化是自动的，但是vue的响应式机制也有问题，就是当state特别多的时候，Watcher也会很多，会导致卡顿，所以大型应用（状态特别多的）一般用react，更加可控。
+    * 相似之处
 
-    通过js来操作一切，还是用各自的处理方式: react的思路是all in js，通过js来生成html，所以设计了jsx，还有通过js来操作css，社区的styled-component、jss等; vue是把html，css，js组合到一起，用各自的处理方式，vue有单文件组件，可以把html、css、js写到一个文件中，html提供了模板引擎来处理。
+        * 都将注意力集中保持在核心库，而将其他功能如路由和全局状态管理交给相关的库；
+        * 都有自己的构建工具，能让你得到一个根据最佳实践设置的项目模板；
+        * 都使用了Virtual DOM（虚拟DOM）提高重绘性能；
+        * 都有props的概念，允许组件间的数据传递；
+        * 都鼓励组件化应用，将应用分拆成一个个功能明确的模块，提高复用性。
 
-    类式的组件写法，还是声明式的写法: react是类式的写法，api很少; 而vue是声明式的写法，通过传入各种options，api和参数都很多。所以react结合typescript更容易一起写，vue稍微复杂。
+    * 不同之处
 
-    扩展不同: react可以通过高阶组件（Higher Order Components--HOC）来扩展，而vue需要通过mixins来扩展。
+        1. 数据流
 
-    什么功能内置，什么交给社区去做: react做的事情很少，很多都交给社区去做，vue很多东西都是内置的，写起来确实方便一些，
-    比如 redux的combineReducer就对应vuex的modules，
-    比如reselect就对应vuex的getter和vue组件的computed，
-    vuex的mutation是直接改变的原始数据，而redux的reducer是返回一个全新的state，所以redux结合immutable来优化性能，vue不需要。
+            Vue默认支持数据双向绑定，而React一直提倡单向数据流
+
+        2. 虚拟DOM
+
+            Vue2.x开始引入"Virtual DOM"，消除了和React在这方面的差异，但是在具体的细节还是有各自的特点。
+
+            Vue宣称可以更快地计算出Virtual DOM的差异，这是由于它在渲染过程中，会跟踪每一个组件的依赖关系，不需要重新渲染整个组件树。
+
+            对于React而言，每当应用的状态被改变时，全部子组件都会重新渲染。当然，这可以通过 PureComponent/shouldComponentUpdate这个生命周期方法来进行控制，但Vue将此视为默认的优化。
+
+        3. 组件化
+
+            React与Vue最大的不同是模板的编写。
+
+            Vue鼓励写近似常规HTML的模板。写起来很接近标准 HTML元素，只是多了一些属性。
+
+            React推荐你所有的模板通用JavaScript的语法扩展——JSX书写。
+
+            具体来讲：React中render函数是支持闭包特性的，所以import的组件在render中可以直接调用。但是在Vue中，由于模板中使用的数据都必须挂在 this 上进行一次中转，所以 import 一个组件完了之后，还需要在 components 中再声明下。
+
+        4. 监听数据变化的实现原理不同
+
+            Vue 通过 getter/setter 以及一些函数的劫持，能精确知道数据变化，不需要特别的优化就能达到很好的性能
+
+            React 默认是通过比较引用的方式进行的，如果不优化（PureComponent/shouldComponentUpdate）可能导致大量不必要的vDOM的重新渲染。这是因为 Vue 使用的是可变数据，而React更强调数据的不可变。
+
+        5. 高阶组件
+
+            react可以通过高阶组件（HOC）来扩展，而Vue需要通过mixins来扩展。
+
+            高阶组件就是高阶函数，而React的组件本身就是纯粹的函数，所以高阶函数对React来说易如反掌。相反Vue.js使用HTML模板创建视图组件，这时模板无法有效的编译，因此Vue不能采用HOC来实现。
+
+        6. 构建工具
+
+            两者都有自己的构建工具：
+
+            React ==> Create React APP
+            Vue ==> vue-cli
+
+        7. 跨平台
+
+            React ==> React Native
+            Vue ==> Weex
+
+        8. 状态管理
+
+            vuex的mutation是直接改变的原始数据，而redux的reducer是返回一个全新的state，所以redux结合immutable来优化性能，vue不需要。
 
 ## Fragments
 
