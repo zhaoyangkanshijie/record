@@ -22,152 +22,191 @@
 
 1. 参考链接：
 
-   [看懂此文，不再困惑于 javascript 中的事件绑定、事件冒泡、事件捕获和事件执行顺序](https://blog.csdn.net/aitangyong/article/details/43231111)
+  [看懂此文，不再困惑于 javascript 中的事件绑定、事件冒泡、事件捕获和事件执行顺序](https://blog.csdn.net/aitangyong/article/details/43231111)
 
-   [js 中的事件委托或是事件代理详解](https://www.cnblogs.com/liugang-vip/p/5616484.html)
+  [js 中的事件委托或是事件代理详解](https://www.cnblogs.com/liugang-vip/p/5616484.html)
+
+  [「2021」高频前端面试题汇总之浏览器原理篇](https://juejin.cn/post/6916157109906341902/)
 
 2. 详解：
 
-   - 3 种方式：
+  * 事件绑定3 种方式：
 
-   ```html
-   <p id="btn" onclick="hello()"></p>
-   <script>
-     document.getElementById("btn").onclick = function () {};
-     document.getElementById("btn").addEventListener("click", function () {});
-   </script>
-   ```
+  ```html
+  <p id="btn" onclick="hello()"></p>
+  <script>
+    document.getElementById("btn").onclick = function () {};
+    document.getElementById("btn").addEventListener("click", function () {});
+  </script>
+  ```
 
-   其中 addEventListener 可重复绑定同一元素，先绑定先执行。
+  其中 addEventListener 可重复绑定同一元素，先绑定先执行。
 
-   对于层叠元素，则需要区分事件冒泡和事件捕获，冒泡：从底向面，捕获：从面向底。addEventListener((type, listener, useCapture)
+  对于层叠元素，则需要区分事件冒泡和事件捕获，冒泡：从底向面，捕获：从面向底。addEventListener((type, listener, useCapture)
 
-   阻止冒泡：只执行当前元素事件，不执行层叠元素事件。event.stopPropagation()
+  * 阻止冒泡
+  
+    只执行当前元素事件，不执行层叠元素事件。event.stopPropagation()
 
-   事件委托：利用事件冒泡，只指定一个事件处理程序，就可以管理某一类型的所有事件。例如 ul 下有很多 li，逐一绑定事件很影响性能，且新 li 加入也要重新绑定事件，会十分麻烦，所以 li 事件需要委托其上一级 ul 代为执行事件。
+  * 事件委托
+  
+    利用事件冒泡，只指定一个事件处理程序，就可以管理某一类型的所有事件。例如 ul 下有很多 li，逐一绑定事件很影响性能，且新 li 加入也要重新绑定事件，会十分麻烦，所以 li 事件需要委托其上一级 ul 代为执行事件。
 
-   ```js
-   window.onload = function () {
-     var oUl = document.getElementById("ul1");
-     oUl.onclick = function (ev) {
-       var ev = ev || window.event;
-       var target = ev.target || ev.srcElement;
-       if (target.nodeName.toLowerCase() == "li") {
-         alert(123);
-         alert(target.innerHTML);
-       }
-     };
-   };
-   ```
+    ```html
+    <ul id="list">
+      <li>item 1</li>
+      <li>item 2</li>
+      <li>item 3</li>
+      ......
+      <li>item n</li>
+    </ul>
+    ```
 
-   - 关于 onclick,addEventListener('click'),\$('...').on('click')
+    ```js
+    window.onload = function () {
+      var oUl = document.getElementById("ul1");
+      oUl.onclick = function (ev) {
+        var ev = ev || window.event;
+        var target = ev.target || ev.srcElement;
+        if (target.nodeName.toLowerCase() == "li") {
+          alert(123);
+          alert(target.innerHTML);
+        }
+      };
+    };
+    ```
 
-     1. 实际上，3 种写法都可以转化为 addEventListener('click',function,options)的形式
+    * 特点
 
-     2. 在没有设置 options 的情况下，click 后会先事件捕获，然后事件冒泡，options 中默认捕获为 false，所以 function 是在冒泡阶段执行，由内层冒泡至外层
+      1. 减少内存消耗
 
-     3. options 中设置为 true，则 function 在捕获阶段执行
+        如果给每个列表项一一都绑定一个函数，那对于内存消耗是非常大的，效率上需要消耗很多性能。因此，比较好的方法就是把这个点击事件绑定到他的父层，也就是 ul 上，然后在执行事件时再去匹配判断目标元素，所以事件委托可以减少大量的内存消耗，节约效率。
 
-     4. options 还有其它 2 个参数，可与 capture 一起以对象的形式传入
+      2. 动态绑定事件
 
-        ```js
-        document
-          .getElementsByClassName("middle")[0]
-          .addEventListener("click", handler, {
-            capture: true,
-            once: true, //只执行一次
-            passive: true, //永不调用 preventDefault(),如果调用，控制台会出现警告
-          });
-        ```
+        每个列表项都绑定事件，在很多时候，需要通过 AJAX 或者用户操作动态的增加或者去除列表项元素，那么在每一次改变的时候都需要重新给新增的元素绑定事件，给即将删去的元素解绑事件；如果用了事件委托就没有这种麻烦了，因为事件是绑定在父层的，和目标元素的增减是没有关系的，执行到目标元素是在真正响应执行事件函数的过程中去匹配的，所以使用事件在动态绑定事件的情况下是可以减少很多重复工作的。
 
-     5. click 的元素指向内层的元素，外层捕获进来后到达最内层，最内层按先后顺序执行完 function，再冒泡向上
+    * 局限性
 
-     6. event.stopPropagation()表示停止传播，在哪一层的事件中设置了，就不会传播到下一层，例如在 middle 层设置 capture 为 true，则不会再向下捕获再冒泡
+      1. focus、blur 之类的事件没有事件冒泡机制，所以无法实现事件委托
+      2. mousemove、mouseout 这样的事件，虽然有事件冒泡，但是只能不断通过位置去计算定位，对性能消耗高，因此也是不适合于事件委托的。
+      3. 事件委托会影响页面性能，主要影响因素有：
 
-     7. 点击哪一层元素，则以哪一层元素为捕获和冒泡的底部
+        * 元素中，绑定事件委托的次数；
+        * 点击的最底层元素，到绑定事件元素之间的DOM层数；
 
-     8. 例子
+      * 在必须使用事件委托的地方，可以进行如下的处理
 
-        ```html
-        <div class="out" onclick="console.log('out')">
-          <div class="middle" onclick="console.log('middle')">
-            <div class="inner" onclick="console.log('inner')"></div>
-          </div>
+        * 只在必须的地方，使用事件委托，比如：ajax的局部刷新区域
+        * 尽量的减少绑定的层级，不在body元素上，进行绑定
+        * 减少绑定的次数，如果可以，那么把多个事件的绑定，合并到一次事件委托中去，由这个事件委托的回调，来进行分发。
+
+  * 关于 onclick,addEventListener('click'),\$('...').on('click')
+
+    1. 实际上，3 种写法都可以转化为 addEventListener('click',function,options)的形式
+
+    2. 在没有设置 options 的情况下，click 后会先事件捕获，然后事件冒泡，options 中默认捕获为 false，所以 function 是在冒泡阶段执行，由内层冒泡至外层
+
+    3. options 中设置为 true，则 function 在捕获阶段执行
+
+    4. options 还有其它 2 个参数，可与 capture 一起以对象的形式传入
+
+      ```js
+      document
+        .getElementsByClassName("middle")[0]
+        .addEventListener("click", handler, {
+          capture: true,
+          once: true, //只执行一次
+          passive: true, //永不调用 preventDefault(),如果调用，控制台会出现警告
+        });
+      ```
+
+    5. click 的元素指向内层的元素，外层捕获进来后到达最内层，最内层按先后顺序执行完 function，再冒泡向上
+
+    6. event.stopPropagation()表示停止传播，在哪一层的事件中设置了，就不会传播到下一层，例如在 middle 层设置 capture 为 true，则不会再向下捕获再冒泡
+
+    7. 点击哪一层元素，则以哪一层元素为捕获和冒泡的底部
+
+    8. 例子
+
+      ```html
+      <div class="out" onclick="console.log('out')">
+        <div class="middle" onclick="console.log('middle')">
+          <div class="inner" onclick="console.log('inner')"></div>
         </div>
-        <style>
-          .out {
-            width: 100px;
-            height: 100px;
-            border: 1px solid red;
-          }
-          .middle {
-            width: 80px;
-            height: 80px;
-            border: 1px solid blue;
-          }
-          .inner {
-            width: 40px;
-            height: 40px;
-            border: 1px solid green;
-          }
-        </style>
-        <script>
-          $(() => {
-            $(".out").on("click", function () {
-              console.log("out1");
-            });
-            $(".middle").on("click", function () {
-              console.log("middle1");
-            });
-            $(".inner").on("click", function () {
-              console.log("inner1");
-            });
-            document
-              .getElementsByClassName("out")[0]
-              .addEventListener("click", function () {
-                console.log("out2");
-              });
-            document
-              .getElementsByClassName("middle")[0]
-              .addEventListener("click", function () {
-                console.log("middle2");
-              });
-            document
-              .getElementsByClassName("inner")[0]
-              .addEventListener("click", function () {
-                console.log("inner2");
-              });
-            document.getElementsByClassName("out")[0].addEventListener(
-              "click",
-              function () {
-                console.log("out3");
-              },
-              true
-            );
-            document.getElementsByClassName("middle")[0].addEventListener(
-              "click",
-              function () {
-                console.log("middle3");
-              },
-              true
-            );
-            document.getElementsByClassName("inner")[0].addEventListener(
-              "click",
-              function () {
-                console.log("inner3");
-              },
-              true
-            );
+      </div>
+      <style>
+        .out {
+          width: 100px;
+          height: 100px;
+          border: 1px solid red;
+        }
+        .middle {
+          width: 80px;
+          height: 80px;
+          border: 1px solid blue;
+        }
+        .inner {
+          width: 40px;
+          height: 40px;
+          border: 1px solid green;
+        }
+      </style>
+      <script>
+        $(() => {
+          $(".out").on("click", function () {
+            console.log("out1");
           });
-        </script>
-        <!--点击inner的输出：
-            out3 middle3 inner inner1 inner2 inner3 middle middle1 middle2 out out1 out2
-            点击middle的输出：
-            out3 middle middle1 middle2 middle3 out out1 out2
-        -->
-        ```
-
-
+          $(".middle").on("click", function () {
+            console.log("middle1");
+          });
+          $(".inner").on("click", function () {
+            console.log("inner1");
+          });
+          document
+            .getElementsByClassName("out")[0]
+            .addEventListener("click", function () {
+              console.log("out2");
+            });
+          document
+            .getElementsByClassName("middle")[0]
+            .addEventListener("click", function () {
+              console.log("middle2");
+            });
+          document
+            .getElementsByClassName("inner")[0]
+            .addEventListener("click", function () {
+              console.log("inner2");
+            });
+          document.getElementsByClassName("out")[0].addEventListener(
+            "click",
+            function () {
+              console.log("out3");
+            },
+            true
+          );
+          document.getElementsByClassName("middle")[0].addEventListener(
+            "click",
+            function () {
+              console.log("middle3");
+            },
+            true
+          );
+          document.getElementsByClassName("inner")[0].addEventListener(
+            "click",
+            function () {
+              console.log("inner3");
+            },
+            true
+          );
+        });
+      </script>
+      <!--点击inner的输出：
+          out3 middle3 inner inner1 inner2 inner3 middle middle1 middle2 out out1 out2
+          点击middle的输出：
+          out3 middle middle1 middle2 middle3 out out1 out2
+      -->
+      ```
 
 ### js 数据类型与隐式转换
 
@@ -578,322 +617,399 @@
 
 1. 参考链接：
 
-   [详解 JavaScript 中的 Event Loop（事件循环）机制](https://www.cnblogs.com/cangqinglang/p/8967268.html)
+  [详解 JavaScript 中的 Event Loop（事件循环）机制](https://www.cnblogs.com/cangqinglang/p/8967268.html)
 
-   [谈谈 Event Loop（事件循环）机制](https://www.jianshu.com/p/6e9f4eb7fdbb)
+  [谈谈 Event Loop（事件循环）机制](https://www.jianshu.com/p/6e9f4eb7fdbb)
 
-   [Javascript 异步编程之 setTimeout 与 setInterval 详解分析](https://www.cnblogs.com/tugenhua0707/p/4083475.html)
+  [Javascript 异步编程之 setTimeout 与 setInterval 详解分析](https://www.cnblogs.com/tugenhua0707/p/4083475.html)
 
-   [理解 JavaScript 执行机制及异步回调（setTimeout/setInterval/Promise）](https://blog.csdn.net/zuggs_/article/details/82381558)
+  [理解 JavaScript 执行机制及异步回调（setTimeout/setInterval/Promise）](https://blog.csdn.net/zuggs_/article/details/82381558)
 
-   [js 异步执行顺序](https://www.jianshu.com/p/ca480f9e7dea)
+  [js 异步执行顺序](https://www.jianshu.com/p/ca480f9e7dea)
 
-   [为什么要用 setTimeout 模拟 setInterval?](https://blog.csdn.net/b954960630/article/details/82286486)
+  [为什么要用 setTimeout 模拟 setInterval?](https://blog.csdn.net/b954960630/article/details/82286486)
 
-   [详解 setTimeout、setImmediate、process.nextTick 的区别](https://www.cnblogs.com/onepixel/articles/7605465.html)
+  [详解 setTimeout、setImmediate、process.nextTick 的区别](https://www.cnblogs.com/onepixel/articles/7605465.html)
 
-   [setTimeout/setImmediate/process.nextTick 的区别](https://www.jianshu.com/p/77f03673aa06)
+  [setTimeout/setImmediate/process.nextTick 的区别](https://www.jianshu.com/p/77f03673aa06)
 
-   [简单理解 Vue 中的 nextTick](https://www.jianshu.com/p/a7550c0e164f)
+  [简单理解 Vue 中的 nextTick](https://www.jianshu.com/p/a7550c0e164f)
 
-   [浅谈 async/await](https://www.jianshu.com/p/1e75bd387aa0)
+  [浅谈 async/await](https://www.jianshu.com/p/1e75bd387aa0)
 
-   [async 函数的含义和用法](http://www.ruanyifeng.com/blog/2015/05/async.html)
+  [async 函数的含义和用法](http://www.ruanyifeng.com/blog/2015/05/async.html)
 
-   [面试向：Async/Await 代替 Promise.all()](https://juejin.im/post/5d56f89b518825415d0608be)
+  [面试向：Async/Await 代替 Promise.all()](https://juejin.im/post/5d56f89b518825415d0608be)
 
-   [ECMAScript 6 入门](https://es6.ruanyifeng.com/#docs/async)
+  [ECMAScript 6 入门](https://es6.ruanyifeng.com/#docs/async)
 
-   [Async/Await 替代 Promise 的 6 个理由](https://www.cnblogs.com/fundebug/p/6667725.html)
+  [Async/Await 替代 Promise 的 6 个理由](https://www.cnblogs.com/fundebug/p/6667725.html)
 
-   [js 基础之 setTimeout 与 setInterval 原理分析](https://blog.csdn.net/qq_41694291/article/details/93974595)
+  [js 基础之 setTimeout 与 setInterval 原理分析](https://blog.csdn.net/qq_41694291/article/details/93974595)
 
-   [关于 setTimeout 和 setInterval 的实现原理](https://blog.csdn.net/sinat_30443713/article/details/78128088)
+  [关于 setTimeout 和 setInterval 的实现原理](https://blog.csdn.net/sinat_30443713/article/details/78128088)
 
-   [什么是事件循环？](https://cloud.tencent.com/developer/news/566935)
+  [什么是事件循环？](https://cloud.tencent.com/developer/news/566935)
 
-   [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
+  [面试造火箭，看下这些大厂原题](https://juejin.im/post/6859121743869509646)
 
-   [浏览器与Node的事件循环(Event Loop)有何区别?](https://zhuanlan.zhihu.com/p/54882306)
+  [浏览器与Node的事件循环(Event Loop)有何区别?](https://zhuanlan.zhihu.com/p/54882306)
 
-   [做一些动图，学习一下EventLoop](https://juejin.cn/post/6969028296893792286)
+  [做一些动图，学习一下EventLoop](https://juejin.cn/post/6969028296893792286)
 
-   [requestAnimationFrame && setTimeout 原理剖析](https://www.jianshu.com/p/1e782d5702ef)
+  [requestAnimationFrame && setTimeout 原理剖析](https://www.jianshu.com/p/1e782d5702ef)
 
-   [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+  [Node.js 有难度的面试题，你能答对几个？](https://mp.weixin.qq.com/s/MLp1r3pDa91_EG07uZID-Q)
+
+  [「2021」高频前端面试题汇总之浏览器原理篇](https://juejin.cn/post/6916157109906341902/)
+
+  [使用 queueMicrotask 来执行微任务](https://blog.csdn.net/littlelyon/article/details/102927823)
 
 2. 详解：
 
-   - js 是单线程的非阻塞语言：因为如果是多线程，一边绑定事件，一边移除元素，会引起冲突。另外，如果引入锁，则大大增加复杂度，所以采取单线程。
+  - js 是单线程的非阻塞语言：因为如果是多线程，一边绑定事件，一边移除元素，会引起冲突。另外，如果引入锁，则大大增加复杂度，所以采取单线程。
 
-   - 执行栈：方法排队执行的地方，每个单元对应一个 context，包含作用域中的 this。
+  - 执行栈：方法排队执行的地方，每个单元对应一个 context，包含作用域中的 this。
 
-   - 事件(消息)队列：异步事件返回结果后，js 会将这个事件加入与当前执行栈不同的另一个队列，被放入事件队列不会立刻执行其回调，而是等待当前执行栈中的所有任务都执行完毕，主线程处于闲置状态时，再把事件放回执行栈。
+  - 事件(消息)队列：异步事件返回结果后，js 会将这个事件加入与当前执行栈不同的另一个队列，被放入事件队列不会立刻执行其回调，而是等待当前执行栈中的所有任务都执行完毕，主线程处于闲置状态时，再把事件放回执行栈。
 
-   - 事件循环：主线程不断的从消息队列中取消息，执行消息，这个过程称为事件循环，这种机制叫事件循环机制，取一次消息并执行的过程叫一次循环。
+  - 事件循环：主线程不断的从消息队列中取消息，执行消息，这个过程称为事件循环，这种机制叫事件循环机制，取一次消息并执行的过程叫一次循环。
 
-   - 事件循环机制：由执行栈和事件队列构成的无限循环
+  - 事件循环机制：由执行栈和事件队列构成的无限循环
 
-   - 事件循环描述：所有同步任务都在主线程上执行，形成一个执行栈，主线程之外，还存在一个”任务队列”，只要异步任务有了运行结果，就在”任务队列”之中放置一个事件。一旦”执行栈”中的所有同步任务执行完毕，系统就会读取”任务队列”，于是异步任务结束等待状态，进入执行栈，开始执行。主线程从”任务队列”中读取事件，这个过程是循环不断的，所以整个的这种运行机制又称为 Event Loop（事件循环）。
+  - 事件循环描述：所有同步任务都在主线程上执行，形成一个执行栈，主线程之外，还存在一个”任务队列”，只要异步任务有了运行结果，就在”任务队列”之中放置一个事件。一旦”执行栈”中的所有同步任务执行完毕，系统就会读取”任务队列”，于是异步任务结束等待状态，进入执行栈，开始执行。主线程从”任务队列”中读取事件，这个过程是循环不断的，所以整个的这种运行机制又称为 Event Loop（事件循环）。
 
-   - 宏任务：setInterval()，setTimeout()，setImmediate()，xhr回调
+  - 宏任务：setInterval()，setTimeout()，setImmediate()，xhr回调
 
-     - setTimeout：在指定的毫秒数后，将定时任务处理的函数添加到事件队列的队尾。
-     - setInterval：按照指定的周期(以毫秒数计时)，将定时任务处理函数添加到事件队列的队尾。
-       - 因为 js 是单线程的，如果处于堵塞状态计不了时，它必须依赖外部计时并触发定时，所以队列中的定时事件也是异步事件。
-       - 每个 setTimeout 产生的任务会直接 push 到任务队列中；而 setInterval 在每次把任务 push 到任务队列前，都要进行一下判断(看上次的任务是否仍在队列中)。
-       - setInterval 有两个缺点：
-         - 某些间隔会被跳过；
-         - 可能多个定时器会连续执行；
-       - setTimeout 模拟 setInterval,解决 setInterval 缺点
-       ```js
-       //每次执行的时候都会创建一个新的定时器
-       var a = setTimeout(function () {
-         // 任务
-         setTimeout(a, interval); //获取当前函数的引用，并且为其设置另一个定时器
-       }, interval);
-       //在前一个定时器执行完前，不会向队列插入新的定时器
-       //保证定时器间隔
-       ```
-
-   - 微任务 1：new Promise()、fetch()
-
-     - Promise 是异步的，是指他的 then()和 catch()方法，Promise 本身还是同步的
-     - 有 resolve()后，才能执行 then(),有 reject()，不执行 then()
-     - fetch基于promise
-
-   - 微任务 2：async await
-
-     - async function(){} 表示函数内存在异步操作
-     - await 强制下面代码等待，直到这行代码得出结果(await setTimeout 无效，适用于 ajax)
-
-   - 微任务 3：MutationObserver
-
-   - 微任务 4：process.nextTick
-
-   - 操作系统任务、浏览器重绘任务：requestAnimationFrame
-
-      官方解释：window.requestAnimationFrame()告诉浏览器——你希望执行一个动画，并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。该方法需要传入一个回调函数作为参数，该回调函数会在浏览器下一次重绘之前执行。
-
-      requestAnimationFrame它不需要你去手动设置执行间隔时间，它是跟随系统的屏幕刷新频率走的，如果屏幕刷新频率是60Hz，那么它的执行间隔就是16.7ms(1000/60≈16.7)，如果屏幕刷新频率是100Hz，那么它的执行间隔就是10ms(1000/100=10)，这样就能够保证它的执行与屏幕的刷新频率保持一致，从而避免丢帧现象。
-
-      requestAnimationFrame的回调不会通过任务队列去排队，因为在浏览器离开本标签页之后，requestAnimationFrame回调函数直接停止运行。
-
-   - 事件优先级：同步任务>异步任务(微任务>宏任务(取决于延时时间))
-
-   - Node 事件循环的流程
-
-      在进程启动时，Node 便会创建一个类似于 while(true)的循环，每执行一次循环体的过程我们称为 Tick。
-
-      每个 Tick 的过程就是查看是否有事件待处理。如果有就取出事件及其相关的回调函数。然后进入下一个循环，如果不再有事件处理，就退出进程。
-
-      每个事件循环中有一个或者多个观察者，而判断是否有事件需要处理的过程就是向这些观察者询问是否有要处理的事件。
-
-      在 Node 中，事件主要来源于网络请求、文件的 I/O 等，这些事件对应的观察者有文件 I/O 观察者，网络 I/O 的观察者。
-
-      事件循环是一个典型的生产者/消费者模型。异步 I/O，网络请求等则是事件的生产者，源源不断为 Node 提供不同类型的事件，这些事件被传递到对应的观察者那里，事件循环则从观察者那里取出事件并处理。
-
-      在 windows 下，这个循环基于 IOCP 创建，在*nix 下则基于多线程创建
-
-      异步 I/O 的流程:
-      
-        发起调用->封装请求对象->设置参数和回调函数->请求对象放入线程池等待执行->线程可用时执行请求对象中的I/O操作->执行结果放在请求对象中->通知IOCP调用完成->归还线程
-
-        I/O观察者获取完成的结果->读取请求对象->执行回调函数->事件循环此过程
-
-   - Node.js 是一个基于 Chrome V8 引擎的 JavaScript 运行环境，比 js 少了 DOM/BOM,多了 http/file system,事件执行顺序与 js 不同
-
-     - 浏览器是先把一个栈以及栈中的微任务走完，才会走下一个栈。node 环境里面是把所以栈走完，才走微任务
-     - setTimeout setImmediate 都是宏任务
-     - nextTick 和 then 都属于微任务
-     - i/o 文件操作为宏任务
-
-   - 浏览器和node的事件循环区别
-
-      node会在每个阶段之间执行微任务，6个阶段:
-
-      * timers 阶段：这个阶段执行 timer（setTimeout、setInterval）的回调
-      * I/O callbacks 阶段：处理一些上一轮循环中的少数未执行的 I/O 回调
-      * idle, prepare 阶段：仅 node 内部使用
-      * poll 阶段：获取新的 I/O 事件, 适当的条件下 node 将阻塞在这里
-      * check 阶段：执行 setImmediate() 的回调
-      * close callbacks 阶段：执行 socket 的 close 事件回调
-
-      process.nextTick是独立于 Event Loop 之外的，它有一个自己的队列，当每个阶段完成后，如果存在 nextTick 队列，就会清空队列中的所有回调函数，并且优先于其他 microtask 执行
-
+    - setTimeout：在指定的毫秒数后，将定时任务处理的函数添加到事件队列的队尾。
+    - setInterval：按照指定的周期(以毫秒数计时)，将定时任务处理函数添加到事件队列的队尾。
+      - 因为 js 是单线程的，如果处于堵塞状态计不了时，它必须依赖外部计时并触发定时，所以队列中的定时事件也是异步事件。
+      - 每个 setTimeout 产生的任务会直接 push 到任务队列中；而 setInterval 在每次把任务 push 到任务队列前，都要进行一下判断(看上次的任务是否仍在队列中)。
+      - setInterval 有两个缺点：
+        - 某些间隔会被跳过；
+        - 可能多个定时器会连续执行；
+      - setTimeout 模拟 setInterval,解决 setInterval 缺点
       ```js
-      setTimeout(()=>{
-          console.log('timer1')
-          Promise.resolve().then(function() {
-              console.log('promise1')
-          })
-      }, 0)
-      setTimeout(()=>{
-          console.log('timer2')
-          Promise.resolve().then(function() {
-              console.log('promise2')
-          })
-      }, 0)
-      //浏览器:timer1=>promise1=>timer2=>promise2
-      //node:timer1=>timer2=>promise1=>promise2
+      //每次执行的时候都会创建一个新的定时器
+      var a = setTimeout(function () {
+        // 任务
+        setTimeout(a, interval); //获取当前函数的引用，并且为其设置另一个定时器
+      }, interval);
+      //在前一个定时器执行完前，不会向队列插入新的定时器
+      //保证定时器间隔
       ```
 
-   - nextTick、setTimeout、setImmediate 的区别
+  - 微任务 1：new Promise()、fetch()
 
-     nodejs 中，setTimeout、setImmediate 是宏任务，process.nextTick()是微任务，因此 setTimeout、setImmediate 回调函数插入到任务队列的尾部，nextTick 回调函数加入到当前执行栈的尾部，所以 nextTick 会先执行。
+    - Promise 是异步的，是指他的 then()和 catch()方法，Promise 本身还是同步的
+    - 有 resolve()后，才能执行 then(),有 reject()，不执行 then()
+    - fetch基于promise
 
-     setTimeout、setImmediate 相差不大，但延时设为 0 时，setImmediate 会更快加入任务队列。
+  - 微任务 2：async await
 
-     vue 中，created()钩子函数进行的 DOM 操作一定要放在 Vue.nextTick()的回调函数中，因为此时 DOM 没渲染，需要等到 mounted()后执行。另外，数据变化导致 DOM 变化，也应用 Vue.nextTick()
+    - async function(){} 表示函数内存在异步操作
+    - await 强制下面代码等待，直到这行代码得出结果(await setTimeout 无效，适用于 ajax)
 
-   - setInterval，setTimeout 注意的地方
+  - 微任务 3：MutationObserver
 
-     1. function 中代码执行时间超过指定等待时间，settimeout 会在执行完后立即输出，setinterval 不会再这段时间向任务队列添加回调函数(因为已经存在上一个回调函数没执行完)，但不会影响后续计时。
+  - 微任务 4：process.nextTick
 
-     ```js
-     var start = new Date();
-     setTimeout(function () {
-       var end = new Date();
-       console.log("Time elapsed: ", end - start, "ms");
-     }, 500);
+  - 微任务 5：queueMicrotask
 
-     while (new Date() - start <= 1000) {}
-     //Time elapsed:  1018 ms
-     ```
+    浏览器微任务底层指派api，兼容性chrome71+
 
-     2. 如果 setinterval 执行时间略小于等待时间，则可能会出现连续执行的情况，所以需要用 settimeout 模拟 setinterval
+    ```js
+    self.queueMicrotask(() => {
+      // 函数的内容
+    })
+    ```
 
-     ```js
-     function func(args){
-         //函数本身的逻辑
-         ...
-     }
-     var timer = setInterval(func, 100, args);
+  - 操作系统任务、浏览器重绘任务：requestAnimationFrame
 
-     var timer;
-     function func(args){
-         //函数本身的逻辑
-         ...
-         //函数执行完后，重置定时器
-         timer = setTimeout(func, 100, args);
-     }
-     timer = setTimeout(func, 100, args);
-     ```
+    官方解释：window.requestAnimationFrame()告诉浏览器——你希望执行一个动画，并且要求浏览器在下次重绘之前调用指定的回调函数更新动画。该方法需要传入一个回调函数作为参数，该回调函数会在浏览器下一次重绘之前执行。
 
-     3. 延时设为 0，也不会马上执行，因为浏览器有各自最低等待时间
+    requestAnimationFrame它不需要你去手动设置执行间隔时间，它是跟随系统的屏幕刷新频率走的，如果屏幕刷新频率是60Hz，那么它的执行间隔就是16.7ms(1000/60≈16.7)，如果屏幕刷新频率是100Hz，那么它的执行间隔就是10ms(1000/100=10)，这样就能够保证它的执行与屏幕的刷新频率保持一致，从而避免丢帧现象。
 
-     ```js
-     function a() {
-       setTimeout(function () {
-         console.log(1);
-       }, 0);
-       console.log(2);
-     }
-     a();
-     // 2 1
-     ```
+    requestAnimationFrame的回调不会通过任务队列去排队，因为在浏览器离开本标签页之后，requestAnimationFrame回调函数直接停止运行。
 
-   - 例题：
+  - 事件优先级：同步任务>异步任务(微任务>宏任务(取决于延时时间))
 
-   ```js
-   //浏览器
-   (function () {
-     setTimeout(() => {
-       console.log(0);
-     });
+  - Node 事件循环的流程
 
-     new Promise((resolve) => {
-       console.log(1);
+    在进程启动时，Node 便会创建一个类似于 while(true)的循环，每执行一次循环体的过程我们称为 Tick。
 
-       setTimeout(() => {
-         resolve();
-         Promise.resolve().then(() => {
-           console.log(2);
-           setTimeout(() => console.log(3));
-           Promise.resolve().then(() => console.log(4));
-         });
-       });
+    每个 Tick 的过程就是查看是否有事件待处理。如果有就取出事件及其相关的回调函数。然后进入下一个循环，如果不再有事件处理，就退出进程。
 
-       Promise.resolve().then(() => console.log(5));
-     }).then(() => {
-       console.log(6);
-       Promise.resolve().then(() => console.log(7));
-       setTimeout(() => console.log(8));
-     });
+    每个事件循环中有一个或者多个观察者，而判断是否有事件需要处理的过程就是向这些观察者询问是否有要处理的事件。
 
-     console.log(9);
-   })();
-   //1、9、5、0、6、2、7、4、8、3
-   //node.js
-   console.log("1");
-   setTimeout(function () {
-     console.log("2");
-     process.nextTick(function () {
-       console.log("3");
-     });
-     new Promise(function (resolve) {
-       console.log("4");
-       resolve();
-     }).then(function () {
-       console.log("5");
-     });
-   });
-   process.nextTick(function () {
-     console.log("6");
-   });
-   new Promise(function (resolve) {
-     console.log("7");
-     resolve();
-   }).then(function () {
-     console.log("8");
-   });
-   setTimeout(function () {
-     console.log("9");
-     process.nextTick(function () {
-       console.log("10");
-     });
-     new Promise(function (resolve) {
-       console.log("11");
-       resolve();
-     }).then(function () {
-       console.log("12");
-     });
-   });
-   //1，7，6，8，2，4，3，5，9，11，10，12
-   let test = async function () {
-     await new Promise((resolve, reject) => {
-       console.log(1);
-       setTimeout(() => {
-         resolve();
-       }, 3000);
-     }).then(() => {
-       console.log(2);
-     });
-     console.log(3);
-     await new Promise((resolve, reject) => {
-       console.log(4);
-       setTimeout(() => {
-         resolve();
-       }, 1000);
-     }).then(() => {
-       console.log(5);
-     });
-     console.log(6);
-   };
-   test();
-   //1
+    在 Node 中，事件主要来源于网络请求、文件的 I/O 等，这些事件对应的观察者有文件 I/O 观察者，网络 I/O 的观察者。
 
-   //2
-   //3
-   //4
+    事件循环是一个典型的生产者/消费者模型。异步 I/O，网络请求等则是事件的生产者，源源不断为 Node 提供不同类型的事件，这些事件被传递到对应的观察者那里，事件循环则从观察者那里取出事件并处理。
 
-   //5
-   //6
-   ```
+    在 windows 下，这个循环基于 IOCP 创建，在*nix 下则基于多线程创建
 
-   如下为一段代码，请完善sum函数，使得 sum(1,2,3,4,5,6) 函数返回值为 21 ,需要在 sum 函数中调用 asyncAdd 函数，且不能修改asyncAdd函数
+    异步 I/O 的流程:
+    
+      发起调用->封装请求对象->设置参数和回调函数->请求对象放入线程池等待执行->线程可用时执行请求对象中的I/O操作->执行结果放在请求对象中->通知IOCP调用完成->归还线程
 
-   ```js
+      I/O观察者获取完成的结果->读取请求对象->执行回调函数->事件循环此过程
+
+  - node定时器的特殊情况
+  
+    1. 执行顺序随机例子
+
+      ```js
+      setTimeout(() => {console.log('setTimeout')}, 0)
+      setImmediate(() => {console.log('setImmediate')})
+      ```
+
+      对于以上代码来说，setTimeout 可能执行在前，也可能执行在后
+
+        - 首先 setTimeout(fn, 0) === setTimeout(fn, 1)，这是由源码决定的
+        - 进入事件循环也是需要成本的，如果在准备时候花费了大于 1ms 的时间，那么在 timer 阶段就会直接执行 setTimeout 回调
+        - 那么如果准备时间花费小于 1ms，那么就是 setImmediate 回调先执行了
+
+    2. 执行顺序一定是固定
+
+      ```js
+      const fs = require('fs')
+      fs.readFile(__filename, () => {
+          setTimeout(() => {
+              console.log('timeout');
+          }, 0)
+          setImmediate(() => {
+              console.log('immediate')
+          })
+      })
+      ```
+
+      setImmediate 永远先执行。因为两个代码写在 IO 回调中，IO 回调是在 poll 阶段执行，当回调执行完毕后队列为空，发现存在 setImmediate 回调，所以就直接跳转到 check 阶段去执行回调了。
+
+  - Node.js 是一个基于 Chrome V8 引擎的 JavaScript 运行环境，比 js 少了 DOM/BOM,多了 http/file system,事件执行顺序与 js 不同
+
+    - 浏览器是先把一个栈以及栈中的微任务走完，才会走下一个栈。node 环境里面是把所以栈走完，才走微任务
+    - setTimeout setImmediate 都是宏任务
+    - nextTick 和 then 都属于微任务
+    - i/o 文件操作为宏任务
+
+  - 浏览器和node的事件循环区别
+
+    ```js
+    setTimeout(()=>{
+        console.log('timer1')
+        Promise.resolve().then(function() {
+            console.log('promise1')
+        })
+    }, 0)
+    setTimeout(()=>{
+        console.log('timer2')
+        Promise.resolve().then(function() {
+            console.log('promise2')
+        })
+    }, 0)
+    //浏览器:timer1=>promise1=>timer2=>promise2
+    //node:timer1=>timer2=>promise1=>promise2
+    ```
+
+    node会在每个阶段之间执行微任务，6个阶段:
+
+    1. timers 阶段：这个阶段执行 timer（setTimeout、setInterval）的回调
+
+      初次进入事件循环，会从计时器阶段开始。此阶段会判断是否存在过期的计时器回调（包含 setTimeout 和 setInterval），如果存在则会执行所有过期的计时器回调，执行完毕后，如果回调中触发了相应的微任务，会接着执行所有微任务，执行完微任务后再进入 Pending callbacks 阶段。
+
+    2. I/O callbacks 阶段：处理一些上一轮循环中的少数未执行的 I/O 回调
+    3. idle, prepare 阶段：仅 node 内部使用
+    4. poll 阶段：获取新的 I/O 事件, 适当的条件下 node 将阻塞在这里
+
+      * 当回调队列不为空时：会执行回调，若回调中触发了相应的微任务，这里的微任务执行时机和其他地方有所不同，不会等到所有回调执行完毕后才执行，而是针对每一个回调执行完毕后，就执行相应微任务。执行完所有的回调后，变为下面的情况。
+      * 当回调队列为空时（没有回调或所有回调执行完毕）：但如果存在有计时器（setTimeout、setInterval和setImmediate）没有执行，会结束轮询阶段，进入 Check 阶段。否则会阻塞并等待任何正在执行的I/O操作完成，并马上执行相应的回调，直到所有回调执行完毕。
+
+    5. check 阶段：执行 setImmediate() 的回调
+
+      会检查是否存在 setImmediate 相关的回调，如果存在则执行所有回调，执行完毕后，如果回调中触发了相应的微任务，会接着执行所有微任务，执行完微任务后再进入 Close callbacks 阶段。
+
+    6. close callbacks 阶段：执行 socket 的 close 事件回调
+
+    process.nextTick是独立于 Event Loop 之外的，它有一个自己的队列，当每个阶段完成后，如果存在 nextTick 队列，就会清空队列中的所有回调函数，并且优先于其他 microtask 执行
+
+    永远都是先把 nextTick 全部打印出来
+    ```js
+    setTimeout(() => {
+    console.log('timer1')
+    Promise.resolve().then(function() {
+      console.log('promise1')
+    })
+    }, 0)
+    process.nextTick(() => {
+    console.log('nextTick')
+    process.nextTick(() => {
+      console.log('nextTick')
+      process.nextTick(() => {
+        console.log('nextTick')
+        process.nextTick(() => {
+          console.log('nextTick')
+        })
+      })
+    })
+    })
+    ```
+
+  - nextTick、setTimeout、setImmediate 的区别
+
+    nodejs 中，setTimeout、setImmediate 是宏任务，process.nextTick()是微任务，因此 setTimeout、setImmediate 回调函数插入到任务队列的尾部，nextTick 回调函数加入到当前执行栈的尾部，所以 nextTick 会先执行。
+
+    setTimeout、setImmediate 相差不大，但延时设为 0 时，setImmediate 会更快加入任务队列。
+
+    vue 中，created()钩子函数进行的 DOM 操作一定要放在 Vue.nextTick()的回调函数中，因为此时 DOM 没渲染，需要等到 mounted()后执行。另外，数据变化导致 DOM 变化，也应用 Vue.nextTick()
+
+  - setInterval，setTimeout 注意的地方
+
+    1. function 中代码执行时间超过指定等待时间，settimeout 会在执行完后立即输出，setinterval 不会再这段时间向任务队列添加回调函数(因为已经存在上一个回调函数没执行完)，但不会影响后续计时。
+
+    ```js
+    var start = new Date();
+    setTimeout(function () {
+      var end = new Date();
+      console.log("Time elapsed: ", end - start, "ms");
+    }, 500);
+
+    while (new Date() - start <= 1000) {}
+    //Time elapsed:  1018 ms
+    ```
+
+    2. 如果 setinterval 执行时间略小于等待时间，则可能会出现连续执行的情况，所以需要用 settimeout 模拟 setinterval
+
+    ```js
+    function func(args){
+        //函数本身的逻辑
+        ...
+    }
+    var timer = setInterval(func, 100, args);
+
+    var timer;
+    function func(args){
+        //函数本身的逻辑
+        ...
+        //函数执行完后，重置定时器
+        timer = setTimeout(func, 100, args);
+    }
+    timer = setTimeout(func, 100, args);
+    ```
+
+    3. 延时设为 0，也不会马上执行，因为浏览器有各自最低等待时间
+
+    ```js
+    function a() {
+      setTimeout(function () {
+        console.log(1);
+      }, 0);
+      console.log(2);
+    }
+    a();
+    // 2 1
+    ```
+
+  - 例题：
+
+    ```js
+    //浏览器
+    (function () {
+      setTimeout(() => {
+        console.log(0);
+      });
+
+      new Promise((resolve) => {
+        console.log(1);
+
+        setTimeout(() => {
+          resolve();
+          Promise.resolve().then(() => {
+            console.log(2);
+            setTimeout(() => console.log(3));
+            Promise.resolve().then(() => console.log(4));
+          });
+        });
+
+        Promise.resolve().then(() => console.log(5));
+      }).then(() => {
+        console.log(6);
+        Promise.resolve().then(() => console.log(7));
+        setTimeout(() => console.log(8));
+      });
+
+      console.log(9);
+    })();
+    //1、9、5、0、6、2、7、4、8、3
+    //node.js
+    console.log("1");
+    setTimeout(function () {
+      console.log("2");
+      process.nextTick(function () {
+        console.log("3");
+      });
+      new Promise(function (resolve) {
+        console.log("4");
+        resolve();
+      }).then(function () {
+        console.log("5");
+      });
+    });
+    process.nextTick(function () {
+      console.log("6");
+    });
+    new Promise(function (resolve) {
+      console.log("7");
+      resolve();
+    }).then(function () {
+      console.log("8");
+    });
+    setTimeout(function () {
+      console.log("9");
+      process.nextTick(function () {
+        console.log("10");
+      });
+      new Promise(function (resolve) {
+        console.log("11");
+        resolve();
+      }).then(function () {
+        console.log("12");
+      });
+    });
+    //1，7，6，8，2，4，3，5，9，11，10，12
+    let test = async function () {
+      await new Promise((resolve, reject) => {
+        console.log(1);
+        setTimeout(() => {
+          resolve();
+        }, 3000);
+      }).then(() => {
+        console.log(2);
+      });
+      console.log(3);
+      await new Promise((resolve, reject) => {
+        console.log(4);
+        setTimeout(() => {
+          resolve();
+        }, 1000);
+      }).then(() => {
+        console.log(5);
+      });
+      console.log(6);
+    };
+    test();
+    //1
+
+    //2
+    //3
+    //4
+
+    //5
+    //6
+    ```
+
+    如下为一段代码，请完善sum函数，使得 sum(1,2,3,4,5,6) 函数返回值为 21 ,需要在 sum 函数中调用 asyncAdd 函数，且不能修改asyncAdd函数
+
+    ```js
     /**
     * 请在 sum函数中调用此函数，完成数值计算
     * @param {*} a 要相加的第一个值
@@ -920,102 +1036,102 @@
       console.log(res)
       console.log(`程序执行共耗时: ${window.performance.now() - start}`)
     })
-   ```
+    ```
 
-   普通方法
-  ```js
-  async function sum(...rest) {
-    // 取出来第一个作为初始值
-    let result = rest.shift()
-    // 通过for of 遍历 rest, 依次相加
-    for(let num of rest) {
-      // 使用promise 获取相加结果
-      result = await new Promise(resolve => {
-        asyncAdd(result, num, (_,res) => {
-          resolve(res)
+    普通方法
+    ```js
+    async function sum(...rest) {
+      // 取出来第一个作为初始值
+      let result = rest.shift()
+      // 通过for of 遍历 rest, 依次相加
+      for(let num of rest) {
+        // 使用promise 获取相加结果
+        result = await new Promise(resolve => {
+          asyncAdd(result, num, (_,res) => {
+            resolve(res)
+          })
         })
-      })
-    }
-    // 返回执行结果
-    return result
-  }
-  ```
-
-  优化：两两执行
-  ```js
-  async function sum(...rest) {
-    // 如果传的值少于2个，则直接返回
-    if (rest.length <= 1) {
-      return rest[0] || 0
-    }
-    const promises = []
-    // 遍历将数组里面的值两个两个的执行
-    for (let i = 0; i < rest.length; i += 2) {
-      promises.push(
-        new Promise(resolve => {
-          // 如果 rest[i+1] 是 undefined, 说明数组长度是奇数，这个是最后一个
-          if (rest[i + 1] === undefined) {
-            resolve(rest[i])
-          } else {
-            // 调用asyncAdd 进行计算
-            asyncAdd(rest[i], rest[i + 1], (_, result) => {
-              resolve(result)
-            })
-          }
-        })
-      )
-    }
-    // 获取第一次计算结果
-    const result = await Promise.all(promises)
-    // 然后将第一次获取到的结果即 [3,7,11] 再次调用 sum执行
-    return await sum(...result)
-  }
-  ```
-  ```js
-  async function sum(...rest) {
-    let arr = rest;
-    let r = 0;
-    while(arr.length > 0){
-      let a = arr.pop();
-      let b = 0;
-      if(arr.length > 0){
-        b = arr.pop();
       }
-      let result = await new Promise((resolve,reject)=>{
-        asyncAdd(a,b,(tmp,res)=>{
-          resolve(res);
-        });
-      });
-      r += result;
-    }
-    return r;
-  }
-  ```
-
-  再优化:隐式转换迭代+promise.all
-  ```js
-  async function sum(...rest) {
-    let result = 0
-    // 隐式类型转换， 对象 + 数字，会先调用对象的toString 方法
-    const obj = {}
-    obj.toString = function() {
+      // 返回执行结果
       return result
     }
-    const promises = []
-    for(let num of rest) {
-      promises.push(new Promise((resolve) => {
-        asyncAdd(obj, num, (_, res) => {
-          resolve(res)
-        })
-      }).then(res => {
-        // 在这里将 result的值改变之后，obj.toString 的返回值就变了，这时候下一个setTimeout调用时就使用了新值
-        result = res
-      }))
+    ```
+
+    优化：两两执行
+    ```js
+    async function sum(...rest) {
+      // 如果传的值少于2个，则直接返回
+      if (rest.length <= 1) {
+        return rest[0] || 0
+      }
+      const promises = []
+      // 遍历将数组里面的值两个两个的执行
+      for (let i = 0; i < rest.length; i += 2) {
+        promises.push(
+          new Promise(resolve => {
+            // 如果 rest[i+1] 是 undefined, 说明数组长度是奇数，这个是最后一个
+            if (rest[i + 1] === undefined) {
+              resolve(rest[i])
+            } else {
+              // 调用asyncAdd 进行计算
+              asyncAdd(rest[i], rest[i + 1], (_, result) => {
+                resolve(result)
+              })
+            }
+          })
+        )
+      }
+      // 获取第一次计算结果
+      const result = await Promise.all(promises)
+      // 然后将第一次获取到的结果即 [3,7,11] 再次调用 sum执行
+      return await sum(...result)
     }
-    await Promise.all(promises)
-    return result
-  }
-  ```
+    ```
+    ```js
+    async function sum(...rest) {
+      let arr = rest;
+      let r = 0;
+      while(arr.length > 0){
+        let a = arr.pop();
+        let b = 0;
+        if(arr.length > 0){
+          b = arr.pop();
+        }
+        let result = await new Promise((resolve,reject)=>{
+          asyncAdd(a,b,(tmp,res)=>{
+            resolve(res);
+          });
+        });
+        r += result;
+      }
+      return r;
+    }
+    ```
+
+    再优化:隐式转换迭代+promise.all
+    ```js
+    async function sum(...rest) {
+      let result = 0
+      // 隐式类型转换， 对象 + 数字，会先调用对象的toString 方法
+      const obj = {}
+      obj.toString = function() {
+        return result
+      }
+      const promises = []
+      for(let num of rest) {
+        promises.push(new Promise((resolve) => {
+          asyncAdd(obj, num, (_, res) => {
+            resolve(res)
+          })
+        }).then(res => {
+          // 在这里将 result的值改变之后，obj.toString 的返回值就变了，这时候下一个setTimeout调用时就使用了新值
+          result = res
+        }))
+      }
+      await Promise.all(promises)
+      return result
+    }
+    ```
 
 ### 闭包数据缓存与垃圾回收
 
