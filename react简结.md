@@ -35,6 +35,7 @@
 * [Mobx](#Mobx)
 * [Immutable](#Immutable)
 * [thunk](#thunk)
+* [React.createClass和extends Component的区别](#React.createClass和extends Component的区别)
 
 ---
 
@@ -153,6 +154,8 @@
     [React的合成事件](https://www.cnblogs.com/mengff/p/12901674.html)
 
     [React事件处理和原生JS事件处理](https://www.cnblogs.com/lyraLee/p/11577511.html)
+
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
 
 2. 详解
 
@@ -339,46 +342,76 @@
 
         ReactJS中的事件对象是React将原生事件对象(event)进行了跨浏览器包装过的合成事件(SyntheticEvent)
 
-        合成事件对象的特点：
+        * 合成事件做了两件事：
 
-        1. 在事件处理函数中，可以正常访问事件属性。
+            1. 事件委派
 
-        2. 为了性能考虑，执行完后，合成事件的事件属性将不能再访问。
+                React会把所有的事件绑定到结构的最外层(document)，使用统一的事件监听器，这个事件监听器上维持了一个映射来保存所有组件内部事件监听和处理函数。
 
-            * 异步处理函数中，访问不到合成事件的属性。
+                这样的方式不仅仅减少了内存的消耗，还能在组件挂在销毁时统一订阅和移除事件。
 
-            * 因为执行异步函数的时候，事件处理函数的上下文消失。
+            2. 自动绑定
 
-        执行完后，合成事件的属性会被重置为null。所以异步访问合成事件的属性，是无效的。
+                React组件中，每个方法的上下文都会指向该组件的实例，即自动绑定this为当前组件。
 
-        解决方法：
+        * 合成事件的目的：
 
-        1. 用变量记录事件属性值
+            1. 合成事件首先抹平了浏览器之间的兼容问题，另外这是一个跨浏览器原生事件包装器，赋予了跨浏览器开发的能力；
 
-        ```js
-        function onClick(event) {
-            console.log(event); // => nullified object.
-            console.log(event.type); // => "click"
-            const eventType = event.type; // => "click"
+            2. 对于原生浏览器事件来说，浏览器会给监听器创建一个事件对象。如果你有很多的事件监听，那么就需要分配很多的事件对象，造成高额的内存分配问题。但是对于合成事件来说，有一个事件池专门来管理它们的创建和销毁，当事件需要被使用时，就会从池子中复用对象，事件回调结束后，就会销毁事件对象上的属性，从而便于下次复用事件对象。
 
-            setTimeout(function() {
-                console.log(event.type); // => null
-                console.log(eventType); // => "click"
-            }, 0);
-        }
-        ```
+        * React的事件和普通的HTML事件区别
 
-        2. e.persist()会将当前的合成事件对象，从对象池中移除，就不会回收该对象了。对象可以被异步程序访问到。
+            1. 对于事件名称命名方式，原生事件为全小写，react 事件采用小驼峰；
+            2. 对于事件函数处理语法，原生事件为字符串，react 事件为函数；
+            3. react 事件不能采用 return false 的方式来阻止浏览器的默认行为，而必须要地明确地调用preventDefault()来阻止默认行为。
 
-        合成事件阻止冒泡:
+        * 合成事件优点
 
-        1. e.stopPropagation
+            1. 兼容所有浏览器，更好的跨平台；
+            2. 将事件统一存放在一个数组，避免频繁的新增与删除（垃圾回收）。
+            3. 方便 react 统一管理和事务机制。
 
-            只能阻止合成事件间冒泡，即下层的合成事件，不会冒泡到上层的合成事件。事件本身还都是在document上执行。最多只能阻止document事件不能再冒泡到window上。
+        * 合成事件对象的特点：
 
-        2. e.nativeEvent.stopImmediatePropagation
+            1. 在事件处理函数中，可以正常访问事件属性。
 
-            能阻止合成事件不会冒泡到document上。
+            2. 为了性能考虑，执行完后，合成事件的事件属性将不能再访问。
+
+                * 异步处理函数中，访问不到合成事件的属性。
+
+                * 因为执行异步函数的时候，事件处理函数的上下文消失。
+
+            执行完后，合成事件的属性会被重置为null。所以异步访问合成事件的属性，是无效的。
+
+            解决方法：
+
+            1. 用变量记录事件属性值
+
+            ```js
+            function onClick(event) {
+                console.log(event); // => nullified object.
+                console.log(event.type); // => "click"
+                const eventType = event.type; // => "click"
+
+                setTimeout(function() {
+                    console.log(event.type); // => null
+                    console.log(eventType); // => "click"
+                }, 0);
+            }
+            ```
+
+            2. e.persist()会将当前的合成事件对象，从对象池中移除，就不会回收该对象了。对象可以被异步程序访问到。
+
+        * 合成事件阻止冒泡:
+
+            1. e.stopPropagation
+
+                只能阻止合成事件间冒泡，即下层的合成事件，不会冒泡到上层的合成事件。事件本身还都是在document上执行。最多只能阻止document事件不能再冒泡到window上。
+
+            2. e.nativeEvent.stopImmediatePropagation
+
+                能阻止合成事件不会冒泡到document上。
 
     * 函数调用
 
@@ -445,6 +478,8 @@
 
     [React（17.0版本）生命周期概述](https://www.cnblogs.com/plBlog/p/14428928.html)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
     * 纯函数：固定输入，固定输出
@@ -466,6 +501,10 @@
         * UNSAFE_componentWillReceiveProps
 
             有时候组件在 props 发生变化时会产生多次调用问题，应该使用 componentDidUpdate
+
+            componentWillReceiveProps在初始化render的时候不会执行，它会在Component接受到新的状态(Props)时被触发，一般用于父组件状态更新时子组件的重新渲染。
+
+            使用好处： 在这个生命周期中，可以在子组件的render函数执行前获取新的props，从而更新子组件自己的state。 可以将数据请求放在这里进行执行，需要传的参数则从componentWillReceiveProps(nextProps)中获取。而不必将所有的请求都放在父组件中。于是该请求只会在该组件渲染时才会发出，从而减轻请求负担。
 
         * UNSAFE_componentWillUpdate
 
@@ -854,7 +893,15 @@
 
     [React 父子组件通信](https://www.jianshu.com/p/bc5a924db3a4)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
+
+    "render prop"是指一种在 React 组件之间使用一个值为函数的 prop 共享代码的简单技术
+
+    优点：数据共享、代码复用，将组件内的state作为props传递给调用者，将渲染逻辑交给调用者。
+
+    缺点：无法在 return 语句外访问数据、嵌套写法不够优雅
 
     父组件传入state指定的值给子组件，定义回调函数callback接收子组件传值
     ```js
@@ -2473,6 +2520,15 @@
 
 2. 详解
 
+    React V15 在渲染时，会递归比对 VirtualDOM 树，找出需要变动的节点，然后同步更新它们， 一气呵成。这个过程期间， React 会占据浏览器资源，这会导致用户触发的事件得不到响应，并且会导致掉帧，导致用户感觉到卡顿。
+
+    为了给用户制造一种应用很快的“假象”，不能让一个任务长期霸占着资源。 可以将浏览器的渲染、布局、绘制、资源加载(例如 HTML 解析)、事件响应、脚本执行视作操作系统的“进程”，需要通过某些调度策略合理地分配 CPU 资源，从而提高浏览器的用户响应速率, 同时兼顾任务执行效率。
+
+    所以 React 通过Fiber 架构，让这个执行过程变成可被中断。“适时”地让出 CPU 执行权，除了可以让浏览器及时地响应用户的交互，还有其他好处:
+
+    1. 分批延时对DOM进行操作，避免一次性操作大量 DOM 节点，可以得到更好的用户体验；
+    2. 给浏览器一点喘息的机会，它会对代码进行编译优化（JIT）及进行热代码优化，或者对 reflow 进行修正。
+
     * 虚拟dom
 
         从 render 方法返回的不可变 React 元素树，通常称为虚拟DOM。
@@ -2514,7 +2570,6 @@
     * react架构
 
         组件return render信息 给任务调度器(scheduler),Scheduler 决定渲染（更新）任务优先级，将高优的更新任务优先交给 Reconciler(调和器/协调器)， Reconciler负责找出前后两个 Virtual DOM（React Element）树的「差异」，并把「差异」告诉 Renderer(渲染器)。
-
 
     * fiber
 
@@ -2645,9 +2700,14 @@
 
     [高阶组件](https://www.yuque.com/chenzilong/rglnod/dzl1i6)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
+    高阶组件（HOC）是 React 中用于复用组件逻辑的一种高级技巧。HOC 自身不是 React API 的一部分，它是一种基于 React 的组合特性而形成的设计模式。
+
     高阶组件就是一个函数，且该函数(wrapper)接受一个组件作为参数，并返回一个新的组件。
+
     高阶组件并不关心数据使用的方式和原因，而被包裹的组件也不关心数据来自何处.
 
     ```js
@@ -2662,6 +2722,165 @@
     HOC本身没有修改传入的组件，hoc通过将组件包装在容器组件。HOC是纯函数，没有副作用。这里提到容器组件，其实和redux的connet函数是同一个方式。
 
     withSubscription 和包装组件之间的契约完全基于之间传递的 props。这种依赖方式使得替换 HOC 变得容易，只要它们为包装的组件提供相同的 prop 即可。
+
+    ```js
+    // hoc的定义
+    function withSubscription(WrappedComponent, selectData) {
+    return class extends React.Component {
+        constructor(props) {
+        super(props);
+        this.state = {
+            data: selectData(DataSource, props)
+        };
+        }
+        // 一些通用的逻辑处理
+        render() {
+        // ... 并使用新数据渲染被包装的组件!
+        return <WrappedComponent data={this.state.data} {...this.props} />;
+        }
+    };
+
+    // 使用
+    const BlogPostWithSubscription = withSubscription(BlogPost,
+    (DataSource, props) => DataSource.getBlogPost(props.id));
+    ```
+
+    * 优点
+    
+        逻辑服用、不影响被包裹组件的内部逻辑。
+
+    * 缺点
+    
+        hoc传递给被包裹组件的props容易和被包裹后的组件重名，进而被覆盖
+
+    * 适用场景
+
+        * 代码复用，逻辑抽象
+        * 渲染劫持
+        * State 抽象和更改
+        * Props 更改
+
+    * 具体应用例子
+
+        1. 权限控制
+
+            利用高阶组件的 条件渲染 特性可以对页面进行权限控制，权限控制一般分为两个维度：页面级别和 页面元素级别
+            ```ts
+            // HOC.js
+            function withAdminAuth(WrappedComponent) {
+                return class extends React.Component {
+                    state = {
+                        isAdmin: false,
+                    }
+                    async UNSAFE_componentWillMount() {
+                        const currentRole = await getCurrentUserRole();
+                        this.setState({
+                            isAdmin: currentRole === 'Admin',
+                        });
+                    }
+                    render() {
+                        if (this.state.isAdmin) {
+                            return <WrappedComponent {...this.props} />;
+                        } else {
+                            return (<div>您没有权限查看该页面，请联系管理员！</div>);
+                        }
+                    }
+                };
+            }
+
+            // pages/page-a.js
+            class PageA extends React.Component {
+                constructor(props) {
+                    super(props);
+                    // something here...
+                }
+                UNSAFE_componentWillMount() {
+                    // fetching data
+                }
+                render() {
+                    // render page with data
+                }
+            }
+            export default withAdminAuth(PageA);
+
+
+            // pages/page-b.js
+            class PageB extends React.Component {
+                constructor(props) {
+                    super(props);
+                // something here...
+                    }
+                UNSAFE_componentWillMount() {
+                // fetching data
+                }
+                render() {
+                // render page with data
+                }
+            }
+            export default withAdminAuth(PageB);
+            ```
+
+        2. 组件渲染性能追踪
+
+            借助父组件子组件生命周期规则捕获子组件的生命周期，可以方便的对某个组件的渲染时间进行记录
+            ```ts
+            class Home extends React.Component {
+                render() {
+                    return (<h1>Hello World.</h1>);
+                }
+            }
+            function withTiming(WrappedComponent) {
+                return class extends WrappedComponent {
+                    constructor(props) {
+                        super(props);
+                        this.start = 0;
+                        this.end = 0;
+                    }
+                    UNSAFE_componentWillMount() {
+                        super.componentWillMount && super.componentWillMount();
+                        this.start = Date.now();
+                    }
+                    componentDidMount() {
+                        super.componentDidMount && super.componentDidMount();
+                        this.end = Date.now();
+                        console.log(`${WrappedComponent.name} 组件渲染时间为 ${this.end - this.start} ms`);
+                    }
+                    render() {
+                        return super.render();
+                    }
+                };
+            }
+
+            export default withTiming(Home);//withTiming 是利用 反向继承 实现的一个高阶组件，功能是计算被包裹组件（这里是 Home 组件）的渲染时间。
+            ```
+
+        3. 页面复用
+
+            ```ts
+            const withFetching = fetching => WrappedComponent => {
+                return class extends React.Component {
+                    state = {
+                        data: [],
+                    }
+                    async UNSAFE_componentWillMount() {
+                        const data = await fetching();
+                        this.setState({
+                            data,
+                        });
+                    }
+                    render() {
+                        return <WrappedComponent data={this.state.data} {...this.props} />;
+                    }
+                }
+            }
+
+            // pages/page-a.js
+            export default withFetching(fetching('science-fiction'))(MovieList);
+            // pages/page-b.js
+            export default withFetching(fetching('action'))(MovieList);
+            // pages/page-other.js
+            export default withFetching(fetching('some-other-type'))(MovieList);
+            ```
 
 ## hook
 
@@ -2697,11 +2916,40 @@
 
     [useRef使用总结](https://juejin.cn/post/6844904174417608712)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
     Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
 
     Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
+
+    ```ts
+    // 自定义一个获取订阅数据的hook
+    function useSubscription() {
+    const data = DataSource.getComments();
+    return [data];
+    }
+    // 
+    function CommentList(props) {
+    const {data} = props;
+    const [subData] = useSubscription();
+        ...
+    }
+    // 使用
+    <CommentList data='hello' />
+    ```
+
+    * 解决的问题
+
+        hook解决了hoc的prop覆盖的问题，同时使用的方式解决了render props的嵌套地狱的问题。
+
+    * 优点
+
+        * 使用直观；
+        * 解决hoc的prop 重名问题；
+        * 解决render props 因共享数据 而出现嵌套地狱的问题；
+        * 能在return之外使用数据的问题。
 
     * React 中提供的 hooks：
 
@@ -3697,6 +3945,14 @@
         6. 当所有节点都 doWork 完成后，会触发 commitRoot 方法，React 进入 commit 阶段。
         7. 在 commit 阶段中，React 会根据前面为各个节点打的 Tag，一次性更新整个 dom 元素。
 
+    * 哪些方法会触发 React 重新渲染？
+
+        setState 是 React 中最常用的命令，通常情况下，执行 setState 会触发 render。但是这里有个点值得关注，执行 setState 的时候不一定会重新渲染。当 setState 传入 null 时，并不会触发 render。
+
+    * React如何判断什么时候重新渲染组件？
+
+        组件状态的改变可以因为props的改变，或者直接通过setState方法改变。组件获得新的状态，然后React决定是否应该重新渲染组件。只要组件的state发生变化，React就会对组件进行重新渲染。这是因为React中的shouldComponentUpdate方法默认返回true，这就是导致每次更新都重新渲染的原因。
+
 ## react源码简述
 
 参考链接：
@@ -4339,6 +4595,8 @@ React.createElement(
 
 [jsx到javascript的转换过程](https://www.yuque.com/chenzilong/rglnod/bg3c94)
 
+[「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 * 版本v16.13.1
 
 * createElement(组件类型或者元素类型或者系统内置类型, props的集合, 子节点数据)
@@ -4416,6 +4674,8 @@ Component.prototype.forceUpdate = function(callback) {
 
 这里就是做了PureComponent对Component的原型继承，然后多加了一个在PureComponent的原型上属性isPureReactComponent。
 
+PureComponent表示一个纯组件，可以用来优化React程序，减少render函数执行的次数，从而提高组件的性能。
+
 这里中间用了一个ComponentDummy，是因为，需要在原型上面多加一个属性，又不能污染Component的原型。
 
 ```js
@@ -4439,6 +4699,12 @@ pureComponentPrototype.constructor = PureComponent;
 Object.assign(pureComponentPrototype, Component.prototype);
 pureComponentPrototype.isPureReactComponent = true;
 ```
+
+当prop或者state发生变化时，可以通过在shouldComponentUpdate生命周期函数中执行return false来阻止页面的更新，从而减少不必要的render执行。React.PureComponent会自动执行 shouldComponentUpdate。
+
+pureComponent中的 shouldComponentUpdate() 进行的是浅比较，也就是说如果是引用数据类型的数据，只会比较不是同一个地址，而不会比较这个地址里面的数据是否一致。浅比较会忽略属性和或状态突变情况，其实也就是数据引用指针没有变化，而数据发生改变的时候render是不会执行的。如果需要重新渲染那么就需要重新开辟空间引用数据。PureComponent一般会用在一些纯展示组件上。
+
+使用pureComponent的**好处**：当组件更新时，如果组件的props或者state都没有改变，render函数就不会触发。省去虚拟DOM的生成和对比过程，达到提升性能的目的。这是因为react自动做了一层浅比较。
 
 * createRef
 
@@ -5354,3 +5620,36 @@ class Switch extends React.Component {
     非function,不处理，将action 传给下一个中间件，最终都会根据传入的action计算相应的reducers
 
     function类型的action, 自动触发函数，并且将store.dispatch传入
+
+## React.createClass和extends Component的区别
+
+1. 参考链接
+
+    [对于react-thunk中间件的简单理解](https://blog.csdn.net/weixin_38642331/article/details/81748312)
+
+2. 详解
+
+    1. 语法区别
+
+        * createClass本质上是一个工厂函数，extends的方式更加接近最新的ES6规范的class写法。两种方式在语法上的差别主要体现在方法的定义和静态属性的声明上。
+        * createClass方式的方法定义使用逗号，隔开，因为creatClass本质上是一个函数，传递给它的是一个Object；而class的方式定义方法时务必谨记不要使用逗号隔开，这是ES6 class的语法规范。
+
+    2. propType 和 getDefaultProps
+
+        * React.createClass：通过proTypes对象和getDefaultProps()方法来设置和获取props.
+        * React.Component：通过设置两个属性propTypes和defaultProps
+
+    3. 状态的区别
+
+        * React.createClass：通过getInitialState()方法返回一个包含初始值的对象
+        * React.Component：通过constructor设置初始状态
+
+    4. this区别
+
+        * React.createClass：会正确绑定this
+        * React.Component：由于使用了 ES6，这里会有些微不同，属性并不会自动绑定到 React 类的实例上。
+
+    5. Mixins
+
+        * React.createClass：使用 React.createClass 的话，可以在创建组件时添加一个叫做 mixins 的属性，并将可供混合的类的集合以数组的形式赋给 mixins。
+        * 如果使用 ES6 的方式来创建组件，那么 React mixins 的特性将不能被使用了。
