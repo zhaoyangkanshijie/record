@@ -7,7 +7,7 @@
 * [react生命周期](#react生命周期)
 * [react数据绑定原理](#react数据绑定原理)
 * [请求后台资源](#请求后台资源)
-* [父子组件通信](#父子组件通信)
+* [父子组件通信props](#父子组件通信props)
 * [跨级组件通信](#跨级组件通信)
 * [非嵌套组件间通信](#非嵌套组件间通信)
 * [react路由](#react路由)
@@ -24,7 +24,7 @@
 * [Fragments](#Fragments)
 * [插槽](#插槽)
 * [分析器](#分析器)
-* [setState同步异步](#setState同步异步)
+* [setState](#setState)
 * [react源码简述](#react源码简述)
 * [点击外部元素](#点击外部元素)
 * [react性能优化](#react性能优化)
@@ -35,7 +35,9 @@
 * [Mobx](#Mobx)
 * [Immutable](#Immutable)
 * [thunk](#thunk)
-* [React.createClass和extends Component的区别](#React.createClass和extends Component的区别)
+* [React.createClass和extendsComponent的区别](#React.createClass和extendsComponent的区别)
+* [React声明组件](#React声明组件)
+* [React-Intl](#React-Intl)
 
 ---
 
@@ -514,6 +516,36 @@
 
         V16前后区别：由同步渲染改为异步渲染(fiber机制)
 
+        * 删除原因
+
+            被废弃的三个函数都是在render之前，因为fiber的出现，很可能因为高优先级任务的出现而打断现有任务导致它们会被执行多次。
+
+            1. componentWillMount
+
+                这个函数的功能完全可以使用componentDidMount(异步获取数据)和 constructor(初始化)来代替。
+
+                如果在 componentWillMount 中订阅事件，但在服务端并不会执行 componentWillUnMount事件，也就是说服务端会导致内存泄漏，所以componentWilIMount完全可以不使用，但使用者有时候难免因为各种各样的情况在 componentWillMount中做一些操作，那么React为了约束开发者，干脆就抛掉了这个API
+
+            2. componentWillReceiveProps
+
+                在老版本的 React 中，如果组件自身的某个 state 跟其 props 密切相关的话，一直都没有一种很优雅的处理方式去更新 state，而是需要在 componentWilReceiveProps 中判断前后两个 props 是否相同，如果不同再将新的 props更新到相应的 state 上去。
+
+                这样做一来会破坏 state 数据的单一数据源，导致组件状态变得不可预测，另一方面也会增加组件的重绘次数。类似的业务需求也有很多，如一个可以横向滑动的列表，当前高亮的 Tab 显然隶属于列表自身时，根据传入的某个值，直接定位到某个 Tab。
+
+                为了解决这些问题，React引入了第一个新的生命周期：getDerivedStateFromProps。它有以下的优点∶
+
+                * getDSFP是静态方法，在这里不能使用this，也就是一个纯函数，开发者不能写出副作用的代码
+                * 开发者只能通过prevState而不是prevProps来做对比，保证了state和props之间的简单关系以及不需要处理第一次渲染时prevProps为空的情况
+                * 基于第一点，将状态变化（setState）和昂贵操作（tabChange）区分开，更加便于 render 和 commit 阶段操作或者说优化。
+
+            3. componentWillUpdate
+
+                与 componentWillReceiveProps 类似，许多开发者也会在 componentWillUpdate 中根据 props 的变化去触发一些回调 。 但不论是 componentWilReceiveProps 还是 componentWilUpdate，都有可能在一次更新中被调用多次。
+
+                componentDidUpdate 不存在这样的问题，一次更新中 componentDidUpdate 只会被调用一次，所以将原先写在 componentWillUpdate 中的回调迁移至 componentDidUpdate 就可以解决这个问题。
+
+                另外一种情况则是需要获取DOM元素状态，但是由于在fiber中，render可打断，可能在componentWillMount中获取到的元素状态很可能与实际需要的不同，这个通常可以使用第二个新增的生命函数的解决 getSnapshotBeforeUpdate(prevProps, prevState)，getSnapshotBeforeUpdate会在最终确定的render执行之前执行，也就是能保证其获取到的元素状态与didUpdate中获取到的元素状态相同。
+
     * React 在 V16.3 版本中，新增了两个生命周期函数：
 
         * static getDerivedStateFromProps
@@ -699,6 +731,17 @@
                 根据此函数的返回值来判断是否进行重新渲染，true 表示重新渲染，false 表示不重新渲染，默认返回 true
 
                 首次渲染或者当我们调用 forceUpdate 时并不会触发此方法。此方法仅用于性能优化，返回 false 并不会阻止子组件在 state 更改时重新渲染，返回 false，则不会调用 UNSAFE_componentWillUpdate()，render() 和 componentDidUpdate()
+
+                ```js
+                shouldComponentUpdate(nexrProps) {
+                    if (this.props.num === nexrProps.num) {
+                        return false
+                    }
+                    return true;
+                }
+                ```
+
+                添加 shouldComponentUpdate 方法时，不建议使用深度相等检查（如使用 JSON.stringify()），因为深比较效率很低，可能会比重新渲染组件效率还低。而且该方法维护比较困难，建议使用该方法会产生明显的性能提升时使用。
 
             * UNSAFE_componentWillUpdate
 
@@ -887,7 +930,7 @@
     }
     ```
 
-## 父子组件通信
+## 父子组件通信props
 
 1. 参考链接
 
@@ -899,78 +942,148 @@
 
     "render prop"是指一种在 React 组件之间使用一个值为函数的 prop 共享代码的简单技术
 
-    优点：数据共享、代码复用，将组件内的state作为props传递给调用者，将渲染逻辑交给调用者。
+    * 优点
 
-    缺点：无法在 return 语句外访问数据、嵌套写法不够优雅
+        数据共享、代码复用，将组件内的state作为props传递给调用者，将渲染逻辑交给调用者。
 
-    父组件传入state指定的值给子组件，定义回调函数callback接收子组件传值
-    ```js
-    import React, { Component } from 'react';
+    * 缺点
 
-    import './App.css';
+        无法在 return 语句外访问数据、嵌套写法不够优雅
 
-    import Child from './child'
+    * props为什么是只读的？
 
-    class App extends Component {
-        constructor(props){
-            super(props);
-            this.state={
-                msg:'父类的消息',
-                name:'John',
-                age:99
+        this.props是组件之间沟通的一个接口，它只能从父组件流向子组件，具有函数式编程的思想:
+
+        * 给定相同的输入，总是返回相同的输出。
+        * 过程没有副作用。
+        * 不依赖外部状态。
+
+        props的不可以变性就保证的相同的输入，页面显示的内容是一样的，并且不会产生副作用
+
+    * props改变时更新组件的有哪些方法？
+
+        1. componentWillReceiveProps（已废弃）
+
+            可以在子组件的render函数执行前，通过this.props获取旧的属性，通过nextProps获取新的props，对比两次props是否相同，从而更新子组件自己的state。
+
+            好处是，可以将数据请求放在这里进行执行，需要传的参数则从componentWillReceiveProps(nextProps)中获取。而不必将所有的请求都放在父组件中。于是该请求只会在该组件渲染时才会发出，从而减轻请求负担。
+
+        2. getDerivedStateFromProps（16.3引入）
+
+            这个生命周期函数是为了替代componentWillReceiveProps存在的，所以在需要使用componentWillReceiveProps时，就可以考虑使用getDerivedStateFromProps来进行替代。
+
+            两者的参数是不相同的，而getDerivedStateFromProps是一个静态函数，也就是这个函数不能通过this访问到class的属性，也并不推荐直接访问属性。而是应该通过参数提供的nextProps以及prevState来进行判断，根据新传入的props来映射到state。
+
+            如果props传入的内容不需要影响到你的state，那么就需要返回一个null，这个返回值是必须的，所以尽量将其写到函数的末尾：
+
+            ```js
+            static getDerivedStateFromProps(nextProps, prevState) {
+                const {type} = nextProps;
+                // 当传入的type发生变化的时候，更新state
+                if (type !== prevState.type) {
+                    return {
+                        type,
+                    };
+                }
+                // 否则，对于state不进行任何操作
+                return null;
+            }
+            ```
+
+    * 检验props
+
+        React提供了PropTypes以供验证使用。当我们向Props传入的数据无效（向Props传入的数据类型和验证的数据类型不符）就会在控制台发出警告信息。它可以避免随着应用越来越复杂从而出现的问题。并且，它还可以让程序变得更易读。
+
+        如果项目中使用了TypeScript，那么就可以不用PropTypes来校验，而使用TypeScript定义接口来校验props。
+
+        ```js
+        import PropTypes from 'prop-types';
+
+        class Greeting extends React.Component {
+            render() {
+                return (
+                <h1>Hello, {this.props.name}</h1>
+                );
             }
         }
 
-        callback=(msg,name,age)=>{
-            this.setState({msg});
-            this.setState({name});
-            this.setState({age});
-        }
+        Greeting.propTypes = {
+            name: PropTypes.string
+        };
+        ```
 
-        render() {
-            return (
-                <div className="App">
-                    <p> Message: &nbsp;&nbsp;{this.state.msg}</p>
-                    <Child callback={this.callback} age={this.state.age} name={this.state.name}></Child>
-                </div>
-            );
-        }
-    }
+    * 使用
 
-    export default App;
-    ```
-    子组件通过props接收父组件参数，也通过proprs中指定的回调函数传值给父组件
-    ```js
-    import React from "react";
+        父组件传入state指定的值给子组件，定义回调函数callback接收子组件传值
 
-    class Child extends React.Component{
-        constructor(props){
-            super(props);
-            this.state={
-                name:'Andy',
-                age:31,
-                msg:"来自子类的消息"
+        ```js
+        import React, { Component } from 'react';
+
+        import './App.css';
+
+        import Child from './child'
+
+        class App extends Component {
+            constructor(props){
+                super(props);
+                this.state={
+                    msg:'父类的消息',
+                    name:'John',
+                    age:99
+                }
+            }
+
+            callback=(msg,name,age)=>{
+                this.setState({msg});
+                this.setState({name});
+                this.setState({age});
+            }
+
+            render() {
+                return (
+                    <div className="App">
+                        <p> Message: &nbsp;&nbsp;{this.state.msg}</p>
+                        <Child callback={this.callback} age={this.state.age} name={this.state.name}></Child>
+                    </div>
+                );
             }
         }
 
-        change=()=>{
-            this.props.callback(this.state.msg,this.state.name,this.state.age);
+        export default App;
+        ```
+
+        子组件通过props接收父组件参数，也通过proprs中指定的回调函数传值给父组件
+
+        ```js
+        import React from "react";
+
+        class Child extends React.Component{
+            constructor(props){
+                super(props);
+                this.state={
+                    name:'Andy',
+                    age:31,
+                    msg:"来自子类的消息"
+                }
+            }
+
+            change=()=>{
+                this.props.callback(this.state.msg,this.state.name,this.state.age);
+            }
+
+            render(){
+                return(
+                    <div>
+                        <div>{this.props.name}</div>
+                        <div>{this.props.age}</div>
+                        <button onClick={this.change}>点击</button>
+                    </div>
+                )
+            }
         }
 
-        render(){
-            return(
-                <div>
-                    <div>{this.props.name}</div>
-                    <div>{this.props.age}</div>
-                    <button onClick={this.change}>点击</button>
-                </div>
-            )
-        }
-    }
-
-    export default Child;
-    ```
-
+        export default Child;
+        ```
 
 ## 跨级组件通信
 
@@ -1209,6 +1322,8 @@
 
     [React Router教程](https://www.jianshu.com/p/6583b7258e78)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
     * 库
@@ -1216,6 +1331,11 @@
         * react-router 核心组件
         * react-router-dom 应用于浏览器端的路由库（单独使用包含了react-router的核心部分）
         * react-router-native 应用于native端的路由
+
+    * React-Router的实现原理
+
+        1. 基于 hash 的路由：通过监听hashchange事件
+        2. 基于 H5 history 路由，改变 url 可以通过 history.pushState 和 resplaceState 等，会将URL压入堆栈，同时能够应用 history.go() 等 API，监听 url 的变化可以通过自定义事件触发实现
 
     * 路由配置
 
@@ -1225,8 +1345,17 @@
 
         ```tsx
         import { BrowserRouter as Router, Redirect, Route, Link, Switch } from 'react-router-dom';
-        <BrowserRouter> 浏览器的路由组件,不带#
-        <HashRouter> URL格式为Hash路由组件,带#
+        <BrowserRouter
+            basename={string}
+            forceRefresh={bool}
+            getUserConfirmation={func}
+            keyLength={number}
+        /> 浏览器的路由组件,不带#
+        <HashRouter
+            basename={string}
+            getUserConfirmation={func}
+            hashType={string}  
+        /> URL格式为Hash路由组件,带#
         <MemoryRouter> 内存路由组件
         <NativeRouter> Native的路由组件
         <StaticRouter> 地址不改变的静态路由组件
@@ -1299,6 +1428,22 @@
                     state: { fromDashboard: true }
                 }}>查询</Link>
                 ```
+
+            * Link 标签和 a 标签的区别
+
+                * 相同
+                
+                    从最终渲染的 DOM 来看，这两者都是链接
+
+                * 区别
+
+                    Link是react-router 里实现路由跳转的链接，一般配合Route 使用，react-router接管了其默认的链接跳转行为，区别于传统的页面跳转，Link 的“跳转”行为只会触发相匹配的Route对应的页面内容更新，而不会刷新整个页面。
+
+                    Link做了3件事情：
+
+                    1. 有onclick那就执行onclick
+                    2. click的时候阻止a标签默认事件
+                    3. 根据跳转href(即是to)，用history (web前端路由两种方式之一，history & hash)跳转，此时只是链接变了，并没有刷新页面而a标签就是普通的超链接了，用于从当前页面跳转到href指向的另一个页面(非锚点情况)。
 
         3. NavLink组件
 
@@ -1430,6 +1575,14 @@
             * Switch组件
 
                 渲染匹配地址(location)的第一个Route或者Redirect
+
+                ```ts
+                <Switch>
+                    <Route exact path="/" component={Home} />
+                    <Route path="/about" component={About} />
+                    <Route path="/contact" component={Contact} />
+                </Switch>
+                ```
 
     * 样例
 
@@ -1583,6 +1736,8 @@
 
     [React 页面间传参](https://www.cnblogs.com/feng3037/p/10418161.html)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
     ```js
@@ -1615,6 +1770,13 @@
     this.props.match.params.customerCode
     ```
 
+    ```ts
+    import { useHistory } from "react-router-dom";
+    let history = useHistory();
+    /////////////////////////////////
+    let history = this.props.history;
+    ```
+
 ## redux
 
 1. 参考链接
@@ -1638,7 +1800,7 @@
     * 要点
 
         * 单一数据源
-        
+
             * 应用中所有的 state 都以一个对象树的形式储存在一个单一的 store 中。
 
                 * store维持应用的 state；
@@ -1646,17 +1808,17 @@
                 * 提供 dispatch(action) 方法更新 state；
                 * 通过 subscribe(listener) 注册监听器;
                 * 通过 subscribe(listener) 返回的函数注销监听器。
-            
+
             * 注意每个 reducer 只负责管理全局 state 中它负责的一部分。
-            
+
             * 每个 reducer 的 state 参数都不同，分别对应它管理的那部分 state 数据。
 
         * State 是只读的
-        
+
             唯一改变 state 的方法就是触发 action，action 是一个用于描述已发生事件的普通对象。
 
         * 使用纯函数来执行修改
-        
+
             只要传入参数相同，返回计算得到的下一个 state 就一定相同。没有特殊情况、没有副作用，没有 API 请求、没有变量修改，单纯执行计算。
 
     * 使用场合
@@ -2361,128 +2523,153 @@
 
     [Refs & DOM](https://www.yuque.com/chenzilong/rglnod/wravgb)
 
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
 2. 详解
 
-    1. 字符串格式
+    render 阶段 DOM 还没有生成，无法获取 DOM，不能访问refs
 
-        ```html
-        <div id="root"></div>
-        <script type="text/babel">
+    * 应用场景
+
+        * 处理焦点、文本选择或者媒体的控制
+        * 触发必要的动画
+        * 集成第三方 DOM 库
+
+    * 注意：
+
+        * 不应该过度的使用 Refs
+        * ref 的返回值取决于节点的类型：
+            * 当 ref 属性被用于一个普通的 HTML 元素时，React.createRef() 将接收底层 DOM 元素作为他的 current 属性以创建 ref。
+            * 当 ref 属性被用于一个自定义的类组件时，ref 对象将接收该组件已挂载的实例作为他的 current。
+        * 当在父组件中需要访问子组件中的 ref 时可使用传递 Refs 或回调 Refs。
+
+    * 用法
+
+        1. 字符串格式
+
+            ```html
+            <div id="root"></div>
+            <script type="text/babel">
+                class RefDemo extends React.Component{
+                    state = {no:1}
+                    componentDidMount = ()=>{ this.refs.info.textContent = "no = "+this.state.no }//组件挂载完成后设置this.ref.info这个DOM节点的textContext
+
+                    test=()=>{ this.refs.info.textContent= "no = "+ ++this.state.no }//点击测试按钮后也修改this.ref.info这个DOM节点的textContext
+
+                    render(){
+                        return (
+                            <div>
+                            <button onClick={this.test}>测试</button>
+                            <p ref="info"></p>
+                            </div>
+                        )
+                    }
+                }
+                ReactDOM.render(<RefDemo></RefDemo>,root)
+            </script>
+            ```
+
+        2. 函数格式
+
+            ```html
+            <div id="root"></div>
+            <script type="text/babel">
             class RefDemo extends React.Component{
                 state = {no:1}
-                componentDidMount = ()=>{ this.refs.info.textContent = "no = "+this.state.no }//组件挂载完成后设置this.ref.info这个DOM节点的textContext
+                componentDidMount = ()=>{ this.info.textContent = "no = "+this.state.no }
 
-                test=()=>{ this.refs.info.textContent= "no = "+ ++this.state.no }//点击测试按钮后也修改this.ref.info这个DOM节点的textContext
+                test=()=>{ this.info.textContent= "no = "+ ++this.state.no }
 
                 render(){
                     return (
                         <div>
                         <button onClick={this.test}>测试</button>
-                        <p ref="info"></p>
+                        <p ref={ele => this.info = ele}></p>//这里以函数的形式来写，在其它逻辑内只需通过this.info就可以获取这个p节点实例了
                         </div>
                     )
                 }
             }
             ReactDOM.render(<RefDemo></RefDemo>,root)
-        </script>
-        ```
+            </script>
+            ```
 
-    2. 函数格式
+        3. createRef方法
 
-        ```html
-        <div id="root"></div>
-        <script type="text/babel">
-        class RefDemo extends React.Component{
-            state = {no:1}
-            componentDidMount = ()=>{ this.info.textContent = "no = "+this.state.no }
+            ```html
+            <div id="root"></div>
+            <script type="text/babel">
+            class RefDemo extends React.Component{
+                state = {no:1}
+                domp = React.createRef();//执行React.createRef()返回一个{current:null}对象
 
-            test=()=>{ this.info.textContent= "no = "+ ++this.state.no }
+                componentDidMount = ()=>{ this.domp.current.textContent = "no = "+this.state.no }
 
-            render(){
+                test=()=>{ this.domp.current.textContent= "no = "+ ++this.state.no }
+
+                render(){
                 return (
                     <div>
                     <button onClick={this.test}>测试</button>
-                    <p ref={ele => this.info = ele}></p>//这里以函数的形式来写，在其它逻辑内只需通过this.info就可以获取这个p节点实例了
+                    <p ref={this.domp}></p>//设置ref属性，值直接指向React.createRef()的返回值即可，也就是当前的domp属性，之后在其它地方可以直接使用this.domp.current获取这个P实例了
                     </div>
                 )
+                }
             }
-        }
-        ReactDOM.render(<RefDemo></RefDemo>,root)
-        </script>
-        ```
+            ReactDOM.render(<RefDemo></RefDemo>,root)
+            </script>
+            ```
 
-    3. createRef方法
+        4. forwardRef(hoc高阶组件/函数式组件)
 
-        ```html
-        <div id="root"></div>
-        <script type="text/babel">
-        class RefDemo extends React.Component{
-            state = {no:1}
-            domp = React.createRef();//执行React.createRef()返回一个{current:null}对象
+            React.forwardRef 会创建一个React组件，这个组件能够将其接受的 ref 属性转发到其组件树下的另一个组件中。这种技术并不常见，但在以下两种场景中特别有用：
 
-            componentDidMount = ()=>{ this.domp.current.textContent = "no = "+this.state.no }
+            * 转发 refs 到 DOM 组件
+            * 在高阶组件中转发 refs
 
-            test=()=>{ this.domp.current.textContent= "no = "+ ++this.state.no }
+            ```js
+            import React from 'react'
 
-            render(){
-            return (
-                <div>
-                <button onClick={this.test}>测试</button>
-                <p ref={this.domp}></p>//设置ref属性，值直接指向React.createRef()的返回值即可，也就是当前的domp属性，之后在其它地方可以直接使用this.domp.current获取这个P实例了
-                </div>
-            )
-            }
-        }
-        ReactDOM.render(<RefDemo></RefDemo>,root)
-        </script>
-        ```
+            // 此函数接收一个组件...
+            function WithSubscription(WrappedComponent, selectData) {
+            // ...并返回另一个组件...
+            class WithSubscription extends React.Component {
+                constructor(props) {
+                super(props);
+                this.handleChange = this.handleChange.bind(this);
+                this.state = {
+                    data: selectData(this.props.DataSource, props)
+                };
+                }
 
-    4. forwardRef(hoc高阶组件/函数式组件)
+                componentDidMount() {
+                // ...负责订阅相关的操作...
+                this.props.DataSource.addChangeListener(this.props.name, this.handleChange);
+                }
 
-        ```js
-        import React from 'react'
+                componentWillUnmount() {
+                this.props.DataSource.removeChangeListener(this.props.name);
+                }
 
-        // 此函数接收一个组件...
-        function WithSubscription(WrappedComponent, selectData) {
-        // ...并返回另一个组件...
-        class WithSubscription extends React.Component {
-            constructor(props) {
-            super(props);
-            this.handleChange = this.handleChange.bind(this);
-            this.state = {
-                data: selectData(this.props.DataSource, props)
+                handleChange() {
+                this.setState({
+                    data: selectData(this.props.DataSource, this.props)
+                });
+                }
+
+                render() {
+                // ... 并使用新数据渲染被包装的组件!
+                // 请注意，我们可能还会传递其他属性
+                return <WrappedComponent ref={this.props.forwardedRef} data={this.state.data} {...this.props} />;
+                }
             };
-            }
-
-            componentDidMount() {
-            // ...负责订阅相关的操作...
-            this.props.DataSource.addChangeListener(this.props.name, this.handleChange);
-            }
-
-            componentWillUnmount() {
-            this.props.DataSource.removeChangeListener(this.props.name);
-            }
-
-            handleChange() {
-            this.setState({
-                data: selectData(this.props.DataSource, this.props)
+            debugger
+            return React.forwardRef((props, ref) => {
+                return <WithSubscription {...props} forwardedRef={ref} />;
             });
             }
 
-            render() {
-            // ... 并使用新数据渲染被包装的组件!
-            // 请注意，我们可能还会传递其他属性
-            return <WrappedComponent ref={this.props.forwardedRef} data={this.state.data} {...this.props} />;
-            }
-        };
-        debugger
-        return React.forwardRef((props, ref) => {
-            return <WithSubscription {...props} forwardedRef={ref} />;
-        });
-        }
-
-        export default WithSubscription;
-        ```
+            export default WithSubscription;
+            ```
 
 ## 单元测试
 
@@ -3881,7 +4068,7 @@
     }
     ```
 
-## setState同步异步
+## setState
 
 1. 参考链接
 
@@ -3893,13 +4080,45 @@
 
 2. 详解
 
-    1. setState为什么是异步的、什么时候是异步的？
+    * 调用 setState 之后发生了什么？
 
-        setState本身的执行过程是同步的，只是因为在react的合成事件与钩子函数中执行顺序在更新之前，所以不能直接拿到更新后的值，形成了所谓的异步；
+        1. 在 setState 的时候，React 会为当前节点创建一个 updateQueue 的更新列队。
+        2. 然后会触发 reconciliation 过程，在这个过程中，会使用名为 Fiber 的调度算法，开始生成新的 Fiber 树， Fiber 算法的最大特点是可以做到异步可中断的执行。
+        3. 然后 React Scheduler 会根据优先级高低，先执行优先级高的节点，具体是执行 doWork 方法。
+        4. 在 doWork 方法中，React 会执行一遍 updateQueue 中的方法，以获得新的节点。然后对比新旧节点，为老节点打上 更新、插入、替换 等 Tag。
+        5. 当前节点 doWork 完成后，会执行 performUnitOfWork 方法获得新节点，然后再重复上面的过程。
+        6. 当所有节点都 doWork 完成后，会触发 commitRoot 方法，React 进入 commit 阶段。
+        7. 在 commit 阶段中，React 会根据前面为各个节点打的 Tag，一次性更新整个 dom 元素。
 
-    2. 能不能同步，什么时候是同步的？
+    * setState 是同步还是异步的？
 
-        可以同步，在原生事件与setTimeout中是同步的
+        * 假如所有setState是同步的，意味着每执行一次setState时（有可能一个同步代码中，多次setState），都重新vnode diff + dom修改，这对性能来说是极为不好的。如果是异步，则可以把一个同步代码中的多个setState合并成一次组件更新。所以默认是异步的，但是在一些情况下是同步的。
+
+        * setState 并不是单纯同步/异步的，它的表现会因调用场景的不同而不同。在源码中，通过 isBatchingUpdates 来判断setState 是先存进 state 队列还是直接更新，如果值为 true 则执行异步操作，为 false 则直接更新。
+
+            * 异步： 在 React 可以控制的地方，就为 true，比如在 React 生命周期事件和合成事件中，都会走合并操作，延迟更新的策略。
+            * 同步： 在 React 无法控制的地方，比如原生事件，具体就是在 addEventListener 、setTimeout、setInterval 等事件中，就只能同步更新。
+
+        * 一般认为，做异步设计是为了性能优化、减少渲染次数：
+
+            * setState设计为异步，可以显著的提升性能。如果每次调用 setState都进行一次更新，那么意味着render函数会被频繁调用，界面重新渲染，这样效率是很低的；最好的办法应该是获取到多个更新，之后进行批量更新；
+            * 如果同步更新了state，但是还没有执行render函数，那么state和props不能保持同步。state和props不能保持一致性，会在开发中产生很多的问题；
+
+    * setState批量更新的过程是什么？
+
+        调用 setState 时，组件的 state 并不会立即改变， setState 只是把要修改的 state 放入一个队列， React 会优化真正的执行时机，并出于性能原因，会将 React 事件处理程序中的多次React 事件处理程序中的多次 setState 的状态修改合并成一次状态修改。 最终更新只产生一次组件及其子组件的重新渲染，这对于大型应用程序中的性能提升至关重要。需要注意的是，只要同步代码还在执行，“攒起来”这个动作就不会停止。
+
+    * setState的第二个参数作用是什么？
+
+        第二个参数是一个可选的回调函数。这个回调函数将在组件重新渲染后执行。等价于在 componentDidUpdate 生命周期内执行。通常建议使用 componentDidUpdate 来代替此方式。在这个回调函数中你可以拿到更新后 state 的值
+
+        ```js
+        this.setState({
+            key1: newState1,
+            key2: newState2,
+            ...
+        }, callback) // 第二个参数是 state 更新完成后的回调函数
+        ```
 
     * V15 setState更新机制
 
@@ -3935,16 +4154,6 @@
 
         说明在 Concurrent 模式下，即使脱离了 React 的生命周期(在setTimeout中)，setState 依旧能够合并更新。主要原因是 Concurrent 模式下，真正的更新操作被移到了下一个事件队列中，类似于 Vue 的 nextTick。
 
-    * 调用 setState 之后发生了什么？
-
-        1. 在 setState 的时候，React 会为当前节点创建一个 updateQueue 的更新列队。
-        2. 然后会触发 reconciliation 过程，在这个过程中，会使用名为 Fiber 的调度算法，开始生成新的 Fiber 树， Fiber 算法的最大特点是可以做到异步可中断的执行。
-        3. 然后 React Scheduler 会根据优先级高低，先执行优先级高的节点，具体是执行 doWork 方法。
-        4. 在 doWork 方法中，React 会执行一遍 updateQueue 中的方法，以获得新的节点。然后对比新旧节点，为老节点打上 更新、插入、替换 等 Tag。
-        5. 当前节点 doWork 完成后，会执行 performUnitOfWork 方法获得新节点，然后再重复上面的过程。
-        6. 当所有节点都 doWork 完成后，会触发 commitRoot 方法，React 进入 commit 阶段。
-        7. 在 commit 阶段中，React 会根据前面为各个节点打的 Tag，一次性更新整个 dom 元素。
-
     * 哪些方法会触发 React 重新渲染？
 
         setState 是 React 中最常用的命令，通常情况下，执行 setState 会触发 render。但是这里有个点值得关注，执行 setState 的时候不一定会重新渲染。当 setState 传入 null 时，并不会触发 render。
@@ -3952,6 +4161,61 @@
     * React如何判断什么时候重新渲染组件？
 
         组件状态的改变可以因为props的改变，或者直接通过setState方法改变。组件获得新的状态，然后React决定是否应该重新渲染组件。只要组件的state发生变化，React就会对组件进行重新渲染。这是因为React中的shouldComponentUpdate方法默认返回true，这就是导致每次更新都重新渲染的原因。
+
+    * 如何避免不必要的render?
+
+        * shouldComponentUpdate 和 PureComponent
+
+            可以利用 shouldComponentUpdate或者 PureComponent 来减少因父组件更新而触发子组件的 render，从而达到目的。shouldComponentUpdate 来决定是否组件是否重新渲染，如果不希望组件重新渲染，返回 false 即可。
+
+        * 利用高阶组件
+
+            在函数组件中，并没有 shouldComponentUpdate 这个生命周期，可以利用高阶组件，封装一个类似 PureComponet 的功能
+
+        * React.memo
+
+            用来缓存组件的渲染，避免不必要的更新，其实也是一个高阶组件，与 PureComponent 十分类似，但不同的是， React.memo只能用于函数组件。
+
+    * React组件的构造函数有什么作用？它是必须的吗？
+
+        * 构造函数主要用于两个目的：
+
+            * 通过将对象分配给this.state来初始化本地状态
+            * 将事件处理程序方法绑定到实例上
+
+        构造函数用来新建父类的this对象；子类必须在constructor方法中调用super方法；否则新建实例时会报错
+
+        constructor () 必须配上 super(), 如果要在constructor 内部使用 this.props 就要 传入props , 否则不用
+
+        JavaScript中的 bind 每次都会返回一个新的函数, 为了性能等考虑, 尽量在constructor中绑定事件
+
+    * setState和replaceState的区别是什么？
+
+        setState 是修改其中的部分状态，相当于 Object.assign，只是覆盖，不会减少原来的状态。而replaceState 是完全替换原来的状态，相当于赋值，将原来的 state 替换为另一个对象，如果新状态属性减少，那么 state 中就没有这个状态了。
+
+    * this.state和setState有什么区别？
+
+        this.state通常是用来初始化state的，this.setState是用来修改state值的。如果初始化了state之后再使用this.state，之前的state会被覆盖掉，如果使用this.setState，只会替换掉相应的state值。所以，如果想要修改state的值，就需要使用setState，而不能直接修改state，直接修改state之后页面是不会更新的。
+
+    * setState 函数在任何情况下都会导致组件重新渲染吗？如果没有调用 setState，props 值也没有变化，是不是组件就不会重新渲染？
+
+        setState 函数在任何情况下都会导致组件重新渲染
+
+        如果是父组件重新渲染时，不管传入的 props 有没有变化，都会引起子组件的重新渲染。
+
+        shouldComponentUpdate在重新渲染组件开始前触发的，默认返回 true，可以比较 this.props 和 nextProps ，this.state 和 nextState 值是否变化，来确认返回 true 或者 false。当返回 false 时，组件的更新过程停止，后续的 render、componentDidUpdate 也不会被调用。
+
+        添加 shouldComponentUpdate 方法时，不建议使用深度相等检查（如使用 JSON.stringify()），因为深比较效率很低，可能会比重新渲染组件效率还低。而且该方法维护比较困难，建议使用该方法会产生明显的性能提升时使用。
+
+    * state 和 props 触发更新的生命周期分别有什么区别？
+
+        1. state
+
+            shouldComponentUpdate -> componentWillUpdate(已废弃) -> render -> componentDidUpdate
+
+        2. props
+
+            componentWillReceiveProps(已废弃) -> shouldComponentUpdate -> render -> componentDidUpdate
 
 ## react源码简述
 
@@ -5621,11 +5885,11 @@ class Switch extends React.Component {
 
     function类型的action, 自动触发函数，并且将store.dispatch传入
 
-## React.createClass和extends Component的区别
+## React.createClass和extendsComponent的区别
 
 1. 参考链接
 
-    [对于react-thunk中间件的简单理解](https://blog.csdn.net/weixin_38642331/article/details/81748312)
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
 
 2. 详解
 
@@ -5653,3 +5917,185 @@ class Switch extends React.Component {
 
         * React.createClass：使用 React.createClass 的话，可以在创建组件时添加一个叫做 mixins 的属性，并将可供混合的类的集合以数组的形式赋给 mixins。
         * 如果使用 ES6 的方式来创建组件，那么 React mixins 的特性将不能被使用了。
+
+## React声明组件
+
+1. 参考链接
+
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
+2. 详解
+
+    * React 声明组件的三种方式
+
+        1. 函数式定义的无状态组件
+
+            这种组件只负责根据传入的props来展示，不涉及到state状态的操作，组件不会被实例化，整体渲染性能得到提升，不能访问this对象，不能访问生命周期的方法
+
+        2. ES5原生方式React.createClass定义的组件
+
+            会自绑定函数方法，导致不必要的性能开销，增加代码过时的可能性。
+
+        3. ES6形式的extends React.Component定义的组件(推荐)
+
+            取代React.createClass形式；相对于 React.createClass可以更好实现代码复用。
+
+    * 声明组件区别
+
+        * 1和2/3区别
+
+            与无状态组件相比，React.createClass和React.Component都是创建有状态的组件，这些组件是要被实例化的，并且可以访问组件的生命周期方法。
+
+        * 2和3区别
+
+            * 函数this自绑定
+
+                * React.createClass创建的组件，其每一个成员函数的this都有React自动绑定，函数中的this会被正确设置。
+                * React.Component创建的组件，其成员函数不会自动绑定this，需要开发者手动绑定，否则this不能获取当前组件实例对象。
+
+            * 组件属性类型propTypes及其默认props属性defaultProps配置不同
+
+                * React.createClass在创建组件时，有关组件props的属性类型及组件默认的属性会作为组件实例的属性来配置，其中defaultProps是使用getDefaultProps的方法来获取默认组件属性的
+                * React.Component在创建组件时配置这两个对应信息时，他们是作为组件类的属性，不是组件实例的属性，也就是所谓的类的静态属性来配置的。
+
+            * 组件初始状态state的配置不同
+
+                * React.createClass创建的组件，其状态state是通过getInitialState方法来配置组件相关的状态；
+                * React.Component创建的组件，其状态state是在constructor中像初始化组件属性一样声明的。
+
+    * 有状态组件
+
+        * 特点：
+
+            * 是类组件
+            * 有继承
+            * 可以使用this
+            * 可以使用react的生命周期
+            * 使用较多，容易频繁触发生命周期钩子函数，影响性能
+            * 内部使用 state，维护自身状态的变化，有状态组件根据外部组件传入的 props 和自身的 state进行渲染。
+
+        * 使用场景：
+
+            需要使用到状态的。
+            需要使用状态操作组件的（无状态组件的也可以实现新版本react hooks也可实现）
+
+        * 总结：
+        
+            类组件可以维护自身的状态变量，即组件的 state ，类组件还有不同的生命周期方法，可以让开发者能够在组件的不同阶段（挂载、更新、卸载），对组件做更多的控制。类组件则既可以充当无状态组件，也可以充当有状态组件。当一个类组件不需要管理自身状态时，也可称为无状态组件。
+
+    * 无状态组件
+
+        * 特点：
+
+            * 不依赖自身的状态state
+            * 可以是类组件或者函数组件。
+            * 可以完全避免使用 this 关键字。（由于使用的是箭头函数事件无需绑定）
+            * 有更高的性能。当不需要使用生命周期钩子时，应该首先使用无状态函数组件
+            * 组件内部不维护 state ，只根据外部组件传入的 props 进行渲染的组件，当 props 改变时，组件重新渲染。
+
+        * 使用场景：
+
+            组件不需要管理 state，纯展示
+
+        * 优点：
+
+            * 简化代码、专注于 render
+            * 组件不需要被实例化，无生命周期，提升性能。 输出（渲染）只取决于输入（属性），无副作用
+            * 视图和数据的解耦分离
+
+        * 缺点：
+
+            * 无法使用 ref
+            * 无生命周期方法
+            * 无法控制组件的重渲染，因为无法使用shouldComponentUpdate 方法，当组件接受到新的属性时则会重渲染
+
+        * 总结：
+        
+            组件内部状态且与外部无关的组件，可以考虑用状态组件，这样状态树就不会过于复杂，易于理解和管理。当一个组件不需要管理自身状态时，也就是无状态组件，应该优先设计为函数组件。比如自定义的 Button、 Input 等组件。
+
+    * 受控组件
+
+        在使用表单来收集用户输入时，例如input select textearea等元素都要绑定一个change事件，当表单的状态发生变化，就会触发onChange事件，更新组件的state。这种组件在React中被称为受控组件，在受控组件中，组件渲染出的状态与它的value或checked属性相对应，react通过这种方式消除了组件的局部状态，使整个状态可控。react官方推荐使用受控表单组件。
+
+        * 受控组件更新state的流程
+
+            * 可以通过初始state中设置表单的默认值
+            * 每当表单的值发生变化时，调用onChange事件处理器
+            * 事件处理器通过事件对象e拿到改变后的状态，并更新组件的state
+            * 一旦通过setState方法更新state，就会触发视图的重新渲染，完成表单组件的更新
+
+        * 受控组件缺陷
+
+            表单元素的值都是由React组件进行管理，当有多个输入框，或者多个这种组件时，如果想同时获取到全部的值就必须每个都要编写事件处理函数，这会让代码看着很臃肿，所以为了解决这种情况，出现了非受控组件。
+
+    * 非受控组件
+
+        如果一个表单组件没有value props（单选和复选按钮对应的是checked props）时，就可以称为非受控组件。在非受控组件中，可以使用一个ref来从DOM获得表单值。而不是为每个状态更新编写一个事件处理程序。
+
+        ```ts
+        class NameForm extends React.Component {
+        constructor(props) {
+            super(props);
+            this.handleSubmit = this.handleSubmit.bind(this);
+        }
+        handleSubmit(event) {
+            alert('A name was submitted: ' + this.input.value);
+            event.preventDefault();
+        }
+        render() {
+            return (
+            <form onSubmit={this.handleSubmit}>
+                <label>
+                Name:
+                <input type="text" ref={(input) => this.input = input} />
+                </label>
+                <input type="submit" value="Submit" />
+            </form>
+            );
+        }
+        }
+        ```
+
+        * 总结
+
+            页面中所有输入类的DOM如果是现用现取的称为非受控组件，而通过setState将输入的值维护到了state中，需要时再从state中取出，这里的数据就受到了state的控制，称为受控组件。
+
+    * 类组件与函数组件
+
+        * 相同点
+
+            组件是 React 可复用的最小代码片段，它们会返回要在页面中渲染的 React 元素。也正因为组件是 React 的最小编码单位，所以无论是函数组件还是类组件，在使用方式和最终呈现效果上都是完全一致的。
+
+            我们甚至可以将一个类组件改写成函数组件，或者把函数组件改写成一个类组件（虽然并不推荐这种重构行为）。从使用者的角度而言，很难从使用体验上区分两者，而且在现代浏览器中，闭包和类的性能只在极端场景下才会有明显的差别。所以，基本可认为两者作为组件是完全一致的。
+
+        * 不同点
+
+            1. 模型 
+            
+                类组件是基于面向对象编程的，它主打的是继承、生命周期等核心概念；函数组件内核是函数式编程，主打的是 immutable、没有副作用、引用透明等特点。
+
+            2. 使用场景
+
+                * 需要使用生命周期的组件，使用类组件
+                * 需要使用继承，使用类组件
+                * 由于 React Hooks 的推出，生命周期概念的淡出，函数组件可以完全取代类组件
+
+            3. 性能优化
+
+                * 类组件主要依靠 shouldComponentUpdate 阻断渲染来提升性能
+                * 函数组件依靠 React.memo 缓存渲染结果来提升性能
+
+## React-Intl
+
+1. 参考链接
+
+    [「2021」高频前端面试题汇总之React篇（上）](https://juejin.cn/post/6941546135827775525)
+
+2. 详解
+
+    React-intl是雅虎的语言国际化开源项目FormatJS的一部分，通过其提供的组件和API可以与ReactJS绑定。
+
+    React-intl提供了两种使用方法，一种是引用React组件，另一种是直接调取API，官方更加推荐在React项目中使用前者，只有在无法使用React组件的地方，才应该调用框架提供的API。它提供了一系列的React组件，包括数字格式化、字符串格式化、日期格式化等。
+
+    在React-intl中，可以配置不同的语言包，他的工作原理就是根据需要，在语言包之间进行切换。
+
