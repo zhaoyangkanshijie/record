@@ -31,13 +31,15 @@
 * [错误边界](#错误边界)
 * [jsx到javascript的转换过程](#jsx到javascript的转换过程)
 * [react源码api](#react源码api)
-* [useEffect和componentDidMount有什么差异](#useEffect和componentDidMount有什么差异)
 * [Mobx](#Mobx)
 * [Immutable](#Immutable)
-* [thunk](#thunk)
+* [react-thunk](#react-thunk)
+* [redux-saga](#redux-saga)
 * [React.createClass和extendsComponent的区别](#React.createClass和extendsComponent的区别)
 * [React声明组件](#React声明组件)
 * [React-Intl](#React-Intl)
+* [redux-persist](#redux-persist)
+* [react严格模式](#react严格模式)
 
 ---
 
@@ -92,7 +94,6 @@
         /test
         app、index等入口文件
     ```
-
 
 ## typescript组件
 
@@ -990,6 +991,137 @@
             }
             ```
 
+    * props.children和React.Children的区别
+
+        当涉及组件嵌套，在父组件中使用props.children把所有子组件显示出来
+        ```ts
+        function ParentComponent(props){
+            return (
+                <div>
+                    {props.children}
+                </div>
+            )
+        }
+        ```
+
+        把父组件中的属性传给所有的子组件，需要使用React.Children方法
+
+        ```ts
+        //子组件
+        function RadioOption(props) {
+            return (
+                <label>
+                <input type="radio" value={props.value} name={props.name} />
+                {props.label}
+                </label>
+            )
+        }
+        //父组件用,props是指父组件的props
+        function renderChildren(props) {
+            
+            //遍历所有子组件
+            return React.Children.map(props.children, child => {
+                if (child.type === RadioOption)
+                    return React.cloneElement(child, {
+                        //把父组件的props.name赋值给每个子组件
+                        name: props.name
+                    })
+                else
+                return child
+            })
+        }
+        //父组件
+        function RadioGroup(props) {
+            return (
+                <div>
+                {renderChildren(props)}
+                </div>
+            )
+        }
+        function App() {
+            return (
+                <RadioGroup name="hello">
+                <RadioOption label="选项一" value="1" />
+                <RadioOption label="选项二" value="2" />
+                <RadioOption label="选项三" value="3" />
+                </RadioGroup>
+            )
+        }
+        export default App;
+        ```
+
+    * 状态提升
+
+        * 概念
+
+            将多个组件需要共享的状态提升到它们最近的父组件上，在父组件上改变这个状态然后通过props分发给子组件。
+
+        * 场景
+
+            父组件中有两个input子组件，如果想在第一个输入框输入数据，来改变第二个输入框的值，这就需要用到状态提升。
+
+        * 例子
+
+            ```ts
+            class Father extends React.Component {
+                constructor(props) {
+                    super(props)
+                    this.state = {
+                        Value1: '',
+                        Value2: ''
+                    }
+                }
+                value1Change(aa) {
+                    this.setState({
+                        Value1: aa
+                    })
+                }
+                value2Change(bb) {
+                    this.setState({
+                        Value2: bb
+                    })
+                }
+                render() {
+                    return (
+                        <div style={{ padding: "100px" }}>
+                            <Child1 value1={this.state.Value1} onvalue1Change={this.value1Change.bind(this)} />
+                            
+
+                            <Child2 value2={this.state.Value1} />
+                        </div>
+                    )
+                }
+            }
+            class Child1 extends React.Component {
+                constructor(props) {
+                    super(props)
+                }
+                changeValue(e) {
+                    this.props.onvalue1Change(e.target.value)
+                }
+                render() {
+                    return (
+                        <input value={this.props.Value1} onChange={this.changeValue.bind(this)} />
+                    )
+                }
+            }
+            class Child2 extends React.Component {
+                constructor(props) {
+                    super(props)
+                }
+                render() {
+                    return (
+                        <input value={this.props.value2} />
+                    )
+                }
+            }
+            
+            ReactDOM.render(
+                <Father />,
+                document.getElementById('root')
+            )
+            ```
+
     * 检验props
 
         React提供了PropTypes以供验证使用。当我们向Props传入的数据无效（向Props传入的数据类型和验证的数据类型不符）就会在控制台发出警告信息。它可以避免随着应用越来越复杂从而出现的问题。并且，它还可以让程序变得更易读。
@@ -1786,16 +1918,36 @@
     [React多组件状态共享之Redux](https://blog.csdn.net/weixin_45014444/article/details/100567842)
 
     [Redux中的connect方法](https://www.jianshu.com/p/caf0c3d2ebc4)
-    
+
     [你不知道的React 和 Vue 的20个区别【面试必备】](https://juejin.im/post/6847009771355127822#heading-30)
 
     [redux](https://www.yuque.com/chenzilong/rglnod/tie55t)
 
     [「2021」高频前端面试题汇总之JavaScript篇（下）](https://juejin.cn/post/6941194115392634888)
 
+    [「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
 2. 详解
 
+    * 主要解决的问题
+
+         单纯的Redux只是一个状态机，是没有UI呈现的，react-redux作用是将Redux的状态机和React的UI呈现绑定在一起，当dispatch action改变state的时候，会自动更新页面。
+
     * 依赖：redux、react-redux、redux-devtools
+
+    * Redux源码模块
+
+        * compose.js 提供从右到左进行函数式编程
+        * createStore.js 提供作为生成唯一store的函数
+        * combineReducers.js 提供合并多个reducer的函数，保证store的唯一性
+        * bindActionCreators.js 可以让开发者在不直接接触dispacth的前提下进行更改state的操作
+        * applyMiddleware.js 这个方法通过中间件来增强dispatch的功能
+
+    * 工作流程
+
+        * 首先，用户（通过View）发出Action，发出方式就用到了dispatch方法
+        * 然后，Store自动调用Reducer，并且传入两个参数：当前State和收到的Action，Reducer会返回新的State
+        * State—旦有变化，Store就会调用监听函数，来更新View
 
     * 要点
 
@@ -1842,22 +1994,6 @@
         （3）一个组件需要改变全局状态
 
         （4）一个组件需要改变另一个组件的状态
-
-    * vuex与redux对比
-
-        1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
-        2. Vuex： view——>commit——>mutations——>state变化——>view变化（同步操作） 
-        3. Vuex： view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
-
-        * 相同
-
-            redux与vuex都是对mvvm思想的服务，将数据从视图中抽离的一种方案; 形式上：vuex借鉴了redux，将store作为全局的数据中心，进行mode管理;
-
-        * 不同
-
-            * Vuex改进了Redux中的Action和Reducer函数，以mutations变化函数取代Reducer，无需switch，只需在对应的mutation函数里改变state值即可
-            * Vuex由于Vue自动重新渲染的特性，无需订阅重新渲染函数，只要生成新的State即可
-            * Vuex数据流的顺序是∶View调用store.commit提交对应的请求到Store中对应的mutation函数->store改变（vue检测到数据变化自动渲染）
 
     * 简写 Redux
 
@@ -2090,7 +2226,7 @@
         * connect
 
             用于连接React组件与 Redux store
-        
+
             不会改变它“连接”的组件，而是提供一个经过包裹的 connect 组件。 conenct 接受4个参数，分别是 mapStateToProps，mapDispatchToProps，mergeProps，options
 
             * mapStateToProps
@@ -2472,6 +2608,70 @@
                 )
                 ```
 
+    * Redux 中异步的请求怎么处理?
+
+        1. 使用react-thunk中间件
+        2. 使用react-asga中间件
+
+    * Redux 中间件是什么？接受几个参数？柯里化函数两端的参数具体是什么？
+
+        原本 view -→> action -> reducer -> store 的数据流加上中间件后变成了 view -> action -> middleware -> reducer -> store ，在这一环节可以做一些"副作用"的操作，如异步请求、打印日志等。
+
+        redux中间件接受一个对象作为参数，对象的参数上有两个字段 dispatch 和 getState，分别代表着 Redux Store 上的两个同名函数。
+
+        柯里化函数两端一个是 middewares，一个是store.dispatch
+
+    * mobox 和 redux 有什么区别？
+
+        * 共同点
+
+            * 为了解决状态管理混乱，无法有效同步的问题统一维护管理应用状态
+            * 某一状态只有一个可信数据来源（通常命名为store，指状态容器）
+            * 操作更新状态方式统一，并且可控（通常以action方式提供更新状态的途径）
+            * 支持将store与React组件连接，如react-redux，mobx-react
+
+        * 区别
+
+            * redux将数据保存在单一的store中，mobx将数据保存在分散的多个store中
+            * redux使用plain object保存数据，需要手动处理变化后的操作;mobx适用observable保存数据，数据变化后自动处理响应的操作
+            * redux使用不可变状态，这意味着状态是只读的，不能直接去修改它，而是应该返回一个新的状态，同时使用纯函数;mobx中的状态是可变的，可以直接对其进行修改
+            * mobx更多的使用面向对象的编程思维;redux的函数式编程思想需要借助一系列的中间件来处理异步和副作用
+            * mobx中有更多的抽象和封装，调试会比较困难，同时结果也难以预测;而redux提供能够进行时间回溯的开发工具，同时其纯函数以及更少的抽象，让调试变得更加的容易
+
+    * vuex与redux对比
+
+        1. Redux：view——>actions——>reducer——>state变化——>view变化（同步异步一样）
+        2. Vuex： view——>commit——>mutations——>state变化——>view变化（同步操作） 
+        3. Vuex： view——>dispatch——>actions——>mutations——>state变化——>view变化（异步操作）
+
+        * 相同
+
+            * redux与vuex都是对mvvm思想的服务，将数据从视图中抽离的一种方案;
+            * 形式上：vuex借鉴了redux，将store作为全局的数据中心，进行mode管理;
+            * 单—的数据源
+            * 变化可以预测
+
+        * 不同
+
+            * Vuex改进了Redux中的Action和Reducer函数，以mutations变化函数取代Reducer，无需switch，只需在对应的mutation函数里改变state值即可
+            * Vuex由于Vue自动重新渲染的特性，无需订阅重新渲染函数，只要生成新的State即可
+            * Vuex数据流的顺序是∶View调用store.commit提交对应的请求到Store中对应的mutation函数->store改变（vue检测到数据变化自动渲染）
+
+    * Redux中的connect有什么作用?
+
+        connect负责连接React和Redux
+
+        1. 获取state
+
+            connect 通过 context获取 Provider 中的 store，通过 store.getState() 获取整个store tree 上所有state
+
+        2. 包装原组件
+
+            将state和action通过props的方式传入到原组件内部 wrapWithConnect 返回—个 ReactComponent 对象 Connect，Connect 重新 render 外部传入的原组件 WrappedComponent ，并把 connect 中传入的 mapStateToProps，mapDispatchToProps与组件上原有的 props合并后，通过属性的方式传给WrappedComponent
+
+        3. 监听store tree变化
+
+            connect缓存了store tree中state的状态，通过当前state状态 和变更前 state 状态进行比较，从而确定是否调用 this.setState()方法触发Connect及其子组件的重新渲染
 
 ## 使用cookie
 
@@ -3107,29 +3307,43 @@
 
 2. 详解
 
-    Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
+    * 背景
 
-    Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
+        Hook 是 React 16.8 的新增特性。它可以在不编写 class 的情况下使用 state 以及其他的 React 特性，摆脱this，且不必在不同生命周期中处理业务。
 
-    ```ts
-    // 自定义一个获取订阅数据的hook
-    function useSubscription() {
-    const data = DataSource.getComments();
-    return [data];
-    }
-    // 
-    function CommentList(props) {
-    const {data} = props;
-    const [subData] = useSubscription();
-        ...
-    }
-    // 使用
-    <CommentList data='hello' />
-    ```
+        函数组件比起类组件少了很多东西，比如生命周期、对 state 的管理等。这就给函数组件的使用带来了非常多的局限性，导致我们并不能使用函数这种形式，写出一个真正的全功能的组件。而React-Hooks 的出现，就是为了帮助函数组件补齐这些（相对于类组件来说）缺失的能力。
+
+        Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。
+
+        ```ts
+        // 自定义一个获取订阅数据的hook
+        function useSubscription() {
+        const data = DataSource.getComments();
+        return [data];
+        }
+        // 
+        function CommentList(props) {
+        const {data} = props;
+        const [subData] = useSubscription();
+            ...
+        }
+        // 使用
+        <CommentList data='hello' />
+        ```
 
     * 解决的问题
 
-        hook解决了hoc的prop覆盖的问题，同时使用的方式解决了render props的嵌套地狱的问题。
+        1. 组件之间难以复用状态逻辑
+
+            hook解决了hoc的prop覆盖的问题，同时使用的方式解决了render props的嵌套地狱的问题。Hook 使我们在无需修改组件结构的情况下复用状态逻辑。
+
+        2. 生命周期函数与业务逻辑耦合太深，导致关联部分难以拆分。
+
+            Hook 将组件中相互关联的部分拆分成更小的函数（比如设置订阅或请求数据），而并非强制按照生命周期划分。你还可以使用 reducer 来管理组件的内部状态，使其更加可预测。
+
+        3. class导致 this 的问题
+
+            Hook 使你在非 class 的情况下可以使用更多的 React 特性
 
     * 优点
 
@@ -3190,11 +3404,161 @@
             4. inputs - 一组值，用于确定是否应销毁和重新创建effect
             5. next - 函数组件中定义的下一个effect的引用。
 
-    * 为什么"不要在循环，条件或嵌套函数中调用 Hook， 确保总是在你的 React 函数的最顶层调用他们"?
+    * React Hooks在平时开发中需要注意的问题和原因
 
-        以 setState 为例，在 react 内部，每个组件(Fiber)的 hooks 都是以链表的形式存在 memoizeState 属性中：
+        * 为什么"不要在循环，条件或嵌套函数中调用 Hook， 确保总是在你的 React 函数的最顶层调用他们"?
 
-        update 阶段，每次调用 setState，链表就会执行 next 向后移动一步。如果将 setState 写在条件判断中，假设条件判断不成立，没有执行里面的 setState 方法，会导致接下来所有的 setState 的取值出现偏移，从而导致异常发生。
+            以 setState 为例，在 react 内部，每个组件(Fiber)的 hooks 都是以链表的形式存在 memoizeState 属性中：
+
+            update 阶段，每次调用 setState，链表就会执行 next 向后移动一步。如果将 setState 写在条件判断中，假设条件判断不成立，没有执行里面的 setState 方法，会导致接下来所有的 setState 的取值出现偏移，从而导致异常发生。
+
+        * 使用useState时候，使用push，pop，splice等直接更改数组对象的坑
+
+            使用push直接更改数组无法获取到新值，应该采用析构方式，但是在class里面不会有这个问题。代码示例：
+
+            ```js
+            function Indicatorfilter() {
+                let [num,setNums] = useState([0,1,2,3])
+                const test = () => {
+                    // 这里坑是直接采用push去更新num
+                    // setNums(num)是无法更新num的
+                    // 必须使用num = [...num ,1]
+                    num.push(1)
+                    // num = [...num ,1]
+                    setNums(num)
+                }
+                return (
+                    <div className='filter'>
+                    <div onClick={test}>测试</div>
+                        <div>
+                        {num.map((item,index) => (
+                            <div key={index}>{item}</div>
+                        ))}
+                    </div>
+                    </div>
+                )
+            }
+
+            class Indicatorfilter extends React.Component<any,any>{
+                constructor(props:any){
+                    super(props)
+                    this.state = {
+                        nums:[1,2,3]
+                    }
+                    this.test = this.test.bind(this)
+                }
+
+                test(){
+                    // class采用同样的方式是没有问题的
+                    this.state.nums.push(1)
+                    this.setState({
+                        nums: this.state.nums
+                    })
+                }
+
+                render(){
+                    let {nums} = this.state
+                    return(
+                        <div>
+                            <div onClick={this.test}>测试</div>
+                                <div>
+                                    {nums.map((item:any,index:number) => (
+                                        <div key={index}>{item}</div>
+                                    ))}
+                                </div>
+                        </div>
+
+                    )
+                }
+            }
+            ```
+
+        * useState设置状态的时候，只有第一次生效，后期需要更新状态，必须通过useEffect
+
+            ```ts
+            const TableDeail = ({
+                columns,
+            }:TableData) => {
+                const [tabColumn, setTabColumn] = useState(columns) 
+            }
+
+            // 正确的做法是通过useEffect改变这个值
+            const TableDeail = ({
+                columns,
+            }:TableData) => {
+                const [tabColumn, setTabColumn] = useState(columns) 
+                useEffect(() =>{setTabColumn(columns)},[columns])
+            }
+            ```
+
+    * 为什么 useState 要使用数组而不是对象?
+
+        useState 返回的是 array 而不是 object 的原因就是为了降低因解构产生的复杂度
+
+        * 如果 useState 返回的是数组，那么使用者可以对数组中的元素命名，代码看起来也比较干净
+        * 如果 useState 返回的是对象，在解构对象的时候必须要和 useState 内部实现返回的对象同名，想要使用多次的话，必须得设置别名才能使用返回值
+
+    * useEffect 与 useLayoutEffect 的区别
+
+        * 共同点
+
+            1. 运用效果
+
+                useEffect 与 useLayoutEffect 两者都是用于处理副作用，这些副作用包括改变 DOM、设置订阅、操作定时器等。在函数组件内部操作副作用是不被允许的，所以需要使用这两个函数去处理。
+
+            2. 使用方式
+
+                useEffect 与 useLayoutEffect 两者底层的函数都是调用的 mountEffectImpl方法，在使用上也没什么差异，基本可以直接替换。
+
+                如果实在分不清，先用 useEffect，一般问题不大；如果页面有异常，再直接替换为 useLayoutEffect 即可。
+
+        * 不同点
+
+            1. 使用场景
+
+                useEffect 在 React 的渲染过程中是被异步调用的，用于绝大多数场景；
+
+                useLayoutEffect 会在所有的 DOM 变更之后同步调用，主要用于处理 DOM 操作、调整样式、避免页面闪烁等问题。也正因为是同步处理，所以需要避免在 useLayoutEffect 做计算量较大的耗时任务从而造成阻塞。
+
+            2. 使用效果
+
+                useEffect是按照顺序执行代码的，改变屏幕像素之后执行（先渲染，后改变DOM），当改变屏幕内容时可能会产生闪烁；
+
+                useLayoutEffect是改变屏幕像素之前就执行了（会推迟页面显示的事件，先改变DOM后渲染），不会产生闪烁。useLayoutEffect总是比useEffect先执行。
+
+    * useEffect和componentDidMount有什么差异
+
+        useEffect 会捕获 props 和 state。所以即便在回调函数里，你拿到的还是初始的 props 和 state。如果想得到“最新”的值，可以使用 ref。
+
+    * React Hooks 和生命周期的关系？
+
+        1. constructor:函数组件不需要构造函数，可以通过调用 useState 来初始化 state
+        2. getDerivedStateFromProps:一般情况下，我们不需要使用它，可以在渲染过程中更新 state，以达到实现 getDerivedStateFromProps 的目的。
+
+            ```js
+            function ScrollView({row}) {
+                let [isScrollingDown, setIsScrollingDown] = useState(false);
+                let [prevRow, setPrevRow] = useState(null);
+                if (row !== prevRow) {
+                    // Row 自上次渲染以来发生过改变。更新 isScrollingDown。
+                    setIsScrollingDown(prevRow !== null && row > prevRow);
+                    setPrevRow(row);
+                }
+                return `Scrolling down: ${isScrollingDown}`;
+            }
+            ```
+
+        3. shouldComponentUpdate:可以用 React.memo 包裹一个组件来对它的 props 进行浅比较
+
+            ```js
+            const Button = React.memo((props) => {  // 具体的组件
+            });
+            ```
+
+        4. render：这是函数组件体本身
+        5. componentDidMount, componentDidUpdate:useLayoutEffect。useEffect 可以表达所有这些的组合
+        6. componentWillUnmount:useEffect 里面返回的 cleanup 函数
+        7. componentDidCatch , getDerivedStateFromError:没有对应
 
     * 实现样例
 
@@ -4810,6 +5174,8 @@ outDivClickHandler(e) {
 
 [jsx到javascript的转换过程](https://www.yuque.com/chenzilong/rglnod/bg3c94)
 
+[「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
 * 过程
 
 ```jsx
@@ -4852,6 +5218,14 @@ React.createElement(
   React.createElement("span", null, "3")
 );
 ```
+
+JSX 是一个 JavaScript 的语法扩展，结构类似 XML。JSX 主要用于声明 React 元素。
+
+但 React 中并不强制使用 JSX。即使使用了 JSX，也会在构建过程中，通过 Babel 插件编译为 React.createElement。
+
+每个 JSX 元素只是调用 React.createElement(component, props, ...children) 的语法糖。因此，使用 JSX 可以完成的任何事情都可以通过纯 JavaScript 完成。
+
+在React 17之前，如果使用了JSX，其实就是在使用React， babel 会把组件转换为 CreateElement 形式。在React 17之后，就不再需要引入，因为 babel 已经可以帮我们自动引入react。
 
 ## react源码api
 
@@ -5304,16 +5678,6 @@ class Switch extends React.Component {
   }
 }
 ```
-
-## useEffect和componentDidMount有什么差异
-
-1. 参考链接
-
-    [React 灵魂 23 问，你能答对几个？](https://mp.weixin.qq.com/s/uMZMcoN5Kxkp_DUHcF-_9g)
-
-2. 详解
-
-    useEffect 会捕获 props 和 state。所以即便在回调函数里，你拿到的还是初始的 props 和 state。如果想得到“最新”的值，可以使用 ref。
 
 ## Mobx
 
@@ -5852,38 +6216,186 @@ class Switch extends React.Component {
 
         然后vue认为，尽管immutability很屌，但仍然需要自己实现shouldComponentUpdate，而且为了保证你不会意外的更改对象，我们还需要引入immutable.js。增加了外部引用和学习成本。于是vue利用ES5的一个特性Object.definePropery实现了一套“黑魔法”，在你绑定数据的时候，就为对象里每一个属性设置了setter/getter，只要你一改属性，就会触发变更，效率之高，使用之简令人咂舌。当然这也有问题，就是IE9以下那些不支持ES5的浏览器是不能用的。
 
-## 对于react-thunk中间件的简单理解
+## react-thunk
 
 1. 参考链接
 
     [对于react-thunk中间件的简单理解](https://blog.csdn.net/weixin_38642331/article/details/81748312)
 
+    [「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
 2. 详解
 
-    引入thunk插件后，我们可以在actionCreators里通过返回一个函数，然后就可以在函数里编写某些异步操作了(处理请求结果)。而不只是单纯的返回一个action对象。最后通过传入的store.dispatch，发出action通知给Store要进行状态更新。
+    * 应用
 
-    ```js
-    import { applyMiddleware, createStore } from 'redux';
-    import thunk from 'redux-thunk';
-    import middleware1 from 'middleware1';
-    import middleware2 from 'middleware2';
+        引入thunk插件后，我们可以在actionCreators里通过返回一个函数，然后就可以在函数里编写某些**异步操作**了(处理请求结果)。而不只是单纯的返回一个action对象。最后通过传入的store.dispatch，发出action通知给Store要进行状态更新。
 
-    const store = createStore(
-        reducer,
-        initialState,
-        applyMiddleware(thunk, middleware1, middleware2)
-    );
-    ```
+        ```js
+        import { applyMiddleware, createStore } from 'redux';
+        import thunk from 'redux-thunk';
+        import middleware1 from 'middleware1';
+        import middleware2 from 'middleware2';
 
-    applyMiddleware用于调用各种中间件，执行后，将所有入参中间件存入一个数组，并且返回一个闭包，闭包接受一个createStore作为入参并且执行后返回下一个闭包
+        const store = createStore(
+            reducer,
+            initialState,
+            applyMiddleware(thunk, middleware1, middleware2)
+        );
+        ```
 
-    中间件串联执行，使用了一个compose函数
+        applyMiddleware用于调用各种中间件，执行后，将所有入参中间件存入一个数组，并且返回一个闭包，闭包接受一个createStore作为入参并且执行后返回下一个闭包
 
-    thunk一定会接受上一个中间件的执行结果继续执行，然后最终在createState里返回一个改造好的dispatch
+        中间件串联执行，使用了一个compose函数
 
-    非function,不处理，将action 传给下一个中间件，最终都会根据传入的action计算相应的reducers
+        thunk一定会接受上一个中间件的执行结果继续执行，然后最终在createState里返回一个改造好的dispatch
 
-    function类型的action, 自动触发函数，并且将store.dispatch传入
+        非function,不处理，将action 传给下一个中间件，最终都会根据传入的action计算相应的reducers
+
+        function类型的action, 自动触发函数，并且将store.dispatch传入
+
+    * 优点
+
+        * 体积⼩: redux-thunk的实现⽅式很简单,只有不到20⾏代码
+        * 使⽤简单: redux-thunk没有引⼊像redux-saga或者redux-observable额外的范式,上⼿简单
+
+    * 缺点
+
+        * 样板代码过多: 与redux本身⼀样,通常⼀个请求需要⼤量的代码,⽽且很多都是重复性质的
+        * 耦合严重: 异步操作与redux的action偶合在⼀起,不⽅便管理
+        * 功能孱弱: 有⼀些实际开发中常⽤的功能需要⾃⼰进⾏封装
+
+## redux-saga
+
+1. 参考链接
+
+    [Redux-saga](https://www.jianshu.com/p/6f96bdaaea22)
+
+    [「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
+2. 详解
+
+    redux-saga是一个用于管理redux应用异步操作的中间件，redux-saga通过创建sagas将所有异步操作逻辑收集在一个地方集中处理，可以用来代替redux-thunk中间件。
+
+    * 优点
+
+        * 异步解耦: 异步操作被被转移到单独 saga.js 中，不再是掺杂在 action.js 或 component.js 中
+        * action摆脱thunk function: dispatch 的参数依然是⼀个纯粹的 action (FSA)，⽽不是充满 “⿊魔法” thunk function
+        * 异常处理: 受益于 generator function 的 saga 实现，代码异常/请求失败 都可以直接通过 try/catch 语法直接捕获处理
+        * 功能强⼤: redux-saga提供了⼤量的Saga 辅助函数和Effect 创建器供开发者使⽤,开发者⽆须封装或者简单封装即可使⽤
+        * 灵活: redux-saga可以将多个Saga可以串⾏/并⾏组合起来,形成⼀个⾮常实⽤的异步flow
+        * 易测试，提供了各种case的测试⽅案，包括mock task，分⽀覆盖等等
+
+    * 缺陷
+
+        * 额外的学习成本: redux-saga不仅在使⽤难以理解的 generator function,⽽且有数⼗个API,学习成本远超redux-thunk,最重要的是你的额外学习成本是只服务于这个库的,与redux-observable不同,redux-observable虽然也有额外学习成本但是背后是rxjs和⼀整套思想
+        * 体积庞⼤: 体积略⼤,代码近2000⾏，min版25KB左右
+        * 功能过剩: 实际上并发控制等功能很难⽤到,但是我们依然需要引⼊这些代码
+        * ts⽀持不友好: yield⽆法返回TS类型
+
+    * 使用
+
+        * 配置中间件
+
+            ```js
+            import {createStore, applyMiddleware, compose} from 'redux';
+            import reducer from './reducer';
+            import createSagaMiddleware from 'redux-saga'
+            import TodoListSaga from './sagas'
+
+            const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ ? window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__({}) : compose;
+            const sagaMiddleware = createSagaMiddleware()
+
+            const enhancer = composeEnhancers(
+            applyMiddleware(sagaMiddleware)
+            );
+
+            const store = createStore(reducer, enhancer);
+            sagaMiddleware.run(TodoListSaga)
+
+            export default store;
+            ```
+
+        * 将异步请求放在sagas.js中
+
+            ```js
+            import {takeEvery, put} from 'redux-saga/effects'
+            import {initTodoList} from './actionCreator'
+            import {GET_INIT_ITEM} from './actionTypes'
+            import axios from 'axios'
+
+            function* func(){
+                try{
+                    // 可以获取异步返回数据
+                    const res = yield axios.get('/getData')
+                    const action = initTodoList(res.data)
+                    // 将action发送到reducer
+                    yield put(action)
+                }catch(e){
+                    console.log('网络请求失败')
+                }
+            }
+
+            function* mySaga(){
+                // 自动捕获GET_INIT_ITEM类型的action，并执行func
+                yield takeEvery(GET_INIT_ITEM, func)
+            }
+
+            export default mySaga
+            ```
+
+        * 发送action
+
+            ```js
+            componentDidMount(){
+                const action = getInitTodoItemAction()
+                store.dispatch(action)
+            }
+            ```
+
+    * 处理并发
+
+        * takeEvery
+
+            可以让多个 saga 任务并行被 fork 执行。
+
+            ```js
+            import {
+                fork,
+                take
+            } from "redux-saga/effects"
+
+            const takeEvery = (pattern, saga, ...args) => fork(function*() {
+                while (true) {
+                    const action = yield take(pattern)
+                    yield fork(saga, ...args.concat(action))
+                }
+            })
+            ```
+
+        * takeLatest
+
+            takeLatest 不允许多个 saga 任务并行地执行。一旦接收到新的发起的 action，它就会取消前面所有 fork 过的任务（如果这些任务还在执行的话）。
+
+            在处理 AJAX 请求的时候，如果只希望获取最后那个请求的响应， takeLatest 就会非常有用。
+
+            ```js
+            import {
+                cancel,
+                fork,
+                take
+            } from "redux-saga/effects"
+
+            const takeLatest = (pattern, saga, ...args) => fork(function*() {
+                let lastTask
+                while (true) {
+                    const action = yield take(pattern)
+                    if (lastTask) {
+                        yield cancel(lastTask) // 如果任务已经结束，则 cancel 为空操作
+                    }
+                    lastTask = yield fork(saga, ...args.concat(action))
+                }
+            })
+            ```
 
 ## React.createClass和extendsComponent的区别
 
@@ -6098,4 +6610,93 @@ class Switch extends React.Component {
     React-intl提供了两种使用方法，一种是引用React组件，另一种是直接调取API，官方更加推荐在React项目中使用前者，只有在无法使用React组件的地方，才应该调用框架提供的API。它提供了一系列的React组件，包括数字格式化、字符串格式化、日期格式化等。
 
     在React-intl中，可以配置不同的语言包，他的工作原理就是根据需要，在语言包之间进行切换。
+
+## redux-persist
+
+1. 参考链接
+
+    [「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
+2. 详解
+
+    * 背景
+
+        在React项目中，通过redux存储全局数据时，会有一个问题，如果用户刷新了网页，那么通过redux存储的全局数据就会被全部清空，比如登录信息等。这时就会有全局数据持久化存储的需求。首先想到的就是localStorage，localStorage是没有时间限制的数据存储，可以通过它来实现数据的持久化存储。
+
+        但是在已经使用redux来管理和存储全局数据的基础上，再去使用localStorage来读写数据，这样不仅是工作量巨大，还容易出错。那么有没有结合redux来达到持久数据存储功能的框架呢？当然，它就是redux-persist。redux-persist会将redux的store中的数据缓存到浏览器的localStorage中。
+
+    * 使用
+
+        * 对于reducer和action的处理不变，只需修改store的生成代码
+
+            ```js
+            import {createStore} from 'redux'
+            import reducers from '../reducers/index'
+            import {persistStore, persistReducer} from 'redux-persist';
+            import storage from 'redux-persist/lib/storage';
+            import autoMergeLevel2 from 'redux-persist/lib/stateReconciler/autoMergeLevel2';
+            const persistConfig = {
+                key: 'root',
+                storage: storage,
+                stateReconciler: autoMergeLevel2 // 查看 'Merge Process' 部分的具体情况
+            };
+            const myPersistReducer = persistReducer(persistConfig, reducers)
+            const store = createStore(myPersistReducer)
+            export const persistor = persistStore(store)
+            export default store
+            ```
+
+        * 在index.js中，将PersistGate标签作为网页内容的父标签
+
+            ```js
+            import React from 'react';
+            import ReactDOM from 'react-dom';
+            import {Provider} from 'react-redux'
+            import store from './redux/store/store'
+            import {persistor} from './redux/store/store'
+            import {PersistGate} from 'redux-persist/lib/integration/react';
+            ReactDOM.render(<Provider store={store}>
+                        <PersistGate loading={null} persistor={persistor}>
+                            {/*网页内容*/}
+                        </PersistGate>
+                    </Provider>, document.getElementById('root'));
+            ```
+
+## react严格模式
+
+1. 参考链接
+
+    [「2021」高频前端面试题汇总之React篇（下）](https://juejin.cn/post/6940942549305524238)
+
+2. 详解
+
+    StrictMode 是一个用来突出显示应用程序中潜在问题的工具。与 Fragment 一样，StrictMode 不会渲染任何可见的 UI。它为其后代元素触发额外的检查和警告。 可以为应用程序的任何部分启用严格模式。
+
+    ```ts
+    import React from 'react';
+    function ExampleApplication() {
+        return (
+            <div>
+                <Header />
+                <React.StrictMode>        
+                    <div>
+                        <ComponentOne />
+                        <ComponentTwo />
+                    </div>
+                </React.StrictMode>      
+                <Footer />
+            </div>
+        );
+    }
+    ```
+
+    不会对 Header 和 Footer 组件运行严格模式检查。但是，ComponentOne 和 ComponentTwo 以及它们的所有后代元素都将进行检查。
+
+    StrictMode 目前有助于：
+
+    * 识别不安全的生命周期
+    * 关于使用过时字符串 ref API 的警告
+    * 关于使用废弃的 findDOMNode 方法的警告
+    * 检测意外的副作用
+    * 检测过时的 context API
 
