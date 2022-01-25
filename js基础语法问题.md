@@ -975,7 +975,7 @@
 
    - y:指针相对于当前文档 y 坐标
 
-   - 实践(视频进度条与音量条)
+   - 实践(视频进度条与音量条)(能完美贴合触点，能在元素外移动)
 
       ```html
       <template>
@@ -987,18 +987,18 @@
               <div class="video-stop" @click="pause()" v-show="playing">停</div>
               <div class="video-next">下</div>
               <div class="video-now">{{now}}</div>
-              <div class="video-progress" @mousedown.stop="mousedownProgress($event)" ref="progress">
+              <div class="video-progress" @mousedown.stop="mousedownProgress($event)" @touchstart.stop="touchstartProgress($event)" @touchmove.stop="touchstartProgress($event)" ref="progress">
                   <div class="progress-bar" :style="{width:progress +'%'}">
-                      <div class="progress-button" @mousedown.stop="mousedownProgressButton($event)"></div>
+                      <div class="progress-button" @mousedown.stop="mousedownProgressButton($event)" @touchstart.stop="touchstartProgress($event)" @touchmove.stop="touchstartProgress($event)"></div>
                   </div>
               </div>
               <div class="video-total">{{total}}</div>
               <div class="video-voice" @click.stop="showVoice = !showVoice">
                   <div class="voice-box" @click.stop="" v-if="showVoice">
                       <p class="voice-number">{{voice}}</p>
-                      <div class="voice-bg" @mousedown.stop="mousedownVoice($event)" ref="voice">
+                      <div class="voice-bg" @mousedown.stop="mousedownVoice($event)" @touchstart.stop="touchstartVoice($event)" @touchmove.stop="touchstartVoice($event)" ref="voice">
                           <div class="voice-bar" :style="{height:voice +'%'}">
-                              <div class="voice-botton" @mousedown.stop="mousedownVoiceButton($event)"></div>
+                              <div class="voice-botton" @mousedown.stop="mousedownVoiceButton($event)" @touchstart.stop="touchstartVoice($event)" @touchmove.stop="touchstartVoice($event)"></div>
                           </div>
                       </div>
                   </div>
@@ -1127,6 +1127,11 @@
                     document.onmouseup = null;
                 };
             },
+            touchstartProgress(event) {
+                let offsetX = event.touches[0].clientX - this.$refs.progress.getBoundingClientRect().x;
+                let progressPercent = (offsetX * 100 / this.$refs.progress.clientWidth).toFixed(2);
+                this.setProgress(progressPercent);
+            },
             mousedownProgressButton(event) {
                 let oldX = event.screenX;
                 let oldProgress = this.progress;
@@ -1187,6 +1192,11 @@
                     document.onmousemove = null;
                     document.onmouseup = null;
                 };
+            },
+            touchstartVoice(event) {
+                let offsetY = event.touches[0].clientY - this.$refs.voice.getBoundingClientRect().y;
+                let volume = parseInt(this.$refs.voice.clientHeight - offsetY);
+                this.setVolume(volume);
             },
             mousedownVoiceButton(event) {
                 let oldY = event.screenY;
@@ -1388,7 +1398,6 @@
       }
       </style>
       ```
-
 
 ### delete 操作符
 
